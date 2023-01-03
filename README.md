@@ -1,4 +1,12 @@
 # mqtt-energenie-ener314rt
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-brightgreen.svg)](https://github.com/Achronite/mqtt-energenie-ener314/graphs/commit-activity)
+<!--
+[![Downloads](https://img.shields.io/npm/dm/mqtt-energenie-ener314rt.svg)](https://www.npmjs.com/package/mqtt-energenie-ener314rt)
+[![HitCount](http://hits.dwyl.io/achronite/mqtt-energenie-ener314rt.svg)](http://hits.dwyl.io/achronite/mqtt-energenie-ener314rt)
+![node](https://img.shields.io/node/v/mqtt-energenie-ener314rt)
+[![Release](https://img.shields.io/github/release-pre/achronite/mqtt-energenie-ener314rt.svg)](https://github.com/Achronite/mqtt-energenie-ener314rt/releases)
+[![NPM](https://nodei.co/npm/mqtt-energenie-ener314rt.png)](https://nodei.co/npm/mqtt-energenie-ener314rt/)
+--->
 
 MQTT node.js application to control the Energenie line of products via the ENER314-RT add-on board for the Raspberry Pi.
 
@@ -6,14 +14,11 @@ The primary reason this application has been built is to allow integration with 
 
 https://energenie4u.co.uk/
 
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-brightgreen.svg)](https://github.com/Achronite/mqtt-energenie-ener314/graphs/commit-activity)
-[![Downloads](https://img.shields.io/npm/dm/mqtt-energenie-ener314rt.svg)](https://www.npmjs.com/package/mqtt-energenie-ener314rt)
-[![HitCount](http://hits.dwyl.io/achronite/mqtt-energenie-ener314rt.svg)](http://hits.dwyl.io/achronite/mqtt-energenie-ener314rt)
-![node](https://img.shields.io/node/v/mqtt-energenie-ener314rt)
-[![Release](https://img.shields.io/github/release-pre/achronite/mqtt-energenie-ener314rt.svg)](https://github.com/Achronite/mqtt-energenie-ener314rt/releases)
-[![NPM](https://nodei.co/npm/mqtt-energenie-ener314rt.png)](https://nodei.co/npm/mqtt-energenie-ener314rt/)
 
-## WARNING: THIS REPOSITORY IS UNDER DEVELOPMENT AND SHOULD BE USED WITH CAUTION
+## WARNING: THIS REPOSITORY IS UNDER ACTIVE DEVELOPMENT
+>I am still actively developing this node.js application.
+
+>There are currently lots of DEBUGs in the code and it has yet to be npm or github packaged for release, but the basic code is working as intended and I welcome any testers.  Please provide any feedback in [issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues)
 
 ## Purpose
 
