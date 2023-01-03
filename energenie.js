@@ -62,13 +62,15 @@ process.on('message', msg => {
                     // Invoke C function to do the send
                     if (initialised){
                         var ret = ener314rt.ookSwitch(zone, switchNum, switchState, xmits);
+                        if (ret == 0){
+                            msg.state = switchState;
+                        }
                     } else {
                         console.log("EMULATION: calling ookSwitch(", zone, ",", switchNum, ",", switchState,",", xmits,")");
                         msg.emulated = true;
                         msg.state = switchState;
                     }
 
-                    // format result
                     // return result to parent
                     process.send(msg);
 

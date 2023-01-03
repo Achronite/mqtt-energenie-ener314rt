@@ -147,6 +147,8 @@ forked.on("message", msg => {
 						} else {
 							rtn_msg = "OFF";
 						}
+					} else {
+						console.log("msg.state type = ", typeof(msg.state));
 					}
 					// send single response back via MQTT state topic
 					console.log("publishing ", state_topic, ": ", rtn_msg);
