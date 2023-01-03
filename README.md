@@ -105,14 +105,6 @@ Here is a table showing the Device Topic and if control and monitoring is supopo
 |MIHO069|MiHome Heating Thermostat|18|Cached|Yes|No| 
 |MIHO089|MiHome Click - Smart Button|?|No|Yes||
 
-
-## 'Control Only' OOK Zone Rules
-* Each Energenie **'Control'** or OOK based device can be assigned to a specifc zone (or house code) and a switch number.
-* Each zone is encoded as a 20-bit address (1-1048575 decimal).
-* Each zone can contain up to 6 separate switches (1-6) - NOTE: officially energenie state this is only 4 devices (1-4)
-* All devices within the **same** zone can be switched **at the same time** using a switch number of '0'.
-* A default zone '0' can be used to use Energenie's default zone (0x6C6C6).
-
 ## MQTT Topics
 
 The commands and monitor messages are sent/received using MQTT topics.  The topic design is loosely based on that used for esphome devices, and parameter names generally align to the OpenThings parameter standard.
@@ -175,19 +167,51 @@ mqtt:
     - name: "Coffee Machine Reactive Power"
       state_topic: energenie/2/8294/REACTIVE_POWER/state
       device_class: reactive_power
+      unit_of_measurement: "VAR"
 
-    - name: "Coffee Machine Frequency"
+    - name: "Coffee Machine Radio Frequency"
       state_topic: energenie/2/8294/FREQUENCY/state
       device_class: frequency
+      unit_of_measurement: "Hz"
 
     - name: "Coffee Machine Real Power"
       state_topic: energenie/2/8294/REAL_POWER/state
       device_class: power
+      unit_of_measurement: "W"
 
     - name: "Coffee Machine Voltage"
       state_topic: energenie/2/8294/VOLTAGE/state
       device_class: voltage
+      unit_of_measurement: "V"
 ```
+>NOTE: If you have an 'Control' (Blue) devices these will need to be added manually by teaching the device code (see below)
+
+>TIP: You can use an MQTT explorer to show the auto-discovered OpenThings 'Monitor' devices reported values.
+
+### Energenie 'Control Only' OOK device teaching in Home Assistant
+The control only devices (any listed in the above table as Device Topic 'ook' or with a Blue icon on the energenie boxes) need to be taught a zone and switch code.
+
+1. Add an mqtt entry in `configuration.yaml` for your switch or light. These should uniquely reference your device (following the zone rules below).  For example to teach an ENER002 socket to be Zone 567 switch 1 enter the following:
+```
+mqtt:
+  switch:
+    - name: "My Switch"
+      command_topic: energenie/ook/567/1/switch/command
+      optimistic: false
+      state_topic: energenie/ook/567/1/switch/state
+```
+2. Refresh the MQTT configuration in Home Assistant
+3. Hold the button on your device until it starts to flash (holding longer clears the learnt codes).
+4. Click the power on button on the dashboard for your device.  This will send an MQTT message to this application, which will send a power-on request for the zone/switch combination set in the command topic.
+5. The device should learn the zone code being sent by the power-on request, the light should stop flashing when successful.
+6. All subsequent calls using the same zone/switch number will cause your device to switch.
+
+### 'Control Only' OOK Zone Rules
+* Each Energenie **'Control'** or OOK based device can be assigned to a specifc zone (or house code) and a switch number.
+* Each zone is encoded as a 20-bit address (1-1048575 decimal).
+* Each zone can contain up to 6 separate switches (1-6) - NOTE: officially energenie state this is only 4 devices (1-4)
+* All devices within the **same** zone can be switched **at the same time** using a switch number of '0'.
+* A default zone '0' can be used to use Energenie's default zone (0x6C6C6).
 
 ## Change History
 See [CHANGELOG.md](./CHANGELOG.md)
