@@ -129,7 +129,7 @@ const forked = fork("energenie.js");
 */
 forked.on("message", msg => {
 	// we have a monitor or ACK message, transform into MQTT message
-    console.log("Message from energenie process: ", msg);
+    //console.log("Message from energenie process: ", msg);
 
 	// format state topic string
 	// TODO: deal with multiple return values for FSK
@@ -207,7 +207,7 @@ forked.on("message", msg => {
 						}
 
 						break;
-					case 'MOTION_SENSOR':
+					case 'MOTION_DETECTOR':
 						topic_key = 'motion';
 						break;
 					default:
