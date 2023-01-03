@@ -209,6 +209,11 @@ forked.on("message", msg => {
 						break;
 					case 'MOTION_DETECTOR':
 						topic_key = 'motion';
+						if (msg[key] == 1 || msg[key] == '1') {
+							msg[key] = "ON";
+						} else {
+							msg[key] = "OFF";
+						}
 						break;
 					default:
 						// assume an unknown key we need to set in topic tree
