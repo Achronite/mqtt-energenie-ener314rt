@@ -160,9 +160,8 @@ mqtt:
 ```
 
 ## Change History
-| Version | Date | Change details
-|---|---|---|
-0.1.0|Jan 2023|Initial alpha release
+See [CHANGELOG.md](./CHANGELOG.md)
+
 
 ## Built With
 
