@@ -2,9 +2,9 @@
 
 ## [Unreleased]
 
-* Support for OOK dimmer switch #3
-* Support for setting parameter values for eTRV #2
-* Add support for Home Assistant MQTT discovery #1
+* Support for OOK dimmer switch [#3](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/3)
+* Support for setting parameter values for eTRV [#2](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/2)
+* Add support for Home Assistant MQTT discovery [#1](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/1)
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
