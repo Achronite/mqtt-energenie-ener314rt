@@ -22,16 +22,9 @@ var ener314rt = require('energenie-ener314rt');
 // import async processing for handling radio comms
 const { fork } = require('child_process');
 
-// TODO swap these for config
-//const CONFIG.mqtt.broker = "mqtt://pi3.local";
-const MQTT_OPTIONS = { clientId: CONFIG.mqtt.clientId,
-					username:CONFIG.mqtt.username,
-					password:CONFIG.mqtt.password,
-					clean:true};
-
 // connect to MQTT
-var client = mqtt.connect(CONFIG.mqtt.broker,MQTT_OPTIONS);
-console.log("connected flag  " + client.connected);
+var client = mqtt.connect(CONFIG.mqtt_broker,CONFIG.mqtt_options);
+//console.log("connected flag  " + client.connected);
 
 //handle incoming MQTT messages
 client.on('message',function(topic, msg, packet){
@@ -87,7 +80,7 @@ client.on('message',function(topic, msg, packet){
 ** When MQTT is connected, subscribe to the command topic(s)
 */
 client.on('connect',function(){	
-	console.log("MQTT connected  "+ client.connected);
+	console.log("MQTT connected to broker "+ CONFIG.mqtt_broker);
 
 	// start the monitor loop if configured in config file
 	if (CONFIG.monitoring){
@@ -105,7 +98,7 @@ client.on('connect',function(){
 	//console.log("subscribing to ",cmd_topic);
 	client.subscribe(cmd_topic,options, function( err ) {
 		if (!err){
-			console.log("subscribed to ",cmd_topic);
+			console.log("MQTT subscribed to ",cmd_topic);
 		} else {
 			// error
 		}
