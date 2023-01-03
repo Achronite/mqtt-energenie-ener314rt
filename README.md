@@ -72,7 +72,7 @@ It should contain the following entities:
 
 These nodes are designed for energenie RF radio devices in the OOK & FSK (OpenThings) ranges.
 
-Here is a table showing the Device Topic a,d if control and monitoring is supoported for each device:
+Here is a table showing the Device Topic and if control and monitoring is supoported for each device:
 
 | Device | Description | Device Topic | Control | Monitoring | Supported |
 |---|---|:---:|:---:|:---:|:---:|
@@ -110,17 +110,16 @@ Here is a table showing the Device Topic a,d if control and monitoring is supopo
 
 ## MQTT Topics
 
-The commands and monitor messages are sent/received using MQTT topics.  The topic design is losely based on esphome devices, and parameter names generally align to the OpenThings parameter standard.
+The commands and monitor messages are sent/received using MQTT topics.  The topic design is loosely based on that used for esphome devices, and parameter names generally align to the OpenThings parameter standard.
 
 The following table shows some examples of the topics used:
 
-|device|command topic|state topic|monitoring topics...|
-|---|---|---|---|
-|ook-switch|energenie/ook/*zone*/*switchNum*/command|energenie/ook/*zone*/*switchNum*/state|n/a|
-|openThings-switch|energenie/2/*deviceNum*/switch/command|energenie/2/*deviceNum*/switch/state|energenie/2/*deviceNum*/REAL_POWER/state|
-|openThings-monitor|n/a|energenie/5/*deviceNum*/switch/state|energenie/5/*deviceNum*/APPARENT_POWER/state|
-|openThings-pir|n/a|energenie/12/*deviceNum*/motion/state|n/a|
-
+|device|example topic stem|command topic|state topic(s)|valid values|
+|---|---|---|---|---|
+|Control only|energenie/ook/*zone*/*switchNum*|*stem*/command|*stem*/state|ON,OFF|
+|MIHO005|energenie/2/*deviceNum*|*stem*/switch/command|*stem*/switch/state<br>*stem*/REAL_POWER/state<br>*stem*/REACTIVE_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/FREQUENCY/state|ON,OFF<br>Number<br>Number<br>Number<br>Float|
+|MIHO006|energenie/5/*deviceNum*|-|*stem*/APPARENT_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/CURRENT/state|Number<br>Float<br>Float|
+|MIHO032|energenie/12/*deviceNum*|-|*stem*/motion/state|ON,OFF|
 
 For example the 'Smart Plug+' populates the following topics in MQTT:
 ```
