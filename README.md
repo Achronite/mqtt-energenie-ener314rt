@@ -117,10 +117,11 @@ The following table shows some examples of the topics used:
 |MIHO005|energenie/2/*deviceNum*|*stem*/switch/command|*stem*/switch/state<br>*stem*/REAL_POWER/state<br>*stem*/REACTIVE_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/FREQUENCY/state|ON,OFF<br>Number<br>Number<br>Number<br>Float|
 |MIHO006|energenie/5/*deviceNum*|-|*stem*/APPARENT_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/CURRENT/state|Number<br>Float<br>Float|
 |MIHO032|energenie/12/*deviceNum*|-|*stem*/motion/state|ON,OFF|
+|MIHO033|energenie/13/*deviceNum*|-|*stem*/contact/state|ON,OFF|
 
 For example the 'Smart Plug+' populates the following topics in MQTT:
 ```
-    "switch/state": <ON/OFF value receeived from plug
+    "switch/state": <ON/OFF value received from plug>
     "REAL_POWER/state": <power in Watts being consumed>
     "REACTIVE_POWER/state": <Power in volt-ampere reactive (VAR)>
     "VOLTAGE/state": <Power in Volts>            
@@ -162,6 +163,11 @@ mqtt:
       name: "Hallway PIR"
       state_topic: energenie/12/5937/motion/state
       device_class: motion
+
+    - unique_id: Front_Door
+      name: "Front Door"
+      state_topic: energenie/13/8888/contact/state
+      device_class: door    
   
   sensor:
     - name: "Coffee Machine Reactive Power"

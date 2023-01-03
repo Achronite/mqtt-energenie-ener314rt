@@ -109,12 +109,12 @@ client.on('connect',function(){
 
 //handle MQTT errors
 client.on('error',function(error){
-	console.log("Can't connect to MQTT " + error);
+	console.log("Error connecting to MQTT " + error);
 	process.exit(1)
 });
 
 
-// fork energenie process
+// fork energenie process to handle all energenie Rx/Tx
 const forked = fork("energenie.js");
 
 /*
@@ -144,7 +144,7 @@ forked.on("message", msg => {
 						console.log("msg.state type = ", typeof(msg.state));
 					}
 					// send single response back via MQTT state topic
-					console.log("publishing ", state_topic, ": ", rtn_msg);
+					console.log(`MQTT publishing ${state_topic}: ${rtn_msg}`);
 					client.publish(state_topic,rtn_msg);
 					break;
 
@@ -210,6 +210,14 @@ forked.on("message", msg => {
 							msg[key] = "OFF";
 						}
 						break;
+					case 'DOOR_SENSOR':
+						topic_key = 'contact';
+						if (msg[key] == 1 || msg[key] == '1') {
+							msg[key] = "ON";
+						} else {
+							msg[key] = "OFF";
+						}
+						break;						
 					default:
 						// assume an unknown key we need to set in topic tree
 						topic_key = key;							
