@@ -50,17 +50,18 @@ It should contain the following entities:
 ```
 {
     "topic_stub": "energenie/",
-    "mqtt": {
-        "broker": "mqtt://pi3.local",
-        "clientId": "mqtt-node", 
-        "username":"node-ener314rt"
-        "password":"xxxx"
+    "mqtt_broker": "mqtt://pi3.local",
+    "mqtt_options": {
+        "clientId": "node-ener314rt", 
+        "username":"node-ener314rt",
+        "clean": true
     },
     "monitoring": true
 }
 ```
 * `topic_stub` should contain the base topic where your energenie messages should reside on mqtt, the default value should suit most installations.
-* Modify the `mqtt` section with your broker details.
+* `mqtt_broker` should contain your MQTT broker address and protocol.
+* Modify the `mqtt_options` section with your [MQTT client options](https://github.com/mqttjs/MQTT.js#client), such as username, password, certificate etc.
 * If you have any energenie 'Control & Monitor' or 'Monitor' devices then set `"monitoring": true` otherwise remove or set false.
 
 5) Run the application manually using the command: ``node app.js``
