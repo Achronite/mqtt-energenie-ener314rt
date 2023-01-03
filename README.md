@@ -238,12 +238,13 @@ run 'node-gyp rebuild' in this directory to rebuild the node module.
 ## Change History
 | Version | Date | Change details
 |---|---|---|
-0.1.0|Jan 2023|Initial release
+0.1.0|Jan 2023|Initial alpha release
 
 ## Built With
 
 * [NodeJS](https://nodejs.org/dist/latest-v10.x/docs/api/) - JavaScript runtime built on Chrome's V8 JavaScript engine.
-* [N-API](https://nodejs.org/docs/latest-v10.x/api/n-api.html) - Used to wrap C code as a native node.js Addon. N-API is maintained as part of Node.js itself, and produces Application Binary Interface (ABI) stable across all versions of Node.js.
+* [energenie-ener314rt](https://github.com/Achronite/energenie-ener314rt) - Dependant node.js module that performs all energenie functions
+* [mqtt](https://github.com/mqttjs) - javascript implementation of MQTT protocol
 
 ## Authors
 
