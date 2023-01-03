@@ -135,12 +135,14 @@ A full parameter list can be found in C/src/achronite/openThings.c if required.
 
 
 ## Home Assistant Set-up
-MQTT Example `configuration.yaml` file entries for OOK and FSK switches:
+Enable the [MQTT Integration](https://www.home-assistant.io/integrations/mqtt/) in Home Assistant (if not already enabled).
+
+Edit your Home Assistant `configuration.yaml` file for the switches and reported values as applicable. For example:
 ```
 mqtt:
   switch:
     - unique_id: coffee_machine
-      name: Coffee Machine
+      name: "Coffee Machine"
       command_topic: energenie/2/8294/switch/command
       optimistic: false
       state_topic: energenie/2/8294/switch/state
@@ -157,6 +159,29 @@ mqtt:
       command_topic: energenie/ook/88/2/command
       optimistic: false
       state_topic: energenie/ook/88/2/state
+
+  binary_sensor:
+    - unique_id: Hallway_PIR
+      name: "Hallway PIR"
+      state_topic: energenie/12/5937/motion/state
+      device_class: motion
+  
+  sensor:
+    - name: "Coffee Machine Reactive Power"
+      state_topic: energenie/2/8294/REACTIVE_POWER/state
+      device_class: reactive_power
+
+    - name: "Coffee Machine Frequency"
+      state_topic: energenie/2/8294/FREQUENCY/state
+      device_class: frequency
+
+    - name: "Coffee Machine Real Power"
+      state_topic: energenie/2/8294/REAL_POWER/state
+      device_class: power
+
+    - name: "Coffee Machine Voltage"
+      state_topic: energenie/2/8294/VOLTAGE/state
+      device_class: voltage
 ```
 
 ## Change History
