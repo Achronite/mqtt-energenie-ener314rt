@@ -29,16 +29,16 @@ var ener314rt = require('energenie-ener314rt');
 
 // main processing section that does stuff when asked by parent
 process.on('message', msg => {
-    console.log("child: Message from parent:", msg);
+    console.log("energenie: received command:", msg);
     switch (msg.cmd) {
         case 'init':
         case 'reset':
             // Normally we initialise automatically anyway, this is a forced reset
-            console.log("child: reset");
+            console.log("energenie: reset");
             process.send({ cmd: "initialised" })
             break;
         case 'send':
-            //console.log("child: Sending:", msg.payload);
+            //console.log("energenie: Sending:", msg.payload);
             // Check xmit times (advanced), 26ms per payload transmission
             var xmits = Number(msg.repeat) || 20;
             let switchState = Boolean(msg.switchState);
@@ -116,18 +116,18 @@ process.on('message', msg => {
             
         case 'monitor':
             // start monitoring (if not started already)
-            console.log("child: monitor enabled=", msg.enabled);
+            //console.log("energenie: monitor enabled=", msg.enabled);
             if (!monitoring && initialised) {
                 monitoring = true;
                 //getMonitorMsg();
                 startMonitoringThread();
-                console.log("child: Monitoring thread started");
-            } else {
-                console.log("EMULATION: Monitoring thread cannot be enabled in EMULATION mode");
+                console.log("energenie: Monitoring thread started");
+            } else if (!initialised){
+                console.log("energenie: Monitoring thread cannot be enabled, ENER314-RT unavailable");
             }
             break;
         case 'close':
-            console.log("child: closing");
+            console.log("energenie: closing");
             ener314rt.closeEner314rt();
             process.exit();
         case 'cacheCmd':
@@ -135,41 +135,18 @@ process.on('message', msg => {
                 msg.data = 0;
             }
             var res = ener314rt.openThingsCacheCmd(msg.deviceId, msg.otCommand, msg.data);
-            console.log(`child: otCC cmd=${msg.otCommand} res=${res}`);
+            console.log(`energenie: cached cmd=${msg.otCommand} res=${res}`);
             break;
         default:
-            console.log("child: Unknown or missing command:", msg.cmd);
+            console.log("energenie: Unknown or missing command:", msg.cmd);
     }
 });
-
-// monitor mode - non-async version - this works, but does seem to use the main thread loop
-// TODO: async version
-//
-/*
-function getMonitorMsg() {
-    do {
-        var msg = ener314rt.openThingsReceive(true);
-        console.log("child: otR complete");
-        //scope.log(`received ${msg}`);
-
-        // msg returns -ve int value if nothing received, or a string
-        if (typeof (msg) === 'string' || msg instanceof String) {
-            // inform the parent that we have a message
-            var OTmsg = JSON.parse(msg);
-            process.send(OTmsg);
-        } else {
-            // no message
-        }
-    } while (monitoring);
-};
-*/
-
 
 // monitor thread version in ener314rt uses a callback to return monitor messages directly (collected below), it needs the callback passing in
 function startMonitoringThread() {
     ener314rt.openThingsReceiveThread(10000, (msg) => {
         //console.log(`asyncOpenThingsReceive ret=${ret}`);
-        console.log(`child: received=${msg}`);
+        console.log(`energenie: monitor received=${msg}`);
         var OTmsg = JSON.parse(msg);
         OTmsg.cmd = 'monitor';
         process.send(OTmsg);
@@ -177,17 +154,11 @@ function startMonitoringThread() {
 };
 
 // Initialise
-console.log("child: Initialising");
+//console.log("energenie: Initialising adaptor");
 var ret = ener314rt.initEner314rt(false);
 if (ret==0){
     initialised = true;
-    console.log(`child: ENER314-RT initialised succesfully.`);
+    console.log(`energenie: ENER314-RT initialised succesfully.`);
 } else {
-    console.log(`ERROR: child N-API radio_init returned ${ret}, EMULATION mode enabled`);
+    console.log(`energenie ERROR: failed to initialise ENER314-RT ${ret}, EMULATION mode enabled`);
 }
-// simulate random Rx
-/*
-setInterval(() => {
-    process.send({ payload: counter++ });
-}, 4000);
-*/

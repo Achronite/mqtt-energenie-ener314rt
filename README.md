@@ -191,7 +191,7 @@ mqtt:
 ### Energenie 'Control Only' OOK device teaching in Home Assistant
 The control only devices (any listed in the above table as Device Topic 'ook' or with a Blue icon on the energenie boxes) need to be taught a zone and switch code.
 
-1. Add an mqtt entry in `configuration.yaml` for your switch or light. These should uniquely reference your device (following the zone rules below).  For example to teach an ENER002 socket to be Zone 567 switch 1 enter the following:
+1. Add an mqtt entry in `configuration.yaml` for your switch or light. These should uniquely reference your device (following the OOK zone rules below).  For example to teach an ENER002 socket to be Zone 567 switch 1 enter the following:
 ```
 mqtt:
   switch:
@@ -206,7 +206,7 @@ mqtt:
 5. The device should learn the zone code being sent by the power-on request, the light should stop flashing when successful.
 6. All subsequent calls using the same zone/switch number will cause your device to switch.
 
-### 'Control Only' OOK Zone Rules
+## 'Control Only' OOK Zone Rules
 * Each Energenie **'Control'** or OOK based device can be assigned to a specifc zone (or house code) and a switch number.
 * Each zone is encoded as a 20-bit address (1-1048575 decimal).
 * Each zone can contain up to 6 separate switches (1-6) - NOTE: officially energenie state this is only 4 devices (1-4)
