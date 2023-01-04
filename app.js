@@ -143,9 +143,9 @@ forked.on("message", msg => {
 					} else {
 						console.log("msg.state type = ", typeof(msg.state));
 					}
-					// send single response back via MQTT state topic
-					console.log(`MQTT publishing ${state_topic}: ${rtn_msg}`);
-					client.publish(state_topic,rtn_msg);
+					// send single response back via MQTT state topic, setting the retained flag to survive restart on client
+					console.log(`MQTT publishing ${state_topic}: ${rtn_msg} (retained=true)`);
+					client.publish(state_topic,rtn_msg,{retain: true});
 					break;
 
 				case 'fsk':
@@ -181,7 +181,7 @@ forked.on("message", msg => {
 			let keys = Object.keys(msg);
 			var productId = null;
 			var deviceId = null;
-
+			
 			keys.forEach((key) => {
 				topic_key = null;
 				//console.log(`key ${key}=${msg[key]}`);
@@ -229,8 +229,9 @@ forked.on("message", msg => {
 					state = String(msg[key]);
 
 					// send response back via MQTT state topic
-					console.log("publishing ", state_topic, ": ", state);
+					console.log(`publishing ${state_topic}: ${state}`);
 					client.publish(state_topic,state);
+					pub_options = null;
 				}
 			})
 
@@ -248,29 +249,8 @@ forked.on("message", msg => {
 
 
 forked.on('close', (code, signal) => {
-    console.log(`parent: child process has terminated due to receipt of signal ${signal}`);
+    console.log(`ERROR: energenie process has terminated due to receipt of signal ${signal}`);
     // clear interval timer (causes program to exit as nothing left to do!)
     clearInterval(intervalId);
 });
-
-
-// DEBUG: every now and again ask the child to send a message
-/*
-var intervalId = setInterval(() => {
-    forked.send({ cmd: "send" });
-}, 10000);
-*/
-
-// ask trv to report diags
-/*
-var id2 = setInterval(() => {
-    //forked.send({ cmd: "close" });
-    //forked.send({ cmd: "monitor", enabled: false });
-    forked.send({cmd: "cacheCmd",
-        otCommand: 166,
-        data: 0,
-        deviceId: 3989 });
-}, 450000);
-*/
-
 
