@@ -42,7 +42,7 @@ For example:
 sudo apt update
 sudo apt upgrade -y
 curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -   // latest long term supported release
-sudo apt install -y nodejs
+sudo apt install -y nodejs npm
 ```
 3) Install the dependant node modules 'mqtt' and 'energenie-ener314rt'
 ```
@@ -71,7 +71,20 @@ It should contain the following entities:
 
 5) Run the application manually using the command: ``node app.js``
  
+## Systemd Service
 
+Execute the following commands:
+```
+sudo ln -s /home/pi/mqtt-energenie-ener314rt/mqtt-energenie-ener314rt.service /lib/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl start mqtt-energenie-ener314rt
+sudo systemctl enable mqtt-energenie-ener314rt
+```
+
+To view the logs output from the application, use the following command:
+```
+journalctl -u mqtt-energenie-ener314rt.service
+```
 
 ## Supported Devices
 
@@ -84,7 +97,7 @@ Here is a table showing the Device Topic and if control and monitoring is supopo
 |ENER002|Green Button Adapter|ook|Yes|No|Yes|
 |ENER010|MiHome 4 gang Multiplug|ook|Yes|No|Yes|
 |MIHO002|MiHome Smart Plug (Blue)|ook|Yes|No|Yes|
-|MIHO004|MiHome Smart Monitor Plug (Pink)|1|No|Yes||
+|MIHO004|MiHome Smart Monitor Plug (Pink)|1|No|Yes|Yes|
 |MIHO005|MiHome Smart Plug+ (Purple)|2|Yes|Yes|Yes|
 |MIHO006|MiHome House Monitor|5|No|Yes|Yes|
 |MIHO007|MiHome Socket (White)|ook|Yes|No|Yes|
@@ -114,6 +127,7 @@ The following table shows some examples of the topics used:
 |device|example topic stem|command topic|state topic(s)|valid values|
 |---|---|---|---|---|
 |Control only|energenie/ook/*zone*/*switchNum*|*stem*/command|*stem*/state|ON,OFF|
+|MIHO004|energenie/1/*deviceNum*|-|*stem*/REAL_POWER/state<br>*stem*/REACTIVE_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/FREQUENCY/state|Number<br>Number<br>Number<br>Float|
 |MIHO005|energenie/2/*deviceNum*|*stem*/switch/command|*stem*/switch/state<br>*stem*/REAL_POWER/state<br>*stem*/REACTIVE_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/FREQUENCY/state|ON,OFF<br>Number<br>Number<br>Number<br>Float|
 |MIHO006|energenie/5/*deviceNum*|-|*stem*/APPARENT_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/CURRENT/state|Number<br>Float<br>Float|
 |MIHO032|energenie/12/*deviceNum*|-|*stem*/motion/state|ON,OFF|
