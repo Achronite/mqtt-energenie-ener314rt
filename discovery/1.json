@@ -1,0 +1,6 @@
+{"mdl":"Monitor Plug",
+    "parameters":[
+        {"id": "REAL_POWER",    "component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"power","unit_of_meas":"W"}},
+        {"id": "REACTIVE_POWER","component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"reactive_power","unit_of_meas":"VAR"}}
+    ]
+}

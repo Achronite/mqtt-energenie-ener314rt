@@ -1,0 +1,6 @@
+{"mdl":"Door Sensor",
+    "parameters":[
+        {"id": "timestamp", "component":"sensor",        "stat_t":"~@/state","config": {"dev_cla":"timestamp"}},
+        {"id": "contact",   "component":"binary_sensor", "stat_t":"~@/state","config": {"dev_cla":"door"}}
+    ]
+}

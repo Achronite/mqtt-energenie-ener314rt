@@ -16,7 +16,8 @@ const MQTTM_OT_PRODUCTID = 1;
 const MQTTM_OT_DEVICEID = 2;
 const MQTTM_OT_CMD = 3;
 
-var mqtt = require('mqtt');
+const MQTT = require('mqtt');
+var fs = require('fs');
 
 // import my dependant node.js module
 var ener314rt = require('energenie-ener314rt');
@@ -25,7 +26,7 @@ var ener314rt = require('energenie-ener314rt');
 const { fork } = require('child_process');
 
 // connect to MQTT
-var client = mqtt.connect(CONFIG.mqtt_broker,CONFIG.mqtt_options);
+var client = MQTT.connect(CONFIG.mqtt_broker,CONFIG.mqtt_options);
 //console.log("connected flag  " + client.connected);
 
 //handle incoming MQTT messages
@@ -240,7 +241,7 @@ forked.on("message", msg => {
 			break;
 		case 'discovery':
 				// device discovery message publish discovery messages to Home Assistant
-				console.log(`discovery found ${msg.numDevices} devices\n`);
+				console.log(`discovery found ${msg.numDevices} devices`);
 				msg.devices.forEach(publishDiscovery);
 			break;
 
@@ -266,56 +267,57 @@ function UpdateMQTTDiscovery() {
 }
 
 function publishDiscovery( device, index ){
-	console.log(`>device: ${device.deviceId}`);
-
 	// Each device has specific capabilities, these need mapping to Home Assistant Components
 	// and publishing a config item as applicable @<discovery_prefix>/<component>/[<node_id>/]<object_id>/config
 	if ( device.mfrId == 4){
 		// energenie device
-		var dmsg = { mf: 'energenie', sw: 'ener314rt' };
-		let dev_topic_stub = `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`
 
-		switch( device.productId ){
-			case 1: 
-				dmsg.mdl = "Monitor Plug";
-				break;
-			case 2:
-				dmsg.mdl = "Adapter Plus";
-				// Adaptor plus has 5 parameters
+		// Read discovery config
+		fs.readFile(`discovery/${device.productId}.json`, (err, data) => {
+			if (err) {
+				console.log(`ERROR: discovery skipped for ${device.deviceId} - discovery file 'discovery/${device.productId}.json' missing`);
+			} else {
+				device_defaults = JSON.parse(data);
+				console.log(`> Adding discovery config for ${device_defaults.mdl}-${device.deviceId}`);
+				device_defaults.parameters.forEach( (parameter) => {
+					//console.log(`${device.deviceId}> ${parameter.component} ${parameter.id}`);
+					//
+					var object_id = `${device.deviceId}-${parameter.id}`;
+					var unique_id = `ener314rt-${object_id}`;
+					var name;
+					if (parameter.component == 'switch' || parameter.component == 'binary_sensor' ){
+						name = `${device_defaults.mdl} ${device.deviceId}`;
+					} else {
+						name = `${device_defaults.mdl} ${device.deviceId} ${parameter.id.toLowerCase()}`
+					}
+					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${object_id}/config`;
+					var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
+											parameter.config);
 
-				//1 switch
-				var discoveryTopic = `${CONFIG.discovery_prefix}switch/${device.deviceId}/config`;
-				dmsg.cmd_t = `${dev_topic_stub}switch/command`;
-				dmsg.stat_t = `${dev_topic_stub}switch/state`;
-				dmsg.name   = `${dmsg.mdl}-${device.deviceId}`;
-				dmsg.opt    = false;
+					if (parameter.stat_t){
+						dmsg.stat_t = parameter.stat_t.replace("@", `${device.productId}/${device.deviceId}/${parameter.id}`);
+					}
 
-				console.log(`>>Topic ${discoveryTopic} \n>>configuration = ${JSON.stringify(dmsg)}`);
-				client.publish(discoveryTopic,JSON.stringify(dmsg));
+					if (parameter.cmd_t){
+						dmsg.cmd_t = parameter.cmd_t.replace("@", `${device.productId}/${device.deviceId}/${parameter.id}`);
+					}
 
-				break;
-			case 3:
-				dmsg.mdl = "Radiator Valve";
-				break;
-			case 5:
-				dmsg.mdl = "House Monitor";
-				break;
-			case 12:
-				dmsg.mdl = "Motion Sensor";
-				break;
-			case 13:
-				dmsg.mdl = "Open Sensor";
-				break;
-			case 18:
-				dmsg.mdl = "Thermostat";
-				break;
-			default:
-				dmsg.mdl = device.productId;
-		}
+					//console.log(`publishing ${discoveryTopic},payload:\n${JSON.stringify(dmsg)}`);
+					client.publish(discoveryTopic,JSON.stringify(dmsg),{retain: true});
+
+				})
+
+			}
+
+		});
+
+		// TODO error handling
 
 	}
-
 }
 
-// After 10 mins update MQTT discovery topics
-setTimeout(  UpdateMQTTDiscovery, 30000);
+// After 1 min update MQTT discovery topics
+setTimeout(  UpdateMQTTDiscovery, (60 * 1000));
+
+// Every 30 minutes update MQTT discovery topics
+setInterval(  UpdateMQTTDiscovery, (1800 * 1000));
