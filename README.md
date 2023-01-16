@@ -150,9 +150,12 @@ A full parameter list can be found in C/src/achronite/openThings.c if required.
 ## Home Assistant Set-up
 Enable the [MQTT Integration](https://www.home-assistant.io/integrations/mqtt/) in Home Assistant (if not already enabled).
 
+### MQTT Discovery
 Some devices will now auto-add and be available in Home Assistant via [MQTT discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery), consult the table above to see if your devices are supported.  The default discovery topics for the devices follow the pattern:
 `homeassistant/<component>/ener314rt/<deviceId>-<ParameterName>`
+For performance reasons, the discovery information is updated one minute after the program starts, and then every 30 minutes thereafter.
 
+### Manual setup
 For other devices (particularly the 'Control Only' devices) you **will need to add them manually** by editting your Home Assistant `configuration.yaml` file for the switches and reported values as applicable. For example:
 ```
 mqtt:
