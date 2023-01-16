@@ -273,9 +273,9 @@ function publishDiscovery( device, index ){
 		// energenie device
 
 		// Read discovery config
-		fs.readFile(`discovery/${device.productId}.json`, (err, data) => {
+		fs.readFile(`devices/${device.productId}.json`, (err, data) => {
 			if (err) {
-				console.log(`ERROR: discovery skipped for ${device.deviceId} - discovery file 'discovery/${device.productId}.json' missing`);
+				console.log(`ERROR: discovery skipped for ${device.deviceId} - discovery file 'devices/${device.productId}.json' missing`);
 			} else {
 				device_defaults = JSON.parse(data);
 				console.log(`> Adding discovery config for ${device_defaults.mdl}-${device.deviceId}`);
