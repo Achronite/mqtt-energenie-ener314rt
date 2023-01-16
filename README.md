@@ -61,7 +61,8 @@ It should contain the following entities:
         "username":"node-ener314rt",
         "clean": true
     },
-    "monitoring": true
+    "monitoring": true,
+    "discovery_prefix": "homeassistant/"
 }
 ```
 * `topic_stub` should contain the base topic where your energenie messages should reside on mqtt, the default value should suit most installations.
@@ -149,16 +150,12 @@ A full parameter list can be found in C/src/achronite/openThings.c if required.
 ## Home Assistant Set-up
 Enable the [MQTT Integration](https://www.home-assistant.io/integrations/mqtt/) in Home Assistant (if not already enabled).
 
-Edit your Home Assistant `configuration.yaml` file for the switches and reported values as applicable. For example:
+Some devices will now auto-add and be available in Home Assistant via MQTT discovery.  The default discovery topics for the devices follow the pattern:
+`homeassistant/<component>/ener314rt/<deviceId>-<ParameterName>`
+
+For other devices (particularly the 'Control Only' devices) you will need to add them manually by editting your Home Assistant `configuration.yaml` file for the switches and reported values as applicable. For example:
 ```
 mqtt:
-  switch:
-    - unique_id: coffee_machine
-      name: "Coffee Machine"
-      command_topic: energenie/2/8294/switch/command
-      optimistic: false
-      state_topic: energenie/2/8294/switch/state
-
   light:
     - unique_id: test_light
       name: "Test MQTT Light"
@@ -172,37 +169,12 @@ mqtt:
       optimistic: false
       state_topic: energenie/ook/88/2/state
 
-  binary_sensor:
-    - unique_id: Hallway_PIR
-      name: "Hallway PIR"
-      state_topic: energenie/12/5937/motion/state
-      device_class: motion
-
-    - unique_id: Front_Door
-      name: "Front Door"
-      state_topic: energenie/13/8888/contact/state
-      device_class: door    
-  
   sensor:
-    - name: "Coffee Machine Reactive Power"
-      state_topic: energenie/2/8294/REACTIVE_POWER/state
-      device_class: reactive_power
-      unit_of_measurement: "VAR"
+    - name: "eTRV Temperature"
+      state_topic: energenie/3/12345/TEMPERATURE/state
+      device_class: temperature
+      unit_of_measurement: "C"
 
-    - name: "Coffee Machine Radio Frequency"
-      state_topic: energenie/2/8294/FREQUENCY/state
-      device_class: frequency
-      unit_of_measurement: "Hz"
-
-    - name: "Coffee Machine Real Power"
-      state_topic: energenie/2/8294/REAL_POWER/state
-      device_class: power
-      unit_of_measurement: "W"
-
-    - name: "Coffee Machine Voltage"
-      state_topic: energenie/2/8294/VOLTAGE/state
-      device_class: voltage
-      unit_of_measurement: "V"
 ```
 >NOTE: If you have an 'Control' (Blue) devices these will need to be added manually by teaching the device code (see below)
 
