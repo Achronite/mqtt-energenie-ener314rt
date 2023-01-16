@@ -93,31 +93,31 @@ These nodes are designed for energenie RF radio devices in the OOK & FSK (OpenTh
 
 Here is a table showing the Device Topic and if control and monitoring is supoported for each device:
 
-| Device | Description | Device Topic | Control | Monitoring | Supported |
-|---|---|:---:|:---:|:---:|:---:|
-|ENER002|Green Button Adapter|ook|Yes|No|Yes|
-|ENER010|MiHome 4 gang Multiplug|ook|Yes|No|Yes|
-|MIHO002|MiHome Smart Plug (Blue)|ook|Yes|No|Yes|
-|MIHO004|MiHome Smart Monitor Plug (Pink)|1|No|Yes|Yes|
-|MIHO005|MiHome Smart Plug+ (Purple)|2|Yes|Yes|Yes|
-|MIHO006|MiHome House Monitor|5|No|Yes|Yes|
-|MIHO007|MiHome Socket (White)|ook|Yes|No|Yes|
-|MIHO008|MiHome Light Switch (White)|ook|Yes|No|Yes|
-|MIHO009|MiHome 2 gang Light Switch (White)|ook|Yes|No|Yes|
-|MIHO010|MiHome Dimmer Switch (White)|ook|Yes|No|*soon*|
-|MIHO013|MiHome Radiator Valve|3|Cached|Yes|*soon*|
-|MIHO014|Single Pole Relay (inline)|ook|Yes|No|Yes|
-|MIHO015|MiHome Relay|ook|Yes|No|Yes|
-|MIHO021|MiHome Socket (Nickel)|ook|Yes|No|Yes|
-|MIHO022|MiHome Socket (Chrome)|ook|Yes|No|Yes|
-|MIHO023|MiHome Socket (Steel)|ook|Yes|No|Yes|
-|MIHO024|MiHome Light Switch (Nickel)|ook|Yes|No|Yes|
-|MIHO025|MiHome Light Switch (Chrome)|ook|Yes|No|Yes|
-|MIHO026|MiHome Light Switch (Steel)|ook|Yes|No|Yes|
-|MIHO032|MiHome Motion sensor|12|No|Yes|Yes|
-|MIHO033|MiHome Open Sensor|13|No|Yes|Yes|
-|MIHO069|MiHome Heating Thermostat|18|Cached|Yes|No| 
-|MIHO089|MiHome Click - Smart Button|?|No|Yes||
+| Device | Description | Device Topic | Control | Monitoring | Discovery | Supported | 
+|---|---|:---:|:---:|:---:|:---:|:---:|
+|ENER002|Green Button Adapter|ook|Yes|No|No|Yes|
+|ENER010|MiHome 4 gang Multiplug|ook|Yes|No|No|Yes|
+|MIHO002|MiHome Smart Plug (Blue)|ook|Yes|No|No|Yes|
+|MIHO004|MiHome Smart Monitor Plug (Pink)|1|No|Yes|Yes|Yes|
+|MIHO005|MiHome Smart Plug+ (Purple)|2|Yes|Yes|Yes|Yes|
+|MIHO006|MiHome House Monitor|5|No|Yes|Yes|Yes|
+|MIHO007|MiHome Socket (White)|ook|Yes|No|No|Yes|
+|MIHO008|MiHome Light Switch (White)|ook|Yes|No|No|Yes|
+|MIHO009|MiHome 2 gang Light Switch (White)|ook|Yes|No|No|Yes|
+|MIHO010|MiHome Dimmer Switch (White)|ook|Yes|No|No|*soon*|
+|MIHO013|MiHome Radiator Valve|3|Cached|Yes|*soon*|*soon*|
+|MIHO014|Single Pole Relay (inline)|ook|Yes|No|No|Yes|
+|MIHO015|MiHome Relay|ook|Yes|No|No|Yes|
+|MIHO021|MiHome Socket (Nickel)|ook|Yes|No|No|Yes|
+|MIHO022|MiHome Socket (Chrome)|ook|Yes|No|No|Yes|
+|MIHO023|MiHome Socket (Steel)|ook|Yes|No|No|Yes|
+|MIHO024|MiHome Light Switch (Nickel)|ook|Yes|No|No|Yes|
+|MIHO025|MiHome Light Switch (Chrome)|ook|Yes|No|No|Yes|
+|MIHO026|MiHome Light Switch (Steel)|ook|Yes|No|No|Yes|
+|MIHO032|MiHome Motion sensor|12|No|Yes|Yes|Yes|
+|MIHO033|MiHome Open Sensor|13|No|Yes|Yes|Yes|
+|MIHO069|MiHome Heating Thermostat|18|Cached|Yes|No|No| 
+|MIHO089|MiHome Click - Smart Button|?|No|Yes|No|No|
 
 ## MQTT Topics
 
@@ -150,10 +150,10 @@ A full parameter list can be found in C/src/achronite/openThings.c if required.
 ## Home Assistant Set-up
 Enable the [MQTT Integration](https://www.home-assistant.io/integrations/mqtt/) in Home Assistant (if not already enabled).
 
-Some devices will now auto-add and be available in Home Assistant via MQTT discovery.  The default discovery topics for the devices follow the pattern:
+Some devices will now auto-add and be available in Home Assistant via [MQTT discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery), consult the table above to see if your devices are supported.  The default discovery topics for the devices follow the pattern:
 `homeassistant/<component>/ener314rt/<deviceId>-<ParameterName>`
 
-For other devices (particularly the 'Control Only' devices) you will need to add them manually by editting your Home Assistant `configuration.yaml` file for the switches and reported values as applicable. For example:
+For other devices (particularly the 'Control Only' devices) you **will need to add them manually** by editting your Home Assistant `configuration.yaml` file for the switches and reported values as applicable. For example:
 ```
 mqtt:
   light:
