@@ -6,5 +6,6 @@
         "username":"node-ener314rt",
         "clean": true
     },
-    "monitoring": true
+    "monitoring": true,
+    "discovery_prefix": "homeassistant/"
 }

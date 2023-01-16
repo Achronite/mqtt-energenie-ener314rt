@@ -91,7 +91,7 @@ process.on('message', msg => {
                             // Invoke C function to do the send
                             if (initialised){
                                 var res = ener314rt.openThingsSwitch(productId, deviceId, switchState, xmits);
-                                // monitoring loop should respond for us
+                                console.log(`DEBUG: openThingsSwitch(${productId}, ${deviceId}, ${switchState}, ${xmits}) returned ${res}`);// monitoring loop should respond for us
                             } else {
                                 console.log(`EMULATION: calling openThingsSwitch( ${productId}, ${deviceId}, ${switchState}, ${xmits})`);
                                 // for emulation mode we need to respond, otherwise monitoring loop will do it for us
@@ -115,15 +115,17 @@ process.on('message', msg => {
             break;
             
         case 'monitor':
-            // start monitoring (if not started already)
             //console.log("energenie: monitor enabled=", msg.enabled);
-            if (!monitoring && initialised) {
-                monitoring = true;
-                //getMonitorMsg();
-                startMonitoringThread();
-                console.log("energenie: Monitoring thread started");
-            } else if (!initialised){
-                console.log("energenie: Monitoring thread cannot be enabled, ENER314-RT unavailable");
+            if (msg.enabled){
+                // start monitoring thread (if not started already)
+                if (!monitoring && initialised) {
+                    monitoring = true;
+                    //getMonitorMsg();
+                    startMonitoringThread();
+                    console.log("energenie: Monitoring thread started");
+                } else if (!initialised){
+                    console.log("energenie: Monitoring thread cannot be started, ENER314-RT unavailable");
+                } 
             }
             break;
         case 'close':
@@ -136,6 +138,15 @@ process.on('message', msg => {
             }
             var res = ener314rt.openThingsCacheCmd(msg.deviceId, msg.otCommand, msg.data);
             console.log(`energenie: cached cmd=${msg.otCommand} res=${res}`);
+            break;
+        case 'discovery':
+            // Update the MQTT discovery topics after requesting devicelist
+            var response = ener314rt.openThingsDeviceList(msg.scan);
+            var discovery = JSON.parse(response);
+            console.log(`energenie.js: discovery returned: ${response}`);
+            msg.numDevices = discovery.numDevices;
+            msg.devices = discovery.devices;
+            process.send(msg);
             break;
         default:
             console.log("energenie: Unknown or missing command:", msg.cmd);

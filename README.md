@@ -216,9 +216,9 @@ The control only devices (any listed in the above table as Device Topic 'ook' or
 mqtt:
   switch:
     - name: "My Switch"
-      command_topic: energenie/ook/567/1/switch/command
+      command_topic: energenie/ook/567/1/command
       optimistic: false
-      state_topic: energenie/ook/567/1/switch/state
+      state_topic: energenie/ook/567/1/state
 ```
 2. Refresh the MQTT configuration in Home Assistant
 3. Hold the button on your device until it starts to flash (holding longer clears the learnt codes).

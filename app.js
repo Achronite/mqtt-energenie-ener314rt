@@ -1,4 +1,6 @@
+// mqtt-energenie-ener314rt app.js
 //
+// Copyright Achronite 2023
 //
 
 // import config from file
@@ -176,7 +178,7 @@ forked.on("message", msg => {
 		case 'monitor':
 			// OpenThings monitor message
 
-			// iterate through the object returned
+			// Iterate through the object returned
 
 			let keys = Object.keys(msg);
 			var productId = null;
@@ -236,7 +238,11 @@ forked.on("message", msg => {
 			})
 
 			break;
-
+		case 'discovery':
+				// device discovery message publish discovery messages to Home Assistant
+				console.log(`discovery found ${msg.numDevices} devices\n`);
+				msg.devices.forEach(publishDiscovery);
+			break;
 
 		case 'init':
 		case 'reset':
@@ -254,3 +260,62 @@ forked.on('close', (code, signal) => {
     clearInterval(intervalId);
 });
 
+function UpdateMQTTDiscovery() {
+	console.log(`sending discovery message`);
+	forked.send({ cmd: "discovery", scan: false });
+}
+
+function publishDiscovery( device, index ){
+	console.log(`>device: ${device.deviceId}`);
+
+	// Each device has specific capabilities, these need mapping to Home Assistant Components
+	// and publishing a config item as applicable @<discovery_prefix>/<component>/[<node_id>/]<object_id>/config
+	if ( device.mfrId == 4){
+		// energenie device
+		var dmsg = { mf: 'energenie', sw: 'ener314rt' };
+		let dev_topic_stub = `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`
+
+		switch( device.productId ){
+			case 1: 
+				dmsg.mdl = "Monitor Plug";
+				break;
+			case 2:
+				dmsg.mdl = "Adapter Plus";
+				// Adaptor plus has 5 parameters
+
+				//1 switch
+				var discoveryTopic = `${CONFIG.discovery_prefix}switch/${device.deviceId}/config`;
+				dmsg.cmd_t = `${dev_topic_stub}switch/command`;
+				dmsg.stat_t = `${dev_topic_stub}switch/state`;
+				dmsg.name   = `${dmsg.mdl}-${device.deviceId}`;
+				dmsg.opt    = false;
+
+				console.log(`>>Topic ${discoveryTopic} \n>>configuration = ${JSON.stringify(dmsg)}`);
+				client.publish(discoveryTopic,JSON.stringify(dmsg));
+
+				break;
+			case 3:
+				dmsg.mdl = "Radiator Valve";
+				break;
+			case 5:
+				dmsg.mdl = "House Monitor";
+				break;
+			case 12:
+				dmsg.mdl = "Motion Sensor";
+				break;
+			case 13:
+				dmsg.mdl = "Open Sensor";
+				break;
+			case 18:
+				dmsg.mdl = "Thermostat";
+				break;
+			default:
+				dmsg.mdl = device.productId;
+		}
+
+	}
+
+}
+
+// After 10 mins update MQTT discovery topics
+setTimeout(  UpdateMQTTDiscovery, 30000);
