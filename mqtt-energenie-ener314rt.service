@@ -8,7 +8,7 @@ Environment=
 Type=simple
 User=pi
 WorkingDirectory=/home/pi/mqtt-energenie-ener314rt
-ExecStart=node app.js
+ExecStart=/usr/bin/node app.js
 Restart=on-failure
 
 [Install]
