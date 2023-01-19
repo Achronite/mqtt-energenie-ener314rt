@@ -1,12 +1,10 @@
 # mqtt-energenie-ener314rt
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-brightgreen.svg)](https://github.com/Achronite/mqtt-energenie-ener314/graphs/commit-activity)
-<!--
 [![Downloads](https://img.shields.io/npm/dm/mqtt-energenie-ener314rt.svg)](https://www.npmjs.com/package/mqtt-energenie-ener314rt)
-[![HitCount](http://hits.dwyl.io/achronite/mqtt-energenie-ener314rt.svg)](http://hits.dwyl.io/achronite/mqtt-energenie-ener314rt)
 ![node](https://img.shields.io/node/v/mqtt-energenie-ener314rt)
 [![Release](https://img.shields.io/github/release-pre/achronite/mqtt-energenie-ener314rt.svg)](https://github.com/Achronite/mqtt-energenie-ener314rt/releases)
+
 [![NPM](https://nodei.co/npm/mqtt-energenie-ener314rt.png)](https://nodei.co/npm/mqtt-energenie-ener314rt/)
---->
 
 MQTT node.js application to control the Energenie line of products via the ENER314-RT add-on board for the Raspberry Pi.
 
@@ -16,9 +14,9 @@ https://energenie4u.co.uk/
 
 
 ## WARNING: THIS REPOSITORY IS UNDER ACTIVE DEVELOPMENT
->I am still actively developing this node.js application.
+>I am actively developing this node.js application.
 
->There are currently lots of DEBUGs in the code and it has yet to be npm or github packaged for release, but the basic code is working as intended and I welcome any testers.  Please provide any feedback in [issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues)
+>There are currently DEBUGs in the code and it has yet to be npm or github packaged for release, but the basic code is working as intended and I welcome any testers.  Please provide any feedback in [issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues)
 
 ## Purpose
 
@@ -29,8 +27,6 @@ There is also a node-red implementation by the same author **node-red-contrib-en
 The number of individual devices this module can control is over 4 million, so it should be suitable for most installations!
 
 >NOTE: This module does not currently support the older boards (ENER314/Pi-Mote), the Energenie Wifi sockets or the MiHome Gateway.
-
-
 
 ## Getting Started
 
@@ -54,23 +50,24 @@ npm install energenie-ener314rt --save
 It should contain the following entities:
 ```
 {
-    "topic_stub": "energenie/",
-    "mqtt_broker": "mqtt://pi3.local",
-    "mqtt_options": {
-        "clientId": "node-ener314rt", 
-        "username":"node-ener314rt",
-        "clean": true
+|topic_stub": "energenie/",|||
+|mqtt_broker": "mqtt://pi3.local",|||
+|mqtt_options": {|||
+    |clientId": "node-ener314rt", |||
+    |username":"node-ener314rt",|||
+    |clean": true|||
     },
-    "monitoring": true,
-    "discovery_prefix": "homeassistant/"
+|monitoring": true,|||
+|discovery_prefix": "homeassistant/"|||
 }
 ```
 * `topic_stub` should contain the base topic where your energenie messages should reside on mqtt, the default value should suit most installations.
 * `mqtt_broker` should contain your MQTT broker address and protocol.
 * Modify the `mqtt_options` section with your [MQTT client options](https://github.com/mqttjs/MQTT.js#client), such as username, password, certificate etc.
 * If you have any energenie 'Control & Monitor' or 'Monitor' devices then set `"monitoring": true` otherwise remove or set false.
+* If you are using this module with Home Assistant include the `discovery_prefix` line as above.  The value shown is the default MQTT discovery topic used by Home Assistant.
 
-5) Run the application manually using the command: ``node app.js``
+5) Run the application manually using the command: ``node app.js``.  When you know this runs OK a system service can then be set-up as shown in the following section.
  
 ## Systemd Service
 
@@ -89,9 +86,10 @@ journalctl -u mqtt-energenie-ener314rt.service
 
 ## Supported Devices
 
-These nodes are designed for energenie RF radio devices in the OOK & FSK (OpenThings) ranges.
+These nodes are designed for energenie RF radio devices in the OOK & FSK (OpenThings) ranges. 
 
-Here is a table showing the Device Topic and if control and monitoring is supoported for each device:
+Here is a table showing the Device Topic and if control, monitoring, MQTT discovery and overall support for each device:
+
 
 | Device | Description | Device Topic | Control | Monitoring | Discovery | Supported | 
 |---|---|:---:|:---:|:---:|:---:|:---:|
@@ -136,11 +134,11 @@ The following table shows some examples of the topics used:
 
 For example the 'Smart Plug+' populates the following topics in MQTT:
 ```
-    "switch/state": <ON/OFF value received from plug>
-    "REAL_POWER/state": <power in Watts being consumed>
-    "REACTIVE_POWER/state": <Power in volt-ampere reactive (VAR)>
-    "VOLTAGE/state": <Power in Volts>            
-    "FREQUENCY/state": <Radio Frequency in Hz>
+|switch/state": <ON/OFF value received from plug>|||
+|REAL_POWER/state": <power in Watts being consumed>|||
+|REACTIVE_POWER/state": <Power in volt-ampere reactive (VAR)>|||
+|VOLTAGE/state": <Power in Volts>            |||
+|FREQUENCY/state": <Radio Frequency in Hz>|||
 ```
 Other devices will return other parameters which you can use. I have provided parameter name and type mapping for the known values for received messages to MQTT topics, please use an MQTT explorer to find ones to use.
 
@@ -155,26 +153,32 @@ Some devices will now auto-add and be available in Home Assistant via [MQTT disc
 `homeassistant/<component>/ener314rt/<deviceId>-<ParameterName>`
 For performance reasons, the discovery information is updated one minute after the program starts, and then every 30 minutes thereafter.
 
-### Manual setup
-For other devices (particularly the 'Control Only' devices) you **will need to add them manually** by editting your Home Assistant `configuration.yaml` file for the switches and reported values as applicable. For example:
+### MQTT Manual setup
+For other devices (particularly the 'Control Only' devices) you will **need to add them manually** by editting your Home Assistant `configuration.yaml` file for lights, switches and reported values as applicable. For example:
 ```
 mqtt:
   light:
-    - unique_id: test_light
-      name: "Test MQTT Light"
+    - unique_id: MIHO008_light1
+      name: "Lounge Light Switch"
       command_topic: energenie/ook/87/1/command
       optimistic: false
       state_topic: energenie/ook/87/1/state
 
-    - unique_id: tree_lights
-      name: "Christmas Tree lights"
-      command_topic: energenie/ook/88/2/command
+  switch:
+    - unique_id: ENER002_socket
+      name: "Coffee Maker"
+      command_topic: energenie/ook/89/1/command
       optimistic: false
-      state_topic: energenie/ook/88/2/state
+      state_topic: energenie/ook/89/1/state
+    - unique_id: ENER010_socket_2
+      name: "Subwoofer"
+      command_topic: energenie/ook/564/2/command
+      optimistic: false
+      state_topic: energenie/ook/564/2/state
 
   sensor:
-    - name: "eTRV Temperature"
-      state_topic: energenie/3/12345/TEMPERATURE/state
+    - name: "Room Temperature"
+      state_topic: energenie/18/12345/TEMPERATURE/state
       device_class: temperature
       unit_of_measurement: "C"
 
@@ -200,6 +204,55 @@ mqtt:
 4. Click the power on button on the dashboard for your device.  This will send an MQTT message to this application, which will send a power-on request for the zone/switch combination set in the command topic.
 5. The device should learn the zone code being sent by the power-on request, the light should stop flashing when successful.
 6. All subsequent calls using the same zone/switch number will cause your device to switch.
+
+## MiHome Radiator Valve (eTRV) Support
+MiHome Thermostatic Radiator valves (eTRV) are supported, but due to the way the eTRV works there may be a delay from when a command is sent to it being processed by the device. See **Command Caching** below.
+
+### eTRV Commands
+The MiHome Thermostatic Radiator valve (eTRV) can accept commands to perform operations, provide diagnostics or perform self tests.  The documented commands are provided in the table below.  For this MQTT implementation most of the commands have been simplified under a single 'Maintenance' topic.  If you are using MQTT Discovery in Home Assistant you should see a 'select' for this on your dashboard.
+
+| Command | MQTT Topic | # | Description | .data | Response Msg |
+|---|:---:|---|---|:---:|
+|CLEAR|Maintenance|0|Cancel current outstanding cached command for the device (set command & retries to 0)||All Msgs|
+|EXERCISE_VALVE|Maintenance|163|Send exercise valve command, recommended once a week to calibrate eTRV||DIAGNOSTICS|
+|SET_LOW_POWER_MODE|Maintenance|164|This is used to enhance battery life by limiting the hunting of the actuator, ie it limits small adjustments to degree of opening, when the room temperature is close to the *TEMP_SET* point. A consequence of the Low Power mode is that it may cause larger errors in controlling room temperature to the set temperature.|0=Off<br>1=On|No*|
+|SET_VALVE_STATE|Maintenance|165|Set valve state|0=Open<br>1=Closed<br>2=Auto (default)|No|
+|REQUEST_DIAGNOTICS|Maintenance|166|Request diagnostic data from device, if all is OK it will return 0. Otherwise see additional monitored values for status messages||DIAGNOSTICS|
+|IDENTIFY|Maintenance|191|Identify the device by making the green light flash on the selected eTRV for 60 seconds||No|
+|SET_REPORTING_INTERVAL|Maintenance|210|Update reporting interval to requested value|300-3600 seconds|No|
+|REQUEST_VOLTAGE|Maintenance|226|Report current voltage of the batteries||VOLTAGE|
+|TEMP_SET|TEMPERATURE|244|Send new target temperature for eTRV.<br>NOTE: The VALVE_STATE must be set to 'Auto' for this to work.|int|No|
+
+> \* Although this will not auto-report, a subsequent call to *REQUEST_DIAGNOTICS* will confirm the *LOW_POWER_MODE* setting
+
+### Command Caching
+Battery powered energenie devices, such as the eTRV or Thermostat do not constantly listen for commands.  For example, the eTRV reports its temperature at the *SET_REPORTING_INTERVAL* (default 5 minutes) after which the receiver is then activated to listen for commands. The receiver only remains active for 200ms or until a message is received.
+
+To cater for these hardware limitations a command will be held until a report is received by the monitor thread from the device; at this point the most recent cached message (only 1 is supported) will be sent to the device.  Messages will continue to be resent until we know they have been succesfully received or until the number of retries has reached 0.  When a command is known to have been processed (e.g DIAGNOSTICS) the 'command' and 'retries' topics are reset to 0.
+
+The reason that a command may be resent multiple times is due to reporting issues. The eTRV devices, unfortunately, do not send acknowledgement for every command type (indicated by a 'No' in the *Response Msg* column in the above table).  This includes the *TEMP_SET* command!  So these commands are always resent for the full number of retries.
+
+> **NOTE:** The performance of node may decrease when a command is cached due to dynamic polling. The frequency that the radio device is polled by the monitor thread automatically increases by a factor of 200 when a command is cached (it goes from checking every 5 seconds to every 25 milliseconds) this dramatically increases the chance of a message being correctly received sooner.
+
+### eTRV Topics
+
+To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code has been added to cache the monitor information for these devices.  An example of the values are shown below, only 'known' values are returned when the eTRV regularly reports.
+
+|Parameter|Description|Topics|Data|Discovery Type|
+|---|---|:---:|:---:|:---:|
+|Maintenance|For sending maintenance commands|state,command|None, Cancel Command, Request Diagnostics, Exercise Valve, Identify, Low Power Mode ON, Low Power Mode OFF, Valve Auto, Valve Open,Valve Closed|select|
+|command|Current cached command being set to eTRV|state,command|None,...|sensor|
+|retries|The number of remaining retries for 'command' to be sent to the device|state,*soon*|0-10|sensor|
+|DIAGNOSTICS|Numeric diagnostic code|state|Numeric||
+|ERRORS|true if an error condition has been detected|state||binary_sensor|
+|ERROR_TEXT|error information|state|text|sensor|
+|EXERCISE_VALVE|The result of the *EXERCISE_VALVE* command|state|success, fail|binary_sensor|
+|LOW_POWER_MODE|eTRV is in low power mode state>|state|ON, OFF|binary_sensor|
+|REPORTING_INTERVAL|Frequency the eTRV will work up and report (in seconds)|command|300-3600|Number|
+|TARGET_TEMP|Target temperature in celcius|command|5-40|Number|
+|TEMPERATURE|The current temperature in celcius|state|float|sensor|
+|VALVE_STATE|Current valve mode/state|state|Auto, Open, Closed|sensor|
+|VOLTAGE|Current battery voltage|state|float|sensor|
 
 ## 'Control Only' OOK Zone Rules
 * Each Energenie **'Control'** or OOK based device can be assigned to a specifc zone (or house code) and a switch number.
