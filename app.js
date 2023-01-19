@@ -412,7 +412,7 @@ forked.on("message", msg => {
 					case 'command':
 						topic_key = key;
 						let cmdTxt = lookupCommand(msg[key]);
-						console.log(`>>lookupCommand(${msg[key]}) returned ${cmdTxt}`);
+						\\console.log(`>>lookupCommand(${msg[key]}) returned ${cmdTxt}`);
 						msg[key] = cmdTxt;
 						break;
 					default:
@@ -549,7 +549,7 @@ function publishDiscovery( device, index ){
 }
 
 function lookupCommand( cmd ){
-	console.log(`lookupCommand ${cmd} ${Number(cmd)}`);
+\\	console.log(`lookupCommand ${cmd} ${Number(cmd)}`);
 	switch( Number(cmd) ){
 		case 0:
 			return 'None';
