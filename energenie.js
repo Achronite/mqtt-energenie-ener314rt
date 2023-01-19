@@ -91,7 +91,7 @@ process.on('message', msg => {
                             // Invoke C function to do the send
                             if (initialised){
                                 var res = ener314rt.openThingsSwitch(productId, deviceId, switchState, xmits);
-                                console.log(`DEBUG: openThingsSwitch(${productId}, ${deviceId}, ${switchState}, ${xmits}) returned ${res}`);// monitoring loop should respond for us
+                                console.log(`energenie: openThingsSwitch(${productId}, ${deviceId}, ${switchState}, ${xmits}) returned ${res}`);// monitoring loop should respond for us
                             } else {
                                 console.log(`EMULATION: calling openThingsSwitch( ${productId}, ${deviceId}, ${switchState}, ${xmits})`);
                                 // for emulation mode we need to respond, otherwise monitoring loop will do it for us
@@ -102,7 +102,14 @@ process.on('message', msg => {
 
                             break;
                         case MIHO013:  //eTRV
-                                break;
+                            if (initialised){
+                                //var res = ener314rt.openThingsSwitch(productId, deviceId, switchState, xmits);
+                                console.log(`energenie: TRV command (${productId}, ${deviceId}, ${switchState}, ${xmits}) returned ${res}`);// monitoring loop should respond for us
+                            } else {
+                                console.log(`EMULATION: not implemented for eTRV`);
+                                // for emulation mode we need to respond, otherwise monitoring loop will do it for us                           
+                            }  
+                            break;
                         
                     }
 
@@ -137,13 +144,22 @@ process.on('message', msg => {
                 msg.data = 0;
             }
             var res = ener314rt.openThingsCacheCmd(msg.deviceId, msg.otCommand, msg.data);
+            if (res == 0){
+                // Notify caching or cancel succesful
+                if (msg.otCommand > 0){
+                    msg.retries = 10;
+                } else {
+                    msg.retries = 0;
+                }
+                process.send(msg);
+            }
             console.log(`energenie: cached cmd=${msg.otCommand} res=${res}`);
             break;
         case 'discovery':
             // Update the MQTT discovery topics after requesting devicelist
             var response = ener314rt.openThingsDeviceList(msg.scan);
             var discovery = JSON.parse(response);
-            console.log(`energenie.js: discovery returned: ${response}`);
+            //console.log(`energenie.js: discovery returned: ${response}`);
             msg.numDevices = discovery.numDevices;
             msg.devices = discovery.devices;
             process.send(msg);

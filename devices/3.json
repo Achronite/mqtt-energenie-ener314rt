@@ -1,0 +1,18 @@
+{"mdl":"Radiator",
+    "parameters":[
+        {"id": "TARGET_TEMP",   "component":"number", "stat_t":"~@/state","cmd_t":"~@/command","config": {"dev_cla":"temperature","unit_of_meas":"°C","icon":"mdi:radiator", "min": 5, "max": 40, "opt": true}},
+        {"id": "VOLTAGE",       "component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"battery","unit_of_meas":"V"}},
+        {"id": "TEMPERATURE",   "component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"temperature","unit_of_meas":"°C"}},   
+        {"id": "EXERCISE_VALVE","component":"binary_sensor", "stat_t":"~@/state","cmd_t":"~@/command","config": {"dev_cla":"moving", "payload_on": "success", "payload_off": "fail"}},
+        {"id": "LOW_POWER_MODE","component":"binary_sensor", "stat_t":"~@/state","cmd_t":"~@/command","config": {}},
+        {"id": "ERRORS",        "component":"binary_sensor", "stat_t":"~@/state","config": {"dev_cla":"problem"}},
+        {"id": "ERROR_TEXT",    "component":"sensor", "stat_t":"~@/state","config": {}},
+        {"id": "VALVE_STATE",   "component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:radiator"}},
+        {"id": "REPORTING_INTERVAL","component":"number","cmd_t":"~@/command","config": {"dev_cla":"time","unit_of_meas":"seconds","min": 300, "max": 3600, "opt": true}},
+        {"id": "retries","component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:cached"}},
+        {"id": "command","component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:traffic-light"}},
+        {"id": "Maintenance", "component":"select","stat_t":"~@/state","cmd_t":"~@/command", "config": {"icon":"mdi:radiator","opt":true,"options":[
+            "None","Cancel Command","Request Diagnostics","Exercise Valve","Identify","Low Power Mode ON","Low Power Mode OFF","Valve Auto","Valve Open","Valve Closed"
+            ]}}
+    ]
+}
