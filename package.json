@@ -1,8 +1,7 @@
 {
   "dependencies": {
     "energenie-ener314rt": "0.6.x",
-    "mqtt": "^4.3.7",
-    "yaml": "^2.2.1"
+    "mqtt": "^4.3.7"
   },
   "name": "mqtt-energenie-ener314rt",
   "description": "MQTT node.js application to control the Energenie line of products via the ENER314-RT add-on board for the Raspberry Pi.",
