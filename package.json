@@ -1,0 +1,33 @@
+{
+  "dependencies": {
+    "energenie-ener314rt": "0.6.x",
+    "mqtt": "^4.3.7",
+    "yaml": "^2.2.1"
+  },
+  "name": "mqtt-energenie-ener314rt",
+  "description": "MQTT node.js application to control the Energenie line of products via the ENER314-RT add-on board for the Raspberry Pi.",
+  "version": "0.1.0",
+  "main": "app.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Achronite/mqtt-energenie-ener314rt.git"
+  },
+  "keywords": [
+    "mqtt",
+    "home-assistant",
+    "homeassistant",
+    "hassio",
+    "energenie",
+    "ener314-rt"
+  ],
+  "author": "Achronite",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Achronite/mqtt-energenie-ener314rt/issues"
+  },
+  "homepage": "https://github.com/Achronite/mqtt-energenie-ener314rt#readme"
+}
