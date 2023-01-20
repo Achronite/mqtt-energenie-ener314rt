@@ -303,8 +303,6 @@ forked.on("message", msg => {
 	// we have a monitor or ACK message, transform into MQTT message
     //console.log("Message from energenie process: ", msg);
 
-	// format state topic string
-	// TODO: deal with multiple return values for FSK
 	switch (msg.cmd){
 		case 'send':
 			var rtn_msg = "UNKNOWN";
@@ -323,7 +321,7 @@ forked.on("message", msg => {
 						console.log("msg.state type = ", typeof(msg.state));
 					}
 					// send single response back via MQTT state topic, setting the retained flag to survive restart on client
-					console.log(`MQTT publishing ${state_topic}: ${rtn_msg} (retained=true)`);
+					console.log(`MQTT publishing ${state_topic}: ${rtn_msg} (retained)`);
 					client.publish(state_topic,rtn_msg,{retain: true});
 					break;
 
@@ -356,12 +354,12 @@ forked.on("message", msg => {
 		case 'monitor':
 			// OpenThings monitor message, or return from cache request
 
-			// Iterate through the object returned
-
 			let keys = Object.keys(msg);
 			var productId = null;
 			var deviceId = null;
-			
+
+			// Iterate through the object returned
+
 			keys.forEach((key) => {
 				topic_key = null;
 				//console.log(`key ${key}=${msg[key]}`);
@@ -401,8 +399,8 @@ forked.on("message", msg => {
 
 					case 'LOW_POWER_MODE':
 					case 'ERRORS':
-						topic_key = key;
 						// other binary fields
+						topic_key = key;
 						if (msg[key] == 1 || msg[key] == '1') {
 							msg[key] = "ON";
 						} else {
@@ -420,7 +418,7 @@ forked.on("message", msg => {
 						topic_key = key;							
 				}
 
-				// send MQTT if we have a valid topic string
+				// send MQTT response (state) if we have a valid topic string
 				if (topic_key !== null && msg.productId !== undefined && msg.deviceId !== undefined) {
 					state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/${topic_key}/state`;
 					state = String(msg[key]);
@@ -428,7 +426,6 @@ forked.on("message", msg => {
 					// send response back via MQTT state topic
 					console.log(`publishing ${state_topic}: ${state}`);
 					client.publish(state_topic,state);
-					pub_options = null;
 
 					// Update Maintenance if retries=0
 					if (topic_key == "retries" && state == '0'){
@@ -449,7 +446,7 @@ forked.on("message", msg => {
 			break;
 
 		case 'cacheCmd':
-			// response from cache Cmd, just store command and retries
+			// response from a cacheCmd, just store the command (as text) and retries
 
 			console.log(`return cache: ${JSON.stringify(msg)}`);
 
@@ -479,8 +476,6 @@ forked.on("message", msg => {
 			break;
 	} // switch msg.cmd
 
-	//{ cmd: 'send', mode: 'ook', zone: cmd_array[MQTTM_OOK_ZONE], switchNum: cmd_array[MQTTM_OOK_SWITCH], switchState: switchState};
-
 });
 
 forked.on('close', (code, signal) => {
@@ -494,9 +489,13 @@ function UpdateMQTTDiscovery() {
 	forked.send({ cmd: "discovery", scan: false });
 }
 
+// Each device has specific capabilities, which map to Home Assistant Components.
+// This function publishes config items for these capabilities at @<discovery_prefix>/<component>/[<node_id>/]<object_id>/config
+//
+// Configuration of what values to publish is externalised to a file for each device product 'devices/<productId>.json'
+//
 function publishDiscovery( device, index ){
-	// Each device has specific capabilities, these need mapping to Home Assistant Components
-	// and publishing a config item as applicable @<discovery_prefix>/<component>/[<node_id>/]<object_id>/config
+
 	if ( device.mfrId == 4){
 		// energenie device
 
@@ -506,6 +505,7 @@ function publishDiscovery( device, index ){
 				console.log(`ERROR: discovery skipped for ${device.deviceId} - discovery file 'devices/${device.productId}.json' missing`);
 			} else {
 				device_defaults = JSON.parse(data);
+
 				console.log(`> Adding discovery config for ${device_defaults.mdl}-${device.deviceId}`);
 				device_defaults.parameters.forEach( (parameter) => {
 					//console.log(`${device.deviceId}> ${parameter.component} ${parameter.id}`);
@@ -515,6 +515,7 @@ function publishDiscovery( device, index ){
 					var name;
 					if ((parameter.component == 'switch') ||
 					    (parameter.component == 'binary_sensor' && (parameter.id == 'MOTION_DETECTOR' || parameter.id == 'DOOR_SENSOR') )) {
+						// Shorten name for obvious parameters
 						name = `${device_defaults.mdl} ${device.deviceId}`;
 					} else if (parameter.id == 'retries') {
 						// pretty command retries
@@ -526,6 +527,7 @@ function publishDiscovery( device, index ){
 					var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
 											parameter.config);
 
+					// replace @ in topics with the address where each of the data items are published (state) or read (command)
 					if (parameter.stat_t){
 						dmsg.stat_t = parameter.stat_t.replace("@", `${device.productId}/${device.deviceId}/${parameter.id}`);
 					}
