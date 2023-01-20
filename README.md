@@ -50,15 +50,15 @@ npm install energenie-ener314rt --save
 It should contain the following entities:
 ```
 {
-|topic_stub": "energenie/",|||
-|mqtt_broker": "mqtt://pi3.local",|||
-|mqtt_options": {|||
-    |clientId": "node-ener314rt", |||
-    |username":"node-ener314rt",|||
-    |clean": true|||
+  "topic_stub": "energenie/",
+  "mqtt_broker": "mqtt://pi3.local",
+  "mqtt_options": {
+    "clientId": "node-ener314rt",
+    "username":"node-ener314rt",
+    "clean": true
     },
-|monitoring": true,|||
-|discovery_prefix": "homeassistant/"|||
+  "monitoring": true,
+  "discovery_prefix": "homeassistant/"
 }
 ```
 * `topic_stub` should contain the base topic where your energenie messages should reside on mqtt, the default value should suit most installations.
@@ -67,8 +67,9 @@ It should contain the following entities:
 * If you have any energenie 'Control & Monitor' or 'Monitor' devices then set `"monitoring": true` otherwise remove or set false.
 * If you are using this module with Home Assistant include the `discovery_prefix` line as above.  The value shown is the default MQTT discovery topic used by Home Assistant.
 
-5) Run the application manually using the command: ``node app.js``.  When you know this runs OK a system service can then be set-up as shown in the following section.
- 
+5) Run the application manually using the command: ``node app.js``.  When you know this runs OK a system service can then be set-up as shown in the [Systemd Service](#systemd-service) below.
+## Enabling The Hardware based SPI driver
+This application works best using the linux hardware based SPI driver (spidev).  The application attempts to open this driver on start-up, if it has not been enabled it falls back to using the software driver. The hardware SPI driver is enabled using `sudo raspi-config` choosing `Interface Options` and `SPI`. Do this whilst this software is not running.  The driver in use is reported in the log on startup.
 ## Systemd Service
 
 Execute the following commands:
@@ -88,7 +89,7 @@ journalctl -u mqtt-energenie-ener314rt.service
 
 These nodes are designed for energenie RF radio devices in the OOK & FSK (OpenThings) ranges. 
 
-Here is a table showing the Device Topic and if control, monitoring, MQTT discovery and overall support for each device:
+Here is a table showing the Device Topic and if control, monitoring, [MQTT discovery](#mqtt-discovery) and overall support for each device:
 
 
 | Device | Description | Device Topic | Control | Monitoring | Discovery | Supported | 
