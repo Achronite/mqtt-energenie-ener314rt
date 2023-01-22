@@ -127,6 +127,7 @@ The following table shows some examples of the topics used:
 |device|example topic stem|command topic|state topic(s)|valid values|
 |---|---|---|---|---|
 |Control only|energenie/ook/*zone*/*switchNum*|*stem*/command|*stem*/state|ON,OFF|
+|MIHO010 Dimmer|energenie/ook/*zone*/dimmer|*stem*/command|*stem*/state|ON,OFF,1-10|
 |MIHO004|energenie/1/*deviceNum*|-|*stem*/REAL_POWER/state<br>*stem*/REACTIVE_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/FREQUENCY/state|Number<br>Number<br>Number<br>Float|
 |MIHO005|energenie/2/*deviceNum*|*stem*/switch/command|*stem*/switch/state<br>*stem*/REAL_POWER/state<br>*stem*/REACTIVE_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/FREQUENCY/state|ON,OFF<br>Number<br>Number<br>Number<br>Float|
 |MIHO006|energenie/5/*deviceNum*|-|*stem*/APPARENT_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/CURRENT/state|Number<br>Float<br>Float|
