@@ -103,7 +103,7 @@ Here is a table showing the Device Topic and if control, monitoring, [MQTT disco
 |MIHO007|MiHome Socket (White)|ook|Yes|No|No|Yes|
 |MIHO008|MiHome Light Switch (White)|ook|Yes|No|No|Yes|
 |MIHO009|MiHome 2 gang Light Switch (White)|ook|Yes|No|No|Yes|
-|MIHO010|MiHome Dimmer Switch (White)|ook|Yes|No|No|*soon*|
+|MIHO010|MiHome Dimmer Switch (White)|ook|Yes|No|No|Yes|
 |MIHO013|MiHome Radiator Valve|3|Cached|Yes|*soon*|*soon*|
 |MIHO014|Single Pole Relay (inline)|ook|Yes|No|No|Yes|
 |MIHO015|MiHome Relay|ook|Yes|No|No|Yes|
@@ -155,7 +155,7 @@ Some devices will now auto-add and be available in Home Assistant via [MQTT disc
 For performance reasons, the discovery information is updated one minute after the program starts, and then every 30 minutes thereafter.
 
 ### MQTT Manual setup
-For other devices (particularly the 'Control Only' devices) you will **need to add them manually** by editting your Home Assistant `configuration.yaml` file for lights, switches and reported values as applicable. For example:
+For other devices (particularly the 'Control Only' devices) you will **need to add them manually** by editting your Home Assistant `configuration.yaml` file for lights, dimmers, switches and reported values as applicable. For example:
 ```
 mqtt:
   light:
@@ -176,9 +176,21 @@ mqtt:
       command_topic: energenie/ook/564/2/command
       optimistic: false
       state_topic: energenie/ook/564/2/state
+    - unique_id: MIHO010_Dimmer1
+      name: "Kitchen Dimmer Switch"
+      command_topic: energenie/ook/669/dimmer/command
+      state_topic: energenie/ook/669/dimmer/state
+      state_value_template: "{{ 'OFF' if value == 'OFF' else 'ON' }}"
+      brightness_state_topic: energenie/ook/669/dimmer/state
+      brightness_command_topic: energenie/ook/669/dimmer/command
+      brightness_scale: 10
+      payload_on: 'ON'
+      payload_off: 'OFF'
+      on_command_type: "brightness"
+      optimistic: false
 
   sensor:
-    - name: "Room Temperature"
+    - name: "MiHome Thermometer Temperature"
       state_topic: energenie/18/12345/TEMPERATURE/state
       device_class: temperature
       unit_of_measurement: "C"

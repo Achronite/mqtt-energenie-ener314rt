@@ -54,14 +54,81 @@ client.on('message', function (topic, msg, packet) {
 		case 'OOK':
 		case 'o':
 			// All ook 1-way devices
+			
+			// Is this request for a dimmer switch?
+			if (cmd_array[MQTTM_OOK_SWITCH] == "dimmer"){
+                /*
+                 translate the brightness level into a switch number with on/off value, where the dimmer switch expects the following inputs
+				  'OFF': Channel 1 off: Turn off
+				   'ON': Channel 1 on: Switch on at the previous light level set  (not used by Home Assistant)
+                    '2': Channel 2 on: Set dimmer to 20% (turn on at 20% if off)
+                    '3': Channel 3 on: Set dimmer to 30% (turn on at 30% if off)
+                    '4': Channel 4 on: Set dimmer to 40% (turn on at 40% if off)
+                    '5': Channel 1 off: Set dimmer to 50% (turn on at 50% if off)
+                    '6': Channel 2 off: Set dimmer to 60% (turn on at 60% if off)
+                    '8': Channel 3 off: Set dimmer to 80% (turn on at 80% if off)
+                   '10': Channel 4 off: Set dimmer to 100% (turn on at 100% if off)
+                */
 
-			//validate on/off request, default to OFF
-			var switchState = false;
-			if (typeof msg == typeof true)
-				switchState = msg;
-			else if (msg == "ON" || msg == "on" || msg == 1 || msg == '1')
-				switchState = true;
-			var ener_cmd = { cmd: 'send', mode: 'ook', zone: cmd_array[MQTTM_OOK_ZONE], switchNum: cmd_array[MQTTM_OOK_SWITCH], switchState: switchState };
+				// default dimmer OFF
+				var switchNum = 1;
+				var switchState = false;
+
+				var brightness = String(msg);
+
+				console.log(brightness);
+				// Brightness steps vary
+				switch (brightness) {
+					case 'OFF':
+					case '0':
+						// off
+						break;
+					case 'ON':		// unused by Home Assistant as it should send brightness
+						switchState = true;
+						break;
+					case '1':
+					case '2':
+						switchNum = 2;
+						switchState = true;
+						break;
+					case '3':
+						switchNum = 3;
+						switchState = true;
+						break;
+					case '4':
+						switchNum = 4;
+						switchState = true;
+						break;
+					case '5':
+					case '6':						
+						switchNum = 2;
+						switchState = false;
+						break;
+					case '7':
+					case '8':
+						switchNum = 3;
+						switchState = false;
+						break;
+					case '9':
+					case '10':
+						switchNum = 4;
+						switchState = false;
+						break;
+					default:
+						console.log(`Invalid brightness ${brightness} for ${cmd_array[MQTTM_OOK_ZONE]}`);
+						return;
+                } // switch
+				var ener_cmd = { cmd: 'send', mode: 'ook', brightness: brightness, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: switchNum, switchState: switchState };
+
+			} else {
+				//validate standard on/off request, default to OFF
+				var switchState = false;
+				if (typeof msg == typeof true)
+					switchState = msg;
+				else if (msg == "ON" || msg == "on" || msg == 1 || msg == '1')
+					switchState = true;
+				var ener_cmd = { cmd: 'send', mode: 'ook', zone: cmd_array[MQTTM_OOK_ZONE], switchNum: cmd_array[MQTTM_OOK_SWITCH], switchState: switchState };
+			}
 			break;
 		case '2':
 		case 2:
@@ -104,8 +171,8 @@ client.on('message', function (topic, msg, packet) {
 			// Convert OpenThings Cmd String to Numeric
 			switch (cmd_array[MQTTM_OT_CMD]) {
 				case 'Maintenance':
-					// Special select processing from Home Assistant
-					// The idea here is to translate the maintainance commands into OpenThings Commands
+					// Special select processing from Home Assistant built for the eTRV
+					// The idea here is to translate the maintenance commands into OpenThings Commands
 					msg_data = 0;
 					switch (String(msg)) {
 						case 'None':
@@ -113,7 +180,6 @@ client.on('message', function (topic, msg, packet) {
 							return;
 						case 'Cancel Command':
 							otCommand = CANCEL;
-							// TODO
 							break;
 						case 'Request Diagnostics':
 							otCommand = DIAGNOSTICS;
@@ -309,18 +375,28 @@ forked.on("message", msg => {
 			var state_topic;
 			switch (msg.mode) {
 				case 'ook':
-					state_topic = `${CONFIG.topic_stub}ook/${msg.zone}/${msg.switchNum}/state`;
-					
-					if (typeof(msg.state) === 'boolean'){
-						if (msg.state) {
-							rtn_msg = "ON";
-						} else {
-							rtn_msg = "OFF";
-						}
+					if (msg.brightness){
+						// dimmer switch uses brightness instead of state: 1-10 (ON at Brightness) or OFF
+						console.log(`dimmer: ${JSON.stringify(msg)}`);
+
+						// use the value of dimmer instead of switchNum
+						state_topic = `${CONFIG.topic_stub}ook/${msg.zone}/dimmer/state`;
+						rtn_msg = String(msg.brightness);
+
 					} else {
-						console.log("msg.state type = ", typeof(msg.state));
+						state_topic = `${CONFIG.topic_stub}ook/${msg.zone}/${msg.switchNum}/state`;
+						
+						if (typeof(msg.state) === 'boolean'){
+							if (msg.state) {
+								rtn_msg = "ON";
+							} else {
+								rtn_msg = "OFF";
+							}
+						} else {
+							console.log("msg.state type = ", typeof(msg.state));
+						}
 					}
-					// send single response back via MQTT state topic, setting the retained flag to survive restart on client
+					// send response back via MQTT state topic, setting the retained flag to survive restart on client
 					console.log(`MQTT publishing ${state_topic}: ${rtn_msg} (retained)`);
 					client.publish(state_topic,rtn_msg,{retain: true});
 					break;
