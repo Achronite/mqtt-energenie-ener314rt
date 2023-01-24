@@ -36,14 +36,19 @@ var ener314rt = require('energenie-ener314rt');
 // import async processing for handling radio comms
 const { fork } = require('child_process');
 
+// setup signal error handling
+process.on('SIGINT', handleSignal );
+//process.on('SIGKILL', handleSignal );
+
+
 // connect to MQTT
-console.log(`connecting to MQTT broker: ${CONFIG.mqtt_broker}`);
+console.log(`INFO: connecting to MQTT broker: ${CONFIG.mqtt_broker}`);
 var client = MQTT.connect(CONFIG.mqtt_broker,CONFIG.mqtt_options);
 //console.log("connected flag  " + client.connected);
 
 //handle incoming MQTT messages
 client.on('message', function (topic, msg, packet) {
-	console.log("MQTT cmd topic=" + topic + ": " + msg);
+	console.log("> MQTT cmd topic=" + topic + ": " + msg);
 
 	// format command for passing to energenie process
 	// format is OOK: 'energenie/c/ook/zone/switchNum/command' or OT: 'energenie/c/2/deviceNum/command'
@@ -76,7 +81,6 @@ client.on('message', function (topic, msg, packet) {
 
 				var brightness = String(msg);
 
-				console.log(brightness);
 				// Brightness steps vary
 				switch (brightness) {
 					case 'OFF':
@@ -115,7 +119,7 @@ client.on('message', function (topic, msg, packet) {
 						switchState = false;
 						break;
 					default:
-						console.log(`Invalid brightness ${brightness} for ${cmd_array[MQTTM_OOK_ZONE]}`);
+						console.log(`ERROR: Invalid brightness ${brightness} for ${cmd_array[MQTTM_OOK_ZONE]}`);
 						return;
                 } // switch
 				var ener_cmd = { cmd: 'send', mode: 'ook', brightness: brightness, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: switchNum, switchState: switchState };
@@ -211,7 +215,7 @@ client.on('message', function (topic, msg, packet) {
 							msg_data = 1;
 							break;
 						default:
-							console.log(`Invalid Maintenance command: ${msg} type:${typeof(msg)}`);
+							console.log(`ERROR: Invalid Maintenance command: ${msg} type:${typeof(msg)}`);
 					}  // msg
 					break;
 
@@ -257,7 +261,7 @@ client.on('message', function (topic, msg, packet) {
 					break;
 				default:
 					// unsupported command
-					console.log(`energenie: Unsupported cacheCmd: ${cmd_array[MQTTM_OT_CMD]} ${msg}`);
+					console.log(`ERROR energenie: Unsupported cacheCmd: ${cmd_array[MQTTM_OT_CMD]} ${msg}`);
 					return;
 			} // switch 3: MQTTM_OT_CMD;
 
@@ -291,7 +295,7 @@ client.on('message', function (topic, msg, packet) {
 					data: msg_data
 				};
 			} else {
-				console.log(otCommand);
+				console.log(`> ${otCommand}`);
 			}
 			break;
 
@@ -301,10 +305,10 @@ client.on('message', function (topic, msg, packet) {
 
 	if (ener_cmd !== undefined) {
 		// Send request to energenie process, any responses are handled by forked.on('message')
-		console.log("sending " + JSON.stringify(ener_cmd));
+		console.log("> " + JSON.stringify(ener_cmd));
 		forked.send(ener_cmd);
 	} else {
-		console.log(`Invalid MQTT device/command ${cmd_array[MQTTM_DEVICE]}:${msg}`)
+		console.log(`ERROR: Invalid MQTT device/command ${cmd_array[MQTTM_DEVICE]}:${msg}`)
 	}
 });
 
@@ -313,11 +317,11 @@ client.on('message', function (topic, msg, packet) {
 ** When MQTT is connected, subscribe to the command topic(s)
 */
 client.on('connect',function(){	
-	console.log("MQTT connected to broker "+ CONFIG.mqtt_broker);
+	console.log("INFO: MQTT connected to broker "+ CONFIG.mqtt_broker);
 
 	// start the monitor loop if configured in config file
 	if (CONFIG.monitoring){
-		console.log("starting monitoring of FSK devices...")
+		console.log("INFO: starting monitoring of FSK devices...")
 		forked.send({ cmd: "monitor", enabled: true });
 	}
 
@@ -331,7 +335,7 @@ client.on('connect',function(){
 	//console.log("subscribing to ",cmd_topic);
 	client.subscribe(cmd_topic,options, function( err ) {
 		if (!err){
-			console.log(`MQTT subscribed to ${cmd_topic}`);
+			console.log(`INFO: MQTT subscribed to ${cmd_topic}`);
 		} else {
 			// error
 		}
@@ -339,14 +343,14 @@ client.on('connect',function(){
 
 	// Enable Periodic MQTT discovery at 1 min, and then every 10 minutes
 	if (CONFIG.discovery_prefix) {
-		console.log(`MQTT discovery enabled at topic '${CONFIG.discovery_prefix}'`);
+		console.log(`INFO: MQTT discovery enabled at topic '${CONFIG.discovery_prefix}'`);
 		// After 1 min update MQTT discovery topics
 		setTimeout(  UpdateMQTTDiscovery, (60 * 1000));
 	
 		// Every 10 minutes update MQTT discovery topics
 		doDiscovery = setInterval(  UpdateMQTTDiscovery, (600 * 1000));
 	} else {
-		console.log("MQTT discovery disabled");
+		console.log("INFO: MQTT discovery disabled");
 	}
 
 })
@@ -354,7 +358,7 @@ client.on('connect',function(){
 
 //handle MQTT errors
 client.on('error',function(error){
-	console.log(`Error '${error}' connecting to MQTT broker: ${CONFIG.mqtt_broker}`);
+	console.log(`ERROR '${error}' connecting to MQTT broker: ${CONFIG.mqtt_broker}`);
 	process.exit(1)
 });
 
@@ -377,7 +381,7 @@ forked.on("message", msg => {
 				case 'ook':
 					if (msg.brightness){
 						// dimmer switch uses brightness instead of state: 1-10 (ON at Brightness) or OFF
-						console.log(`dimmer: ${JSON.stringify(msg)}`);
+						//console.log(`dimmer: ${JSON.stringify(msg)}`);
 
 						// use the value of dimmer instead of switchNum
 						state_topic = `${CONFIG.topic_stub}ook/${msg.zone}/dimmer/state`;
@@ -393,11 +397,11 @@ forked.on("message", msg => {
 								rtn_msg = "OFF";
 							}
 						} else {
-							console.log("msg.state type = ", typeof(msg.state));
+							console.log("ERROR: msg.state type = ", typeof(msg.state));
 						}
 					}
 					// send response back via MQTT state topic, setting the retained flag to survive restart on client
-					console.log(`MQTT publishing ${state_topic}: ${rtn_msg} (retained)`);
+					console.log(`< ${state_topic}: ${rtn_msg} (retained)`);
 					client.publish(state_topic,rtn_msg,{retain: true});
 					break;
 
@@ -417,7 +421,7 @@ forked.on("message", msg => {
 					}
 
 					// send single response back via MQTT state topic
-					console.log("publishing ", state_topic, ": ", rtn_msg);
+					console.log("< ", state_topic, ": ", rtn_msg);
 					client.publish(state_topic,rtn_msg);
 
 					break;
@@ -500,14 +504,14 @@ forked.on("message", msg => {
 					state = String(msg[key]);
 
 					// send response back via MQTT state topic
-					console.log(`publishing ${state_topic}: ${state}`);
+					console.log(`< ${state_topic}: ${state}`);
 					client.publish(state_topic,state);
 
 					// Update Maintenance if retries=0
 					if (topic_key == "retries" && state == '0'){
 						// retries are now empty, also change the Maintenance Select back to None
 						state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/Maintenance/state`;
-						console.log(`publishing ${state_topic}: None`);
+						console.log(`< ${state_topic}: None`);
 						client.publish(state_topic,"None");
 					}
 
@@ -517,14 +521,14 @@ forked.on("message", msg => {
 			break;
 		case 'discovery':
 			// device discovery message publish discovery messages to Home Assistant
-			console.log(`discovery found ${msg.numDevices} devices`);
+			console.log(`INFO: discovery found ${msg.numDevices} devices`);
 			msg.devices.forEach(publishDiscovery);
 			break;
 
 		case 'cacheCmd':
 			// response from a cacheCmd, just store the command (as text) and retries
 
-			console.log(`return cache: ${JSON.stringify(msg)}`);
+			console.log(`^ cached: ${JSON.stringify(msg)}`);
 
 			// send MQTT if we have a valid topic string
 			if (msg.productId !== undefined && msg.deviceId !== undefined) {
@@ -533,7 +537,7 @@ forked.on("message", msg => {
 					state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/retries/state`;
 					state = String(msg.retries);
 					// send response back via MQTT
-					console.log(`publishing ${state_topic}: ${state}`);
+					console.log(`< ${state_topic}: ${state}`);
 					client.publish(state_topic,state);
 				}
 				
@@ -542,7 +546,7 @@ forked.on("message", msg => {
 					state = String(lookupCommand(msg.otCommand));
 
 					// send response back via MQTT
-					console.log(`publishing ${state_topic}: ${state}`);
+					console.log(`< ${state_topic}: ${state}`);
 					client.publish(state_topic,state);
 				}
 			};
@@ -555,14 +559,17 @@ forked.on("message", msg => {
 });
 
 forked.on('close', (code, signal) => {
-    console.log(`ERROR: energenie process has terminated due to receipt of signal ${signal}`);
+    console.log(`INFO: exit due to terminated energenie process. code=${code}, signal=${signal}`);
     // clear interval timer (causes program to exit as nothing left to do!)
-    clearInterval(doDiscovery);
+    //clearInterval(doDiscovery);
+	process.exit();
 });
 
 function UpdateMQTTDiscovery() {
-	console.log(`sending discovery message`);
-	forked.send({ cmd: "discovery", scan: false });
+	if (CONFIG.discovery_prefix){
+		console.log(`> discovery`);
+		forked.send({ cmd: "discovery", scan: false });
+	}
 }
 
 // Each device has specific capabilities, which map to Home Assistant Components.
@@ -582,7 +589,7 @@ function publishDiscovery( device, index ){
 			} else {
 				device_defaults = JSON.parse(data);
 
-				console.log(`> Adding discovery config for ${device_defaults.mdl}-${device.deviceId}`);
+				//console.log(`< discovery config for ${device_defaults.mdl}-${device.deviceId}`);
 				device_defaults.parameters.forEach( (parameter) => {
 					//console.log(`${device.deviceId}> ${parameter.component} ${parameter.id}`);
 					//
@@ -612,7 +619,7 @@ function publishDiscovery( device, index ){
 						dmsg.cmd_t = parameter.cmd_t.replace("@", `${device.productId}/${device.deviceId}/${parameter.id}`);
 					}
 
-					//console.log(`publishing ${discoveryTopic},payload:\n${JSON.stringify(dmsg)}`);
+					console.log(`<C ${discoveryTopic}`);
 					client.publish(discoveryTopic,JSON.stringify(dmsg),{retain: true});
 
 				})
@@ -649,4 +656,21 @@ function lookupCommand( cmd ){
 	return cmd;
 }
 
+// Use single function to handle multiple signals
+function handleSignal(signal) {
+	console.log(`Received signal ${signal}, awaiting shutdown of energenie process...`);
 
+	// terminate discovery loop, and therefore the process
+	if (CONFIG.discovery_prefix) {
+		CONFIG.discovery_prefix = null;
+		clearInterval(doDiscovery);
+	}
+
+	// Gracefully shutdown energenie process
+	//forked.send({ cmd: "close" });
+
+	//disconnect from MQTT
+	client.end();
+
+
+  }
