@@ -21,6 +21,13 @@ const MIHO033 = 13;
 const MIHO069 = 18;
 //const MIHO089|MiHome Click - Smart Button|?|No|Yes||
 
+console.log("energenie: child process started");
+
+// Handle signals cleanly
+process.once('SIGINT', handleSignal);
+process.once('SIGABRT', handleSignal);
+process.once('SIGTERM', handleSignal);
+
 var events = require('events');
 this.events = new events.EventEmitter();
 
@@ -162,7 +169,6 @@ process.on('message', msg => {
             //console.log(`energenie.js: discovery returned: ${response}`);
             msg.numDevices = discovery.numDevices;
             msg.devices = discovery.devices;
-            //err = JSON.flibble();
             process.send(msg);
             break;
         default:
@@ -170,24 +176,44 @@ process.on('message', msg => {
     }
 });
 
+// Crude error handler - Handle uncaught exceptions - exit process cleanly
+process.on('uncaughtException', error => {
+    console.log(`ERROR energenie: unhandled Exception: ${error}`);   
+    process.kill(process.pid, "SIGABRT");
+});
 
-// Handle interrupt signal cleanly
-process.once('SIGINT', handleSignal);
 
 // Use single function to handle signals - assume all will close down
 function handleSignal(signal) {
-	console.log(`energenie: signal ${signal}, closing..`);
-    ener314rt.stopMonitoring();
-    // Allow time for monitor thread to complete after config.timeout and close properly, do this as a cb to not block main event loop
-    setTimeout(function () {
-        ener314rt.closeEner314rt();
-        initialised = false;
-        monitoring = false;
-        console.log(`energenie: done - ${signal}`)
-        process.exit(128+signal);
-    }, 10000);
-  }
+    if (initialised){
+        if (monitoring) {
+            console.log(`energenie: signal ${signal}, closing adaptor and monitoring thread..`);
+            ener314rt.stopMonitoring();
 
+            // Allow time for monitor thread to complete after config.timeout and close properly, do this as a cb to not block main event loop
+            setTimeout(function () {
+                ener314rt.closeEner314rt();
+                initialised = false;
+                monitoring = false;
+                console.log(`energenie: done - ${signal}`)
+                process.exit(128+signal);
+            }, 10000);
+        
+        } else {
+            // no monitoring close immediately
+            console.log(`energenie: signal ${signal}, closing adaptor...`);
+            ener314rt.closeEner314rt();
+            initialised = false;
+            monitoring = false;
+            console.log(`energenie: done - ${signal}`)
+            process.exit(128+signal);        
+        }
+    } else {
+        // not even initialised yet!
+        console.log(`energenie: done - ${signal}`)
+        process.exit(128+signal); }
+
+};
 
 // monitor thread version in ener314rt uses a callback to return monitor messages directly (collected below), it needs the callback passing in
 function startMonitoringThread() {
