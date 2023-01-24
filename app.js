@@ -36,6 +36,8 @@ var ener314rt = require('energenie-ener314rt');
 // import async processing for handling radio comms
 const { fork } = require('child_process');
 
+var discovery = false;
+
 // setup signal error handling
 process.on('SIGINT', handleSignal );
 //process.on('SIGKILL', handleSignal );
@@ -343,6 +345,7 @@ client.on('connect',function(){
 
 	// Enable Periodic MQTT discovery at 1 min, and then every 10 minutes
 	if (CONFIG.discovery_prefix) {
+		discovery = true;
 		console.log(`INFO: MQTT discovery enabled at topic '${CONFIG.discovery_prefix}'`);
 		// After 1 min update MQTT discovery topics
 		setTimeout(  UpdateMQTTDiscovery, (60 * 1000));
@@ -559,6 +562,13 @@ forked.on("message", msg => {
 });
 
 forked.on('close', (code, signal) => {
+    console.log(`INFO: close due to terminated energenie process. code=${code}, signal=${signal}`);
+    // clear interval timer (causes program to exit as nothing left to do!)
+    //clearInterval(doDiscovery);
+	process.exit();
+});
+
+forked.on('exit', (code, signal) => {
     console.log(`INFO: exit due to terminated energenie process. code=${code}, signal=${signal}`);
     // clear interval timer (causes program to exit as nothing left to do!)
     //clearInterval(doDiscovery);
@@ -566,7 +576,7 @@ forked.on('close', (code, signal) => {
 });
 
 function UpdateMQTTDiscovery() {
-	if (CONFIG.discovery_prefix){
+	if (discovery){
 		console.log(`> discovery`);
 		forked.send({ cmd: "discovery", scan: false });
 	}
@@ -661,8 +671,8 @@ function handleSignal(signal) {
 	console.log(`Received signal ${signal}, awaiting shutdown of energenie process...`);
 
 	// terminate discovery loop, and therefore the process
-	if (CONFIG.discovery_prefix) {
-		CONFIG.discovery_prefix = null;
+	if (discovery) {
+		discovery = false;
 		clearInterval(doDiscovery);
 	}
 
