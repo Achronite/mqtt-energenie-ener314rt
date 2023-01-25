@@ -613,19 +613,21 @@ function publishDiscovery( device, index ){
 					var object_id = `${device.deviceId}-${parameter.id}`;
 					var unique_id = `ener314rt-${object_id}`;
 					var name;
+					var group_name = `${device_defaults.mdl} ${device.deviceId}`;
 					if ((parameter.component == 'switch') ||
 					    (parameter.component == 'binary_sensor' && (parameter.id == 'MOTION_DETECTOR' || parameter.id == 'DOOR_SENSOR') )) {
 						// Shorten name for obvious parameters
-						name = `${device_defaults.mdl} ${device.deviceId}`;
+						name = group_name;
 					} else if (parameter.id == 'retries') {
 						// pretty command retries
-						name = `${device_defaults.mdl} ${device.deviceId} command retries`;
+						name = `${group_name} command retries`;
 					} else {
-						name = `${device_defaults.mdl} ${device.deviceId} ${parameter.id.toLowerCase()}`
+						name = `${group_name} ${parameter.id.toLowerCase()}`
 					}
 					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${object_id}/config`;
-					var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
-											parameter.config);
+//					var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
+					var dmsg = Object.assign( { device: { name: `${group_name}`, ids: [`ener314rt-${device.deviceId}`], mdl: `${device_defaults.mdl}`, mf: 'energenie', sw: 'mqtt-ener314rt' }, uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}` },
+											parameter.config,);
 
 					// replace @ in topics with the address where each of the data items are published (state) or read (command)
 					if (parameter.stat_t){
