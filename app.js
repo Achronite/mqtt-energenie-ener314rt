@@ -321,12 +321,6 @@ client.on('message', function (topic, msg, packet) {
 client.on('connect',function(){	
 	console.log("INFO: MQTT connected to broker "+ CONFIG.mqtt_broker);
 
-	// start the monitor loop if configured in config file
-	if (CONFIG.monitoring){
-		console.log("INFO: starting monitoring of FSK devices...")
-		forked.send({ cmd: "monitor", enabled: true });
-	}
-
 	// Subscribe to incoming commands
 	var options={
 		retain:true,
@@ -365,10 +359,23 @@ client.on('error',function(error){
 	process.exit(1)
 });
 
+//Report MQTT close
+client.on('close',function(){
+	console.log(`Disconnected from MQTT broker: ${CONFIG.mqtt_broker}`);
+	//process.exit(1)
+});
 
 // fork energenie process to handle all energenie Rx/Tx
 const forked = fork("energenie.js");
 
+
+forked.on("spawn", msg => {
+	// process started succesfully, request start of the monitor loop if configured in config file
+	if (CONFIG.monitoring){
+		console.log("INFO: starting monitoring of FSK devices...")
+		forked.send({ cmd: "monitor", enabled: true });
+	}
+});
 /*
 ** Handle monitor/results messages returned by energenie
 */
