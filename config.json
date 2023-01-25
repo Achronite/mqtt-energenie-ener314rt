@@ -2,7 +2,6 @@
     "topic_stub": "energenie/",
     "mqtt_broker": "mqtt://pi3.local",
     "mqtt_options": {
-        "clientId": "node-ener314rt", 
         "username":"node-ener314rt",
         "clean": true
     },
