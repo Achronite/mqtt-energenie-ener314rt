@@ -27,6 +27,7 @@ console.log("energenie: child process started");
 process.once('SIGINT', handleSignal);
 process.once('SIGABRT', handleSignal);
 process.once('SIGTERM', handleSignal);
+process.once('SIGHUP', handleSignal);
 
 var events = require('events');
 this.events = new events.EventEmitter();
@@ -144,7 +145,7 @@ process.on('message', msg => {
         case 'close':
             console.log("energenie: closing");
             ener314rt.closeEner314rt();
-            process.exit();
+            process.exit(0);
         case 'cacheCmd':
             // Queue a cached command (usually for eTRV)
             if (msg.data === undefined || msg.data === null){
@@ -196,7 +197,7 @@ function handleSignal(signal) {
                 initialised = false;
                 monitoring = false;
                 console.log(`energenie: done - ${signal}`)
-                process.exit(128+signal);
+                process.exit(3);
             }, 10000);
         
         } else {
@@ -206,12 +207,12 @@ function handleSignal(signal) {
             initialised = false;
             monitoring = false;
             console.log(`energenie: done - ${signal}`)
-            process.exit(128+signal);        
+            process.exit(2);        
         }
     } else {
         // not even initialised yet!
         console.log(`energenie: done - ${signal}`)
-        process.exit(128+signal); }
+        process.exit(1); }
 
 };
 
