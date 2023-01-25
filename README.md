@@ -40,8 +40,7 @@ sudo apt install -y nodejs npm
 3) Install the dependant node modules 'mqtt' and 'energenie-ener314rt'
 ```
 cd mqtt-energenie-ener314rt
-npm install mqtt --save
-npm install energenie-ener314rt --save
+npm install
 ```
 4) Create/edit `config.json` file in the same directory as the install.
 It should contain the following entities configured for your environment:
@@ -50,7 +49,6 @@ It should contain the following entities configured for your environment:
   "topic_stub": "energenie/",
   "mqtt_broker": "mqtt://pi3.local",
   "mqtt_options": {
-    "clientId": "node-ener314rt",
     "username":"node-ener314rt",
     "clean": true
     },
