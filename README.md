@@ -13,16 +13,13 @@ The primary reason this application has been built is to allow integration with 
 https://energenie4u.co.uk/
 
 
-## WARNING: THIS REPOSITORY IS UNDER ACTIVE DEVELOPMENT
->I am actively developing this node.js application.
-
->There are currently DEBUGs in the code and it has yet to be npm or github packaged for release, but the basic code is working as intended and I welcome any testers.  Please provide any feedback in [issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues)
-
 ## Purpose
 
-You can use this node.js application to control and monitor the Energenie MiHome radio based smart devices such as adapters, sockets, lights, thermostats and relays using MQTT messages on a Raspberry Pi with an **ENER314-RT** board installed (see below for full device list).  This is *instead* of operating the devices using a MiHome Gateway, so this module does not require an internet connection.
+This node.js application is designed to run on a Raspberry Pi which has an energenie **ENER314-RT** board installed.
 
-There is also a node-red implementation by the same author **node-red-contrib-energenie-ener314rt**, for native integration with node-red.
+MQTT messages are used to control and monitor the Energenie MiHome radio based smart devices such as adapters, sockets, lights, thermostats and relays (see below for full device list).  This is *instead* of operating the devices using a MiHome Gateway, so this module does not require an internet connection.
+
+There is an alternative node-red implementation by the same author **node-red-contrib-energenie-ener314rt**, for native integration with node-red if you prefer.
 
 The number of individual devices this module can control is over 4 million, so it should be suitable for most installations!
 
@@ -32,7 +29,7 @@ The number of individual devices this module can control is over 4 million, so i
 
 1) Plug in your ENER314-RT-VER01 board from Energenie onto the 26 pin or 40 pin connector of your Raspberry Pi.
 
-2) Ensure that the Raspberry Pi is up to date, and has node.js v10+ or above installed.
+2) Ensure that the Raspberry Pi is up to date, and has node.js v10+ and npm installed.
 For example:
 ```
 sudo apt update
@@ -47,7 +44,7 @@ npm install mqtt --save
 npm install energenie-ener314rt --save
 ```
 4) Create/edit `config.json` file in the same directory as the install.
-It should contain the following entities:
+It should contain the following entities configured for your environment:
 ```
 {
   "topic_stub": "energenie/",
@@ -65,14 +62,14 @@ It should contain the following entities:
 * `mqtt_broker` should contain your MQTT broker address and protocol.
 * Modify the `mqtt_options` section with your [MQTT client options](https://github.com/mqttjs/MQTT.js#client), such as username, password, certificate etc.
 * If you have any energenie 'Control & Monitor' or 'Monitor' devices then set `"monitoring": true` otherwise remove or set false.
-* If you are using this module with Home Assistant include the `discovery_prefix` line as above.  The value shown is the default MQTT discovery topic used by Home Assistant.
+* If you are using this module with Home Assistant include the `discovery_prefix` line as above.  The value shown above is the default MQTT discovery topic used by Home Assistant.
 
-5) Run the application manually using the command: ``node app.js``.  When you know this runs OK a system service can then be set-up as shown in the [Systemd Service](#systemd-service) below.
+5) Run the application manually first using the command: ``node app.js``.  When you know this runs OK a system service can then be set-up as shown in the [Systemd Service](#systemd-service) below.
+
 ## Enabling The Hardware based SPI driver
-This application works best using the linux hardware based SPI driver (spidev).  The application attempts to open this driver on start-up, if it has not been enabled it falls back to using the software driver. The hardware SPI driver is enabled using `sudo raspi-config` choosing `Interface Options` and `SPI`. Do this whilst this software is not running.  The driver in use is reported in the log on startup.
+This application works best using the linux hardware based SPI driver (spidev).  The application attempts to open this driver on start-up, if it has not been enabled it falls back to using the software driver. The hardware SPI driver is enabled using `sudo raspi-config` choosing `Interface Options` and `SPI`. Do this whilst this software is not running.  The driver in use is reported within the log on startup.
 ## Systemd Service
-
-Execute the following commands:
+If you want this application to run unattended automatically create a system service by executing the following commands:
 ```
 sudo ln -s /home/pi/mqtt-energenie-ener314rt/mqtt-energenie-ener314rt.service /lib/systemd/system/
 sudo systemctl daemon-reload
@@ -80,7 +77,7 @@ sudo systemctl start mqtt-energenie-ener314rt
 sudo systemctl enable mqtt-energenie-ener314rt
 ```
 
-To view the logs output from the application, use the following command:
+To view the log output from the application, use the following command:
 ```
 journalctl -u mqtt-energenie-ener314rt.service
 ```
@@ -104,7 +101,7 @@ Here is a table showing the Device Topic and if control, monitoring, [MQTT disco
 |MIHO008|MiHome Light Switch (White)|ook|Yes|No|No|Yes|
 |MIHO009|MiHome 2 gang Light Switch (White)|ook|Yes|No|No|Yes|
 |MIHO010|MiHome Dimmer Switch (White)|ook|Yes|No|No|Yes|
-|MIHO013|MiHome Radiator Valve|3|Cached|Yes|*soon*|*soon*|
+|MIHO013|MiHome Radiator Valve|3|Cached|Yes|Yes|Yes|
 |MIHO014|Single Pole Relay (inline)|ook|Yes|No|No|Yes|
 |MIHO015|MiHome Relay|ook|Yes|No|No|Yes|
 |MIHO021|MiHome Socket (Nickel)|ook|Yes|No|No|Yes|
@@ -126,34 +123,27 @@ The following table shows some examples of the topics used:
 
 |device|example topic stem|command topic|state topic(s)|valid values|
 |---|---|---|---|---|
-|Control only|energenie/ook/*zone*/*switchNum*|*stem*/command|*stem*/state|ON,OFF|
-|MIHO010 Dimmer|energenie/ook/*zone*/dimmer|*stem*/command|*stem*/state|ON,OFF,1-10|
+|MIHO002|energenie/ook/*zone*/*switchNum*|*stem*/command|*stem*/state|ON,OFF|
+|MIHO010|energenie/ook/*zone*/dimmer|*stem*/command|*stem*/state|ON,OFF,1-10|
 |MIHO004|energenie/1/*deviceNum*|-|*stem*/REAL_POWER/state<br>*stem*/REACTIVE_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/FREQUENCY/state|Number<br>Number<br>Number<br>Float|
 |MIHO005|energenie/2/*deviceNum*|*stem*/switch/command|*stem*/switch/state<br>*stem*/REAL_POWER/state<br>*stem*/REACTIVE_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/FREQUENCY/state|ON,OFF<br>Number<br>Number<br>Number<br>Float|
 |MIHO006|energenie/5/*deviceNum*|-|*stem*/APPARENT_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/CURRENT/state|Number<br>Float<br>Float|
+|MIHO013|*(see eTRV topics below)*||||
 |MIHO032|energenie/12/*deviceNum*|-|*stem*/motion/state|ON,OFF|
 |MIHO033|energenie/13/*deviceNum*|-|*stem*/contact/state|ON,OFF|
 
-For example the 'Smart Plug+' populates the following topics in MQTT:
-```
-|switch/state": <ON/OFF value received from plug>|||
-|REAL_POWER/state": <power in Watts being consumed>|||
-|REACTIVE_POWER/state": <Power in volt-ampere reactive (VAR)>|||
-|VOLTAGE/state": <Power in Volts>            |||
-|FREQUENCY/state": <Radio Frequency in Hz>|||
-```
-Other devices will return other parameters which you can use. I have provided parameter name and type mapping for the known values for received messages to MQTT topics, please use an MQTT explorer to find ones to use.
+Other devices will return other OpenThings parameters which you can use. I have provided parameter name and type mapping for the known values for received messages to MQTT topics.
 
-A full parameter list can be found in C/src/achronite/openThings.c if required.
-
+>TIP: You can use an MQTT explorer to show your FSK/OpenThings 'Monitor' devices and their automatically-added reported values.
 
 ## Home Assistant Set-up
 Enable the [MQTT Integration](https://www.home-assistant.io/integrations/mqtt/) in Home Assistant (if not already enabled).
 
 ### MQTT Discovery
-Some devices will now auto-add and be available in Home Assistant via [MQTT discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery), consult the table above to see if your devices are supported.  The default discovery topics for the devices follow the pattern:
+Most MiHome Monitor devices will auto-add and be available in Home Assistant via [MQTT discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery), consult the table above to see if your devices are supported.  The default discovery topics for the devices follow this pattern:
 `homeassistant/<component>/ener314rt/<deviceId>-<ParameterName>`
-For performance reasons, the discovery information is updated one minute after the program starts, and then every 30 minutes thereafter.
+
+The MQTT discovery configuration is updated one minute after the program starts, and then every 10 minutes thereafter for performance reasons.
 
 ### MQTT Manual setup
 For other devices (particularly the 'Control Only' devices) you will **need to add them manually** by editting your Home Assistant `configuration.yaml` file for lights, dimmers, switches and reported values as applicable. For example:
@@ -172,11 +162,13 @@ mqtt:
       command_topic: energenie/ook/89/1/command
       optimistic: false
       state_topic: energenie/ook/89/1/state
+
     - unique_id: ENER010_socket_2
       name: "Subwoofer"
       command_topic: energenie/ook/564/2/command
       optimistic: false
       state_topic: energenie/ook/564/2/state
+
     - unique_id: MIHO010_Dimmer1
       name: "Kitchen Dimmer Switch"
       command_topic: energenie/ook/669/dimmer/command
@@ -197,14 +189,13 @@ mqtt:
       unit_of_measurement: "C"
 
 ```
->NOTE: If you have an 'Control' (Blue) devices these will need to be added manually by teaching the device code (see below)
+>TIP: If you do not know the existing zone and switch number for any of your 'Control Only' (Blue) devices you can 're-teach' the device...
 
->TIP: You can use an MQTT explorer to show the auto-discovered OpenThings 'Monitor' devices reported values.
 
 ### Energenie 'Control Only' OOK device teaching in Home Assistant
 The control only devices (any listed in the above table as Device Topic 'ook' or with a Blue icon on the energenie boxes) need to be taught a zone and switch code.
 
-1. Add an mqtt entry in `configuration.yaml` for your switch or light. These should uniquely reference your device (following the OOK zone rules below).  For example to teach an ENER002 socket to be Zone 567 switch 1 enter the following:
+1. Add an `mqtt` entry in `configuration.yaml` for your switch or light. These should uniquely reference your device (following the OOK zone rules below).  For example to teach an ENER002 socket to be Zone `567` switch `1` enter the following:
 ```
 mqtt:
   switch:
@@ -213,11 +204,18 @@ mqtt:
       optimistic: false
       state_topic: energenie/ook/567/1/state
 ```
-2. Refresh the MQTT configuration in Home Assistant
-3. Hold the button on your device until it starts to flash (holding longer clears the learnt codes).
-4. Click the power on button on the dashboard for your device.  This will send an MQTT message to this application, which will send a power-on request for the zone/switch combination set in the command topic.
+2. Reload the YAML configuration `MANUALLY CONFIGURED MQTT ENTITIES` in Home Assistant Developer Tools
+3. Hold the button on your device until it starts to flash (holding longer clears any previous codes; each device can usually have 2 separate codes).
+4. Click the power on button on the dashboard for your new switch/light device.  This will send an MQTT message to this application, which will send a power-on request for the zone/switch combination set in the command topic.
 5. The device should learn the zone code being sent by the power-on request, the light should stop flashing when successful.
 6. All subsequent calls using the same zone/switch number will cause your device to switch.
+
+## 'Control Only' OOK Zone Rules
+* Each Energenie **'Control'** or OOK based device can be assigned to a specifc zone (or house code) and a switch number.
+* Each zone is encoded as a 20-bit address (1-1048575 decimal).
+* Each zone can contain up to 6 separate switches (1-6) - NOTE: officially energenie state this is only 4 devices (1-4)
+* All devices within the **same** zone can be switched **at the same time** using a switch number of '0'.
+* A default zone '0' can be used to use Energenie's default zone (0x6C6C6).
 
 ## MiHome Radiator Valve (eTRV) Support
 MiHome Thermostatic Radiator valves (eTRV) are supported, but due to the way the eTRV works there may be a delay from when a command is sent to it being processed by the device. See **Command Caching** below.
@@ -226,7 +224,7 @@ MiHome Thermostatic Radiator valves (eTRV) are supported, but due to the way the
 The MiHome Thermostatic Radiator valve (eTRV) can accept commands to perform operations, provide diagnostics or perform self tests.  The documented commands are provided in the table below.  For this MQTT implementation most of the commands have been simplified under a single 'Maintenance' topic.  If you are using MQTT Discovery in Home Assistant you should see a 'select' for this on your dashboard.
 
 | Command | MQTT Topic | # | Description | .data | Response Msg |
-|---|:---:|---|---|:---:|
+|---|:---:|---|---|:---:|---|
 |CLEAR|Maintenance|0|Cancel current outstanding cached command for the device (set command & retries to 0)||All Msgs|
 |EXERCISE_VALVE|Maintenance|163|Send exercise valve command, recommended once a week to calibrate eTRV||DIAGNOSTICS|
 |SET_LOW_POWER_MODE|Maintenance|164|This is used to enhance battery life by limiting the hunting of the actuator, ie it limits small adjustments to degree of opening, when the room temperature is close to the *TEMP_SET* point. A consequence of the Low Power mode is that it may cause larger errors in controlling room temperature to the set temperature.|0=Off<br>1=On|No*|
@@ -250,7 +248,7 @@ The reason that a command may be resent multiple times is due to reporting issue
 
 ### eTRV Topics
 
-To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code has been added to cache the monitor information for these devices.  An example of the values are shown below, only 'known' values are returned when the eTRV regularly reports.
+To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code has been added to also cache the monitor information for these devices.  Examples of the values are shown below, only 'known' values are returned when the eTRV regularly reports.
 
 |Parameter|Description|Topics|Data|Discovery Type|
 |---|---|:---:|:---:|:---:|
@@ -268,13 +266,6 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 |VALVE_STATE|Current valve mode/state|state|Auto, Open, Closed|sensor|
 |VOLTAGE|Current battery voltage|state|float|sensor|
 
-## 'Control Only' OOK Zone Rules
-* Each Energenie **'Control'** or OOK based device can be assigned to a specifc zone (or house code) and a switch number.
-* Each zone is encoded as a 20-bit address (1-1048575 decimal).
-* Each zone can contain up to 6 separate switches (1-6) - NOTE: officially energenie state this is only 4 devices (1-4)
-* All devices within the **same** zone can be switched **at the same time** using a switch number of '0'.
-* A default zone '0' can be used to use Energenie's default zone (0x6C6C6).
-
 ## Change History
 See [CHANGELOG.md](./CHANGELOG.md)
 
@@ -287,11 +278,20 @@ See [CHANGELOG.md](./CHANGELOG.md)
 
 ## Authors
 
-* **Achronite** - *MQTT implementation and dependant Node module* - [Achronite](https://github.com/Achronite/mqtt-energenie-ener314rt)
+* **[Achronite](https://github.com/Achronite/mqtt-energenie-ener314rt)** - *MQTT implementation and dependant Node module* - 
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+
+## This project needs your help!
+I have performed all work to date on this open source, free, software without any help (financial or otherwise) from energenie. Your support provides increased motivation to work on future releases and new features. You can help by sponsoring my work on [GitHub Sponsors](https://github.com/sponsors/Achronite) (one-time/monthly, no service fee).
+
+<a href="https://github.com/sponsors/Achronite" target="_blank" title="Become a sponsor">
+<img src="https://img.shields.io/badge/Github-@Achronite-24292e.svg?maxAge=3600&logo=github" height="25" alt="Become a sponsor">
+</a>
+
+Thank you for your support!
 
 ## Bugs and Future Work
 

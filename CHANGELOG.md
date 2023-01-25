@@ -2,17 +2,26 @@
 
 ## [Unreleased]
 
-* Support for OOK dimmer switch [#3](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/3)
-* Support for setting parameter values for eTRV [#2](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/2)
-* Add support for Home Assistant MQTT discovery [#1](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/1)
+* Home Assistant MQTT discovery for 'Control Only' devices for  [#7](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/7)
+* MiHome Thermostat control & MQTT discovery
+* Improvements to error handling (partial fix is included) [#11](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/11)
+* Periodic eTRV commands [#10](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/10)
+* Update state of all OOK switches within a single device when switch 0 used [#4](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/4)
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
-## [0.1.0] 2023-01-03 Alpha (unpackaged)
+## [0.1.0] 2023-01-25 Alpha
 
 ### Added
-* Initial alpha release, extensive DEBUG logs are still output in this version
-* Support for switched OOK devices is included (excluding dimmer switch)
+* Initial packaged release, logging remains for all MQTT inputs & outputs in this version
+* Support for switched OOK devices is included
 * Switch support for MiHome Adaptor+ included
-* MiHome PIR supported
+* MiHome PIR & Door Sensor supported
 * Async monitoring of all known parameters for FSK/OpenThings devices is included
+* Home Assistant MQTT Discovery added for MiHome devices:
+  - Monitor Plug
+  - Smart Plug+
+  - Radiator Valve (includes simplified commands using 'Maintenance' dropdown)
+  - Whole House Monitor
+  - Door (Contact) Sensor
+  - PIR
