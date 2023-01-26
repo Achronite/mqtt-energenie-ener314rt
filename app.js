@@ -216,6 +216,8 @@ client.on('message', function (topic, msg, packet) {
 							otCommand = VALVE_STATE;
 							msg_data = 1;
 							break;
+						case 'Request Voltage':
+							otCommand = VOLTAGE;
 						default:
 							console.log(`ERROR: Invalid Maintenance command: ${msg} type:${typeof(msg)}`);
 					}  // msg
@@ -671,6 +673,8 @@ function lookupCommand( cmd ){
 			return 'Interval';
 		case IDENTIFY:
 			return 'Identify';
+		case VOLTAGE:
+			return 'Voltage';
 	};
 	return cmd;
 }
