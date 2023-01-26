@@ -242,7 +242,7 @@ client.on('message', function (topic, msg, packet) {
 					otCommand = VALVE_STATE;
 					// Convert valve state to numeric
 					if (typeof (msg) != 'number') {
-						switch (msg) {
+						switch (String(msg)) {
 							case 'Open':
 								msg_data = 0;
 								break;
