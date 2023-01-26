@@ -221,17 +221,19 @@ MiHome Thermostatic Radiator valves (eTRV) are supported, but due to the way the
 ### eTRV Commands
 The MiHome Thermostatic Radiator valve (eTRV) can accept commands to perform operations, provide diagnostics or perform self tests.  The documented commands are provided in the table below.  For this MQTT implementation most of the commands have been simplified under a single 'Maintenance' topic.  If you are using MQTT Discovery in Home Assistant you should see a 'select' for this on your dashboard.
 
-| Command | MQTT Topic | # | Description | .data | Response Msg |
+Where .data shows an entry in "", this is the string that should be sent as the 'Command' for the MQTT Maintenance topic. This can be used if you want to send a request without using the select dropdown set-up by MQTT discovery.
+
+| Command | MQTT Command Topic(s) | # | Description | .data | Response Msg |
 |---|:---:|---|---|:---:|---|
-|CLEAR|Maintenance|0|Cancel current outstanding cached command for the device (set command & retries to 0)||All Msgs|
-|EXERCISE_VALVE|Maintenance|163|Send exercise valve command, recommended once a week to calibrate eTRV||DIAGNOSTICS|
-|SET_LOW_POWER_MODE|Maintenance|164|This is used to enhance battery life by limiting the hunting of the actuator, ie it limits small adjustments to degree of opening, when the room temperature is close to the *TEMP_SET* point. A consequence of the Low Power mode is that it may cause larger errors in controlling room temperature to the set temperature.|0=Off<br>1=On|No*|
-|SET_VALVE_STATE|Maintenance|165|Set valve state|0=Open<br>1=Closed<br>2=Auto (default)|No|
-|REQUEST_DIAGNOTICS|Maintenance|166|Request diagnostic data from device, if all is OK it will return 0. Otherwise see additional monitored values for status messages||DIAGNOSTICS|
-|IDENTIFY|Maintenance|191|Identify the device by making the green light flash on the selected eTRV for 60 seconds||No|
-|SET_REPORTING_INTERVAL|Maintenance|210|Update reporting interval to requested value|300-3600 seconds|No|
-|REQUEST_VOLTAGE|Maintenance|226|Report current voltage of the batteries||VOLTAGE|
-|TEMP_SET|TEMPERATURE|244|Send new target temperature for eTRV.<br>NOTE: The VALVE_STATE must be set to 'Auto' for this to work.|int|No|
+|Clear|Maintenance|0|Cancel current outstanding cached command for the device (set command & retries to 0)| "Cancel Command"|All Msgs|
+|Exercise Valve|Maintenance EXERCISE_VALVE|163|Send exercise valve command, recommended once a week to calibrate eTRV|"Exercise Valve"|DIAGNOSTICS|
+|Low power mode|Maintenance LOW_POWER_MODE|164|This is used to enhance battery life by limiting the hunting of the actuator, ie it limits small adjustments to degree of opening, when the room temperature is close to the *TEMP_SET* point. A consequence of the Low Power mode is that it may cause larger errors in controlling room temperature to the set temperature.|0=Off<br>1=On OR "Low Power Mode ON" "Low Power Mode OFF"|No*|
+|Valve state|Maintenance<br>VALVE_STATE|165|Set valve state|"Valve Auto"<br>"Valve Open"<br>"Valve Closed"<br> OR 0=Open<br>1=Closed<br>2=Auto (default)|No|
+|Diagnostics|Maintenance<br>DIAGNOSTICS|166|Request diagnostic data from device, if all is OK it will return 0. Otherwise see additional monitored values for status messages|"Request Diagnostics"|DIAGNOSTICS|
+|Identify|Maintenance<br>IDENTIFY|191|Identify the device by making the green light flash on the selected eTRV for 60 seconds|"Identify"|No|
+|Reporting Interval|Maintenance REPORTING_INTERVAL|210|Update reporting interval to requested value|300-3600 seconds|No|
+|Voltage|Maintenance<br>VOLTAGE|226|Report current voltage of the batteries||VOLTAGE|
+|Target temperature|TARGET_TEMP|244|Send new target temperature for eTRV.<br>NOTE: The VALVE_STATE must be set to 'Auto' for this to work.|5-40<br>(Integer)|No|
 
 > \* Although this will not auto-report, a subsequent call to *REQUEST_DIAGNOTICS* will confirm the *LOW_POWER_MODE* setting
 
@@ -298,4 +300,4 @@ Future work is detailed on the [github issues page](https://github.com/Achronite
 https://github.com/Achronite/mqtt-energenie-ener314rt/issues
 
 
-@Achronite - January 2023 - v0.1.0 Alpha
+@Achronite - January 2023
