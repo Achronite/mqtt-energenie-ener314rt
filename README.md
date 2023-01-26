@@ -37,12 +37,11 @@ sudo apt upgrade -y
 curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -   // latest long term supported release
 sudo apt install -y nodejs npm
 ```
-3) Install the dependant node modules 'mqtt' and 'energenie-ener314rt'
+3) Install this application and it's dependencies:
 ```
-cd mqtt-energenie-ener314rt
-npm install
+npm install mqtt-energenie-ener314rt
 ```
-4) Create/edit `config.json` file in the same directory as the install.
+4) Create/edit `config.json` file in the same directory as the install (mqtt-energenie-ener314rt).
 It should contain the following entities configured for your environment:
 ```
 {

@@ -14,6 +14,10 @@ Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) 
 
 ### Added
 * Group a devices parameters for MQTT discovery [#15](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/15)
+* Request Voltage added to Maintenance commands for eTRV
+
+### Fixed
+* Issue in MQTT discovery that prevented battery voltage being shown for eTRV and House Energy monitor
 
 ## [0.1.0] 2023-01-25 Alpha
 
