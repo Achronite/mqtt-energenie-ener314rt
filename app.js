@@ -444,7 +444,7 @@ forked.on("message", msg => {
 			break;
 
 		case 'monitor':
-			// OpenThings monitor message, or return from cache request
+			// OpenThings monitor message
 
 			let keys = Object.keys(msg);
 			var productId = null;
@@ -453,7 +453,8 @@ forked.on("message", msg => {
 			// Iterate through the object returned
 
 			keys.forEach((key) => {
-				topic_key = null;
+				let topic_key = key;
+				let retain = false;;
 				//console.log(`key ${key}=${msg[key]}`);
 				switch (key) {
 					case 'productId':
@@ -461,6 +462,8 @@ forked.on("message", msg => {
 					case 'mfrId':
 					case 'timestamp':
 					case 'cmd':
+						// do not send via MQTT
+						topic_key = null;
 						break;
 					case 'SWITCH_STATE':
 						// use friendly name and value
@@ -492,7 +495,6 @@ forked.on("message", msg => {
 					case 'LOW_POWER_MODE':
 					case 'ERRORS':
 						// other binary fields
-						topic_key = key;
 						if (msg[key] == 1 || msg[key] == '1') {
 							msg[key] = "ON";
 						} else {
@@ -500,14 +502,20 @@ forked.on("message", msg => {
 						}
 						break;
 					case 'command':
-						topic_key = key;
 						let cmdTxt = lookupCommand(msg[key]);
 						//console.log(`>>lookupCommand(${msg[key]}) returned ${cmdTxt}`);
 						msg[key] = cmdTxt;
 						break;
+					case 'VALVE_STATE':
+					case 'LOW_POWER_MODE':
+					case 'REPORTING_INTERVAL':
+					case 'TARGET_TEMP':
+					case 'ERROR_TEXT':
+						// These values need to be retained on MQTT as they are irregularly reported
+						retain = true;
+						break;
 					default:
 						// assume an unknown key we need to set in topic tree
-						topic_key = key;							
 				}
 
 				// send MQTT response (state) if we have a valid topic string
@@ -516,8 +524,13 @@ forked.on("message", msg => {
 					state = String(msg[key]);
 
 					// send response back via MQTT state topic
-					console.log(`< ${state_topic}: ${state}`);
-					client.publish(state_topic,state);
+					if (retain) {
+						console.log(`< ${state_topic}: ${state} (retained)`);
+						client.publish(state_topic,state,{retain: true});
+					} else {
+						console.log(`< ${state_topic}: ${state}`);
+						client.publish(state_topic,state);
+					}
 
 					// Update Maintenance if retries=0
 					if (topic_key == "retries" && state == '0'){
@@ -561,6 +574,9 @@ forked.on("message", msg => {
 					console.log(`< ${state_topic}: ${state}`);
 					client.publish(state_topic,state);
 				}
+
+				// TODO - Update state for values that are NEVER returned, e.g. TARGET_TEMP
+				
 			};
 			break;
 		case 'init':
