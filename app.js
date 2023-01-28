@@ -460,11 +460,14 @@ forked.on("message", msg => {
 					case 'productId':
 					case 'deviceId':
 					case 'mfrId':
-					case 'timestamp':
 					case 'cmd':
 						// do not send via MQTT
 						topic_key = null;
 						break;
+					case 'timestamp':
+						// epoch to last_seen timestamp
+						topic_key = 'last_seen';
+						break;							
 					case 'SWITCH_STATE':
 						// use friendly name and value
 						topic_key = 'switch';
