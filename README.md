@@ -122,12 +122,14 @@ The following table shows some examples of the topics used:
 |---|---|---|---|---|
 |MIHO002|energenie/ook/*zone*/*switchNum*|*stem*/command|*stem*/state|ON,OFF|
 |MIHO010|energenie/ook/*zone*/dimmer|*stem*/command|*stem*/state|ON,OFF,1-10|
-|MIHO004|energenie/1/*deviceNum*|-|*stem*/REAL_POWER/state<br>*stem*/REACTIVE_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/FREQUENCY/state|Number<br>Number<br>Number<br>Float|
-|MIHO005|energenie/2/*deviceNum*|*stem*/switch/command|*stem*/switch/state<br>*stem*/REAL_POWER/state<br>*stem*/REACTIVE_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/FREQUENCY/state|ON,OFF<br>Number<br>Number<br>Number<br>Float|
-|MIHO006|energenie/5/*deviceNum*|-|*stem*/APPARENT_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/CURRENT/state|Number<br>Float<br>Float|
+|MIHO004|energenie/1/*deviceNum*|-|*stem*/REAL_POWER/state<br>*stem*/REACTIVE_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/FREQUENCY/state<br>*stem*/last_seen/state|Number<br>Number<br>Number<br>Float<br>epoch|
+|MIHO005|energenie/2/*deviceNum*|*stem*/switch/command|*stem*/switch/state<br>*stem*/REAL_POWER/state<br>*stem*/REACTIVE_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/FREQUENCY/state<br>*stem*/last_seen/state|ON,OFF<br>Number<br>Number<br>Number<br>Float<br>epoch|
+|MIHO006|energenie/5/*deviceNum*|-|*stem*/APPARENT_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/CURRENT/state<br>*stem*/last_seen/state|Number<br>Float<br>Float<br>epoch|
 |MIHO013|*(see eTRV topics below)*||||
-|MIHO032|energenie/12/*deviceNum*|-|*stem*/motion/state|ON,OFF|
-|MIHO033|energenie/13/*deviceNum*|-|*stem*/contact/state|ON,OFF|
+|MIHO032|energenie/12/*deviceNum*|-|*stem*/motion/state<br>*stem*/last_seen/state|ON,OFF|
+|MIHO033|energenie/13/*deviceNum*|-|*stem*/contact/state<br>*stem*/last_seen/state|ON,OFF<br>epoch|
+
+epoch = Unix timestamp
 
 Other devices will return other OpenThings parameters which you can use. I have provided parameter name and type mapping for the known values for received messages to MQTT topics.
 
