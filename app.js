@@ -45,8 +45,54 @@ process.on('SIGINT', handleSignal );
 
 // connect to MQTT
 console.log(`INFO: connecting to MQTT broker: ${CONFIG.mqtt_broker}`);
-var client = MQTT.connect(CONFIG.mqtt_broker,CONFIG.mqtt_options);
+
+// Add last will & testament message to set offline on disconnect
+const availability_topic = `${CONFIG.topic_stub}availability/state`
+var mqtt_options = CONFIG.mqtt_options;
+mqtt_options.will = { topic: availability_topic,  payload: 'offline', retain: true };
+
+var client = MQTT.connect(CONFIG.mqtt_broker,mqtt_options);
 //console.log("connected flag  " + client.connected);
+
+// when MQTT is connected...
+client.on('connect',function(){	
+	console.log("INFO: MQTT connected to broker "+ CONFIG.mqtt_broker);
+	console.log(JSON.stringify(mqtt_options));
+
+	// Subscribe to incoming commands
+	var options={
+		retain:true,
+		qos:0};
+	
+	var cmd_topic= MQTT_SUBTOPIC;
+	//var cmd_topic="esphome/sensors/dht11/#";
+	//console.log("subscribing to ",cmd_topic);
+	client.subscribe(cmd_topic,options, function( err ) {
+		if (!err){
+			console.log(`INFO: MQTT subscribed to ${cmd_topic}`);
+		} else {
+			// error
+		}
+	});
+
+	// set availability to online (offline is handled by LWT - see .connect )
+	console.log(`INFO: setting ${availability_topic} to 'online'`);
+	client.publish(availability_topic, 'online', { retain: true });
+
+	// Enable Periodic MQTT discovery at 1 min, and then every 10 minutes
+	if (CONFIG.discovery_prefix) {
+		discovery = true;
+		console.log(`INFO: MQTT discovery enabled at topic '${CONFIG.discovery_prefix}'`);
+		// After 1 min update MQTT discovery topics
+		setTimeout(  UpdateMQTTDiscovery, (60 * 1000));
+	
+		// Every 10 minutes update MQTT discovery topics
+		doDiscovery = setInterval(  UpdateMQTTDiscovery, (600 * 1000));
+	} else {
+		console.log("INFO: MQTT discovery disabled");
+	}
+
+})
 
 //handle incoming MQTT messages
 client.on('message', function (topic, msg, packet) {
@@ -315,46 +361,7 @@ client.on('message', function (topic, msg, packet) {
 		console.log(`ERROR: Invalid MQTT device/command ${cmd_array[MQTTM_DEVICE]}:${msg}`)
 	}
 });
-
-
-/*
-** When MQTT is connected, subscribe to the command topic(s)
-*/
-client.on('connect',function(){	
-	console.log("INFO: MQTT connected to broker "+ CONFIG.mqtt_broker);
-
-	// Subscribe to incoming commands
-	var options={
-		retain:true,
-		qos:0};
-	
-	var cmd_topic= MQTT_SUBTOPIC;
-	//var cmd_topic="esphome/sensors/dht11/#";
-	//console.log("subscribing to ",cmd_topic);
-	client.subscribe(cmd_topic,options, function( err ) {
-		if (!err){
-			console.log(`INFO: MQTT subscribed to ${cmd_topic}`);
-		} else {
-			// error
-		}
-	});
-
-	// Enable Periodic MQTT discovery at 1 min, and then every 10 minutes
-	if (CONFIG.discovery_prefix) {
-		discovery = true;
-		console.log(`INFO: MQTT discovery enabled at topic '${CONFIG.discovery_prefix}'`);
-		// After 1 min update MQTT discovery topics
-		setTimeout(  UpdateMQTTDiscovery, (60 * 1000));
-	
-		// Every 10 minutes update MQTT discovery topics
-		doDiscovery = setInterval(  UpdateMQTTDiscovery, (600 * 1000));
-	} else {
-		console.log("INFO: MQTT discovery disabled");
-	}
-
-})
-
-
+  
 //handle MQTT errors
 client.on('error',function(error){
 	console.log(`ERROR '${error}' connecting to MQTT broker: ${CONFIG.mqtt_broker}`);
@@ -647,7 +654,8 @@ function publishDiscovery( device, index ){
 					}
 					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${object_id}/config`;
 //					var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
-					var dmsg = Object.assign( { device: { name: `${group_name}`, ids: [`ener314rt-${device.deviceId}`], mdl: `${device_defaults.mdl}`, mf: 'energenie', sw: 'mqtt-ener314rt' }, uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}` },
+					var dmsg = Object.assign( { device: { name: `${group_name}`, ids: [`ener314rt-${device.deviceId}`], mdl: `${device_defaults.mdl}`, mf: 'energenie', sw: 'mqtt-ener314rt' }, 
+											uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, availability_topic: `${CONFIG.topic_stub}availability/state` },
 											parameter.config,);
 
 					// replace @ in topics with the address where each of the data items are published (state) or read (command)
@@ -700,7 +708,12 @@ function lookupCommand( cmd ){
 
 // Use single function to handle multiple signals
 function handleSignal(signal) {
-	console.log(`Received signal ${signal}, awaiting shutdown of energenie process...`);
+	console.log(`INFO: Received ${signal} signal`);
+
+	// publish offline to MQTT (abnormal disconnects also set this via MQTT LWT)
+	console.log(`INFO: setting ${availability_topic} to 'offline'`);
+	client.publish(availability_topic, 'offline', { retain: true });
+	console.log(`INFO: awaiting shutdown of energenie process...`);
 
 	// terminate discovery loop, and therefore the process
 	if (discovery) {
@@ -713,6 +726,5 @@ function handleSignal(signal) {
 
 	//disconnect from MQTT
 	client.end();
-
 
   }

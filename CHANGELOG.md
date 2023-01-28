@@ -15,6 +15,8 @@ Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) 
 ### Added
 * Group a devices parameters for MQTT discovery [#15](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/15)
 * Request Voltage added to Maintenance commands for eTRV
+* Set retain flag on irregular reported values on MQTT for 'VALVE_STATE', 'LOW_POWER_MODE', 'REPORTING_INTERVAL', 'TARGET_TEMP' & 'ERROR_TEXT':
+* Added overall availability of application, including basing all discovery devices on this overall availability topic [#19](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/15)
 
 ### Fixed
 * Issue in MQTT discovery that prevented battery voltage being shown for eTRV and House Energy monitor

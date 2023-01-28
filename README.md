@@ -142,6 +142,8 @@ Most MiHome Monitor devices will auto-add and be available in Home Assistant via
 
 The MQTT discovery configuration is updated one minute after the program starts, and then every 10 minutes thereafter for performance reasons.
 
+>WARNING: Discovery currently bases the availability of OpenThings devices upon the overall availability of this application, it does not currently work to the device level (see #19 for latest)
+
 ### MQTT Manual setup
 For other devices (particularly the 'Control Only' devices) you will **need to add them manually** by editting your Home Assistant `configuration.yaml` file for lights, dimmers, switches and reported values as applicable. For example:
 ```
@@ -152,6 +154,7 @@ mqtt:
       command_topic: energenie/ook/87/1/command
       optimistic: false
       state_topic: energenie/ook/87/1/state
+      availability_topic: energenie/availability/state
 
   switch:
     - unique_id: ENER002_socket
@@ -159,12 +162,14 @@ mqtt:
       command_topic: energenie/ook/89/1/command
       optimistic: false
       state_topic: energenie/ook/89/1/state
+      availability_topic: energenie/availability/state
 
     - unique_id: ENER010_socket_2
       name: "Subwoofer"
       command_topic: energenie/ook/564/2/command
       optimistic: false
       state_topic: energenie/ook/564/2/state
+      availability_topic: energenie/availability/state
 
     - unique_id: MIHO010_Dimmer1
       name: "Kitchen Dimmer Switch"
@@ -178,6 +183,7 @@ mqtt:
       payload_off: 'OFF'
       on_command_type: "brightness"
       optimistic: false
+      availability_topic: energenie/availability/state
 
   sensor:
     - name: "MiHome Thermometer Temperature"
