@@ -474,6 +474,8 @@ forked.on("message", msg => {
 					case 'timestamp':
 						// epoch to last_seen timestamp
 						topic_key = 'last_seen';
+						let isoTS = new Date(msg[key] * 1000).toISOString();
+						msg[key] = isoTS;
 						break;							
 					case 'SWITCH_STATE':
 						// use friendly name and value
