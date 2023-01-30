@@ -1,5 +1,6 @@
 {"mdl":"Motion Sensor",
     "parameters":[
+        {"id": "last_seen", "component":"sensor",        "stat_t":"~@/state","config": {"value_template": "{{ as_datetime(value) }}", "dev_cla": "timestamp"}},
         {"id": "motion",    "component":"binary_sensor", "stat_t":"~@/state","config": {"dev_cla":"motion"}}
     ]
 }

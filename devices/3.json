@@ -11,6 +11,7 @@
         {"id": "REPORTING_INTERVAL","component":"number","cmd_t":"~@/command","config": {"dev_cla":"time","unit_of_meas":"seconds","min": 300, "max": 3600, "opt": true}},
         {"id": "retries","component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:cached"}},
         {"id": "command","component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:traffic-light"}},
+        {"id": "last_seen","component":"sensor", "stat_t":"~@/state","config": {"value_template": "{{ as_datetime(value) }}", "dev_cla": "timestamp"}},
         {"id": "Maintenance", "component":"select","stat_t":"~@/state","cmd_t":"~@/command", "config": {"icon":"mdi:radiator","opt":true,"options":[
             "None","Cancel Command","Request Diagnostics","Request Voltage","Exercise Valve","Identify","Low Power Mode ON","Low Power Mode OFF","Valve Auto","Valve Open","Valve Closed"
             ]}}
