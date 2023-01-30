@@ -196,6 +196,17 @@ mqtt:
 ```
 >TIP: If you do not know the existing zone and switch number for any of your 'Control Only' (Blue) devices you can 're-teach' the device...
 
+### Converting an epoch timestamp
+Timestamps are sent via MQTT as epoch timestamps. To convert these to datetime objects in HA do the following (example shown is the conversion of the eTRV VALVE_TS epoch in Home Assistant `configuration.yaml`):
+```
+mqtt:
+  sensor:
+    - unique_id: XXXX_valve_ts
+      name: "Radiator XXXX Valve Exercised"
+      state_topic: energenie/3/XXXX/VALVE_TS/state
+      value_template: "{{ as_datetime(value) }}"
+      device_class: timestamp
+```
 
 ### Energenie 'Control Only' OOK device teaching in Home Assistant
 The control only devices (any listed in the above table as Device Topic 'ook' or with a Blue icon on the energenie boxes) need to be taught a zone and switch code.
