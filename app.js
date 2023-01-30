@@ -650,7 +650,8 @@ function publishDiscovery( device, index ){
 						// pretty command retries
 						name = `${group_name} command retries`;
 					} else {
-						name = `${group_name} ${parameter.id.toLowerCase()}`
+						// Convert to prettier lowercase entity name without underscores
+						name = `${group_name} ${parameter.id.toLowerCase().replace(/_/g, ' ')}`
 					}
 					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${object_id}/config`;
 //					var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
