@@ -42,6 +42,13 @@ var discovery = false;
 process.on('SIGINT', handleSignal );
 //process.on('SIGKILL', handleSignal );
 
+// read xmit defaults from config file
+let ook_xmits = 20;
+let fsk_xmits = 20;
+if (CONFIG.ook_xmits)
+	ook_xmits = CONFIG.ook_xmits;
+if (CONFIG.fsk_xmits)
+	fsk_xmits = CONFIG.fsk_xmits;
 
 // connect to MQTT
 console.log(`INFO: connecting to MQTT broker: ${CONFIG.mqtt_broker}`);
@@ -170,7 +177,7 @@ client.on('message', function (topic, msg, packet) {
 						console.log(`ERROR: Invalid brightness ${brightness} for ${cmd_array[MQTTM_OOK_ZONE]}`);
 						return;
                 } // switch
-				var ener_cmd = { cmd: 'send', mode: 'ook', brightness: brightness, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: switchNum, switchState: switchState };
+				var ener_cmd = { cmd: 'send', mode: 'ook', repeat: ook_xmits, brightness: brightness, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: switchNum, switchState: switchState };
 
 			} else {
 				//validate standard on/off request, default to OFF
@@ -179,7 +186,7 @@ client.on('message', function (topic, msg, packet) {
 					switchState = msg;
 				else if (msg == "ON" || msg == "on" || msg == 1 || msg == '1')
 					switchState = true;
-				var ener_cmd = { cmd: 'send', mode: 'ook', zone: cmd_array[MQTTM_OOK_ZONE], switchNum: cmd_array[MQTTM_OOK_SWITCH], switchState: switchState };
+				var ener_cmd = { cmd: 'send', mode: 'ook', repeat: ook_xmits, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: cmd_array[MQTTM_OOK_SWITCH], switchState: switchState };
 			}
 			break;
 		case '2':
@@ -193,7 +200,7 @@ client.on('message', function (topic, msg, packet) {
 			else if (msg == "ON" || msg == "on" || msg == 1 || msg == '1')
 				switchState = true;
 			var ener_cmd = {
-				cmd: 'send', mode: 'fsk', command: 'switch',
+				cmd: 'send', mode: 'fsk', repeat: fsk_xmits, command: 'switch',
 				productId: cmd_array[MQTTM_OT_PRODUCTID],
 				deviceId: cmd_array[MQTTM_OT_DEVICEID],
 				switchState: switchState
@@ -286,19 +293,6 @@ client.on('message', function (topic, msg, packet) {
 					break;
 				case 'VALVE_STATE':
 					otCommand = VALVE_STATE;
-					// Convert valve state to numeric
-					if (typeof (msg) != 'number') {
-						switch (String(msg)) {
-							case 'Open':
-								msg_data = 0;
-								break;
-							case 'Closed':
-								msg_data = 1;
-							case 'Auto':
-							default:
-								msg_data = 2;
-						}
-					}
 					break;
 				case 'DIAGNOSTICS':
 					otCommand = DIAGNOSTICS;
@@ -337,7 +331,7 @@ client.on('message', function (topic, msg, packet) {
 
 				// All eTRV commands are cached
 				var ener_cmd = {
-					cmd: 'cacheCmd', mode: 'fsk',
+					cmd: 'cacheCmd', mode: 'fsk', repeat: fsk_xmits,
 					command: cmd_array[MQTTM_OT_CMD],
 					productId: Number(cmd_array[MQTTM_OT_PRODUCTID]),
 					deviceId: Number(cmd_array[MQTTM_OT_DEVICEID]),
@@ -562,8 +556,6 @@ forked.on("message", msg => {
 
 		case 'cacheCmd':
 			// response from a cacheCmd, store the command (as text) and retries
-
-			// TODO: Should I spoof VALVE_STATE and TEMP_SET state?
 
 			console.log(`^ cached: ${JSON.stringify(msg)}`);
 

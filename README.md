@@ -52,7 +52,9 @@ It should contain the following entities configured for your environment:
     "clean": true
     },
   "monitoring": true,
-  "discovery_prefix": "homeassistant/"
+  "discovery_prefix": "homeassistant/",
+  "ook_xmits": 10,
+  "fsk_xmits": 5
 }
 ```
 * `topic_stub` should contain the base topic where your energenie messages should reside on mqtt, the default value should suit most installations.
@@ -60,6 +62,7 @@ It should contain the following entities configured for your environment:
 * Modify the `mqtt_options` section with your [MQTT client options](https://github.com/mqttjs/MQTT.js#client), such as username, password, certificate etc.
 * If you have any energenie 'Control & Monitor' or 'Monitor' devices then set `"monitoring": true` otherwise remove or set false.
 * If you are using this module with Home Assistant include the `discovery_prefix` line as above.  The value shown above is the default MQTT discovery topic used by Home Assistant.
+* `ook_xmits` and `fsk_xmits` (optional) contain the number of times to transmit a radio message for `Control` (OOK) and `Control & Monitor` (FSK) devices.  Defaults to 20 otherwise
 
 5) Run the application manually first using the command: ``node app.js``.  When you know this runs OK a system service can then be set-up as shown in the [Systemd Service](#systemd-service) below.
 
@@ -281,7 +284,7 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 |REPORTING_INTERVAL|Frequency the eTRV will work up and report (in seconds)|command|300-3600|Number|
 |TARGET_TEMP|Target temperature in celcius|command|5-40|Number|
 |TEMPERATURE|The current temperature in celcius|state|float|sensor|
-|VALVE_STATE|Current valve mode/state|state|Auto, Open, Closed|sensor|
+|VALVE_STATE|Current valve mode/state|state|0=Open<br>1=Closed<br>2=Auto|sensor|
 |VOLTAGE|Current battery voltage|state|float|sensor|
 
 ## Change History

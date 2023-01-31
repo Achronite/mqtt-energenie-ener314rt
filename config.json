@@ -6,5 +6,7 @@
         "clean": true
     },
     "monitoring": true,
-    "discovery_prefix": "homeassistant/"
+    "discovery_prefix": "homeassistant/",
+    "ook_xmits": 10,
+    "fsk_xmits": 5
 }
