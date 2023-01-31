@@ -6,8 +6,9 @@
 * Improvements to error handling (partial fix has already been included) [#11](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/11)
 * Periodic eTRV commands [#10](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/10)
 * Update state of all OOK switches within a single device when switch 0 used [#4](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/4)
-* Enhance availability (or publish guidance) on OpenThings devices based on last_seen
+* Enhance availability (or publish guidance) on OpenThings devices based on `last_seen`
 * MiHome Thermostat control & MQTT discovery
+* Configurable xmits for eTRV - requires `energenie-ener314rt` module change
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
