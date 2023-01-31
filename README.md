@@ -37,12 +37,11 @@ sudo apt upgrade -y
 curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -   // latest long term supported release
 sudo apt install -y nodejs npm
 ```
-3) Install the dependant node modules 'mqtt' and 'energenie-ener314rt'
+3) Install this application and it's dependencies:
 ```
-cd mqtt-energenie-ener314rt
-npm install
+npm install mqtt-energenie-ener314rt
 ```
-4) Create/edit `config.json` file in the same directory as the install.
+4) Create/edit `config.json` file in the same directory as the install (mqtt-energenie-ener314rt).
 It should contain the following entities configured for your environment:
 ```
 {
@@ -53,7 +52,9 @@ It should contain the following entities configured for your environment:
     "clean": true
     },
   "monitoring": true,
-  "discovery_prefix": "homeassistant/"
+  "discovery_prefix": "homeassistant/",
+  "ook_xmits": 10,
+  "fsk_xmits": 5
 }
 ```
 * `topic_stub` should contain the base topic where your energenie messages should reside on mqtt, the default value should suit most installations.
@@ -61,6 +62,7 @@ It should contain the following entities configured for your environment:
 * Modify the `mqtt_options` section with your [MQTT client options](https://github.com/mqttjs/MQTT.js#client), such as username, password, certificate etc.
 * If you have any energenie 'Control & Monitor' or 'Monitor' devices then set `"monitoring": true` otherwise remove or set false.
 * If you are using this module with Home Assistant include the `discovery_prefix` line as above.  The value shown above is the default MQTT discovery topic used by Home Assistant.
+* `ook_xmits` and `fsk_xmits` (optional) contain the number of times to transmit a radio message for `Control` (OOK) and `Control & Monitor` (FSK) devices.  Defaults to 20 otherwise
 
 5) Run the application manually first using the command: ``node app.js``.  When you know this runs OK a system service can then be set-up as shown in the [Systemd Service](#systemd-service) below.
 
@@ -119,16 +121,19 @@ The commands and monitor messages are sent/received using MQTT topics.  The topi
 
 The following table shows some examples of the topics used:
 
-|device|example topic stem|command topic|state topic(s)|valid values|
+|device|topic stem (~)|command topic|state topic(s)|valid values|
 |---|---|---|---|---|
-|MIHO002|energenie/ook/*zone*/*switchNum*|*stem*/command|*stem*/state|ON,OFF|
-|MIHO010|energenie/ook/*zone*/dimmer|*stem*/command|*stem*/state|ON,OFF,1-10|
-|MIHO004|energenie/1/*deviceNum*|-|*stem*/REAL_POWER/state<br>*stem*/REACTIVE_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/FREQUENCY/state|Number<br>Number<br>Number<br>Float|
-|MIHO005|energenie/2/*deviceNum*|*stem*/switch/command|*stem*/switch/state<br>*stem*/REAL_POWER/state<br>*stem*/REACTIVE_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/FREQUENCY/state|ON,OFF<br>Number<br>Number<br>Number<br>Float|
-|MIHO006|energenie/5/*deviceNum*|-|*stem*/APPARENT_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/CURRENT/state|Number<br>Float<br>Float|
+| All |energenie/availability| |~/state|online,offline|
+|MIHO002|energenie/ook/*zone*/*switchNum*|~/command|~/state|ON,OFF|
+|MIHO010|energenie/ook/*zone*/dimmer|~/command|~/state|ON,OFF,1-10|
+|MIHO004|energenie/1/*deviceNum*|-|~/REAL_POWER/state<br>~/REACTIVE_POWER/state<br>~/VOLTAGE/state<br>~/FREQUENCY/state<br>~/last_seen/state|Number<br>Number<br>Number<br>Float<br>epoch|
+|MIHO005|energenie/2/*deviceNum*|~/switch/command|~/switch/state<br>~/REAL_POWER/state<br>~/REACTIVE_POWER/state<br>~/VOLTAGE/state<br>~/FREQUENCY/state<br>~/last_seen/state|ON,OFF<br>Number<br>Number<br>Number<br>Float<br>epoch|
+|MIHO006|energenie/5/*deviceNum*|-|~/APPARENT_POWER/state<br>~/VOLTAGE/state<br>~/CURRENT/state<br>~/last_seen/state|Number<br>Float<br>Float<br>epoch|
 |MIHO013|*(see eTRV topics below)*||||
-|MIHO032|energenie/12/*deviceNum*|-|*stem*/motion/state|ON,OFF|
-|MIHO033|energenie/13/*deviceNum*|-|*stem*/contact/state|ON,OFF|
+|MIHO032|energenie/12/*deviceNum*|-|~/motion/state<br>~/last_seen/state|ON,OFF|
+|MIHO033|energenie/13/*deviceNum*|-|~/contact/state<br>~/last_seen/state|ON,OFF<br>epoch|
+
+epoch = Unix timestamp
 
 Other devices will return other OpenThings parameters which you can use. I have provided parameter name and type mapping for the known values for received messages to MQTT topics.
 
@@ -138,10 +143,11 @@ Other devices will return other OpenThings parameters which you can use. I have 
 Enable the [MQTT Integration](https://www.home-assistant.io/integrations/mqtt/) in Home Assistant (if not already enabled).
 
 ### MQTT Discovery
-Most MiHome Monitor devices will auto-add and be available in Home Assistant via [MQTT discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery), consult the table above to see if your devices are supported.  The default discovery topics for the devices follow this pattern:
-`homeassistant/<component>/ener314rt/<deviceId>-<ParameterName>`
+Most MiHome Monitor devices will auto-add and be available in Home Assistant via [MQTT discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery), consult the table above to see if your devices are supported.  The default discovery topics for the devices follow the pattern `homeassistant/<component>/ener314rt/<deviceId>-<ParameterName>`, the value `homeassistant/` can be changed in the `config.json` file if your discovery topic is configured differently.
 
-The MQTT discovery configuration is updated one minute after the program starts, and then every 10 minutes thereafter for performance reasons.
+The MQTT discovery configuration is updated one minute after the program starts for seen devices, and then every 10 minutes thereafter for performance reasons.
+
+>WARNING: Discovery currently bases the availability of OpenThings devices upon the overall availability of this application (MQTT topic: energenie/availability/state), it does not currently work to the device level (see #19 for latest)
 
 ### MQTT Manual setup
 For other devices (particularly the 'Control Only' devices) you will **need to add them manually** by editting your Home Assistant `configuration.yaml` file for lights, dimmers, switches and reported values as applicable. For example:
@@ -153,6 +159,7 @@ mqtt:
       command_topic: energenie/ook/87/1/command
       optimistic: false
       state_topic: energenie/ook/87/1/state
+      availability_topic: energenie/availability/state
 
   switch:
     - unique_id: ENER002_socket
@@ -160,12 +167,14 @@ mqtt:
       command_topic: energenie/ook/89/1/command
       optimistic: false
       state_topic: energenie/ook/89/1/state
+      availability_topic: energenie/availability/state
 
     - unique_id: ENER010_socket_2
       name: "Subwoofer"
       command_topic: energenie/ook/564/2/command
       optimistic: false
       state_topic: energenie/ook/564/2/state
+      availability_topic: energenie/availability/state
 
     - unique_id: MIHO010_Dimmer1
       name: "Kitchen Dimmer Switch"
@@ -179,6 +188,7 @@ mqtt:
       payload_off: 'OFF'
       on_command_type: "brightness"
       optimistic: false
+      availability_topic: energenie/availability/state
 
   sensor:
     - name: "MiHome Thermometer Temperature"
@@ -189,6 +199,17 @@ mqtt:
 ```
 >TIP: If you do not know the existing zone and switch number for any of your 'Control Only' (Blue) devices you can 're-teach' the device...
 
+### Converting an epoch timestamp
+Timestamps are sent via MQTT as epoch timestamps. To convert these to datetime objects in HA do the following (example shown is the conversion of the eTRV VALVE_TS epoch in Home Assistant `configuration.yaml`):
+```
+mqtt:
+  sensor:
+    - unique_id: XXXX_valve_ts
+      name: "Radiator XXXX Valve Exercised"
+      state_topic: energenie/3/XXXX/VALVE_TS/state
+      value_template: "{{ as_datetime(value) }}"
+      device_class: timestamp
+```
 
 ### Energenie 'Control Only' OOK device teaching in Home Assistant
 The control only devices (any listed in the above table as Device Topic 'ook' or with a Blue icon on the energenie boxes) need to be taught a zone and switch code.
@@ -221,17 +242,19 @@ MiHome Thermostatic Radiator valves (eTRV) are supported, but due to the way the
 ### eTRV Commands
 The MiHome Thermostatic Radiator valve (eTRV) can accept commands to perform operations, provide diagnostics or perform self tests.  The documented commands are provided in the table below.  For this MQTT implementation most of the commands have been simplified under a single 'Maintenance' topic.  If you are using MQTT Discovery in Home Assistant you should see a 'select' for this on your dashboard.
 
-| Command | MQTT Topic | # | Description | .data | Response Msg |
+Where .data shows an entry in "", this is the string that should be sent as the 'Command' for the MQTT Maintenance topic. This can be used if you want to send a request without using the select dropdown set-up by MQTT discovery.
+
+| Command | MQTT Command Topic(s) | # | Description | .data | Response Msg |
 |---|:---:|---|---|:---:|---|
-|CLEAR|Maintenance|0|Cancel current outstanding cached command for the device (set command & retries to 0)||All Msgs|
-|EXERCISE_VALVE|Maintenance|163|Send exercise valve command, recommended once a week to calibrate eTRV||DIAGNOSTICS|
-|SET_LOW_POWER_MODE|Maintenance|164|This is used to enhance battery life by limiting the hunting of the actuator, ie it limits small adjustments to degree of opening, when the room temperature is close to the *TEMP_SET* point. A consequence of the Low Power mode is that it may cause larger errors in controlling room temperature to the set temperature.|0=Off<br>1=On|No*|
-|SET_VALVE_STATE|Maintenance|165|Set valve state|0=Open<br>1=Closed<br>2=Auto (default)|No|
-|REQUEST_DIAGNOTICS|Maintenance|166|Request diagnostic data from device, if all is OK it will return 0. Otherwise see additional monitored values for status messages||DIAGNOSTICS|
-|IDENTIFY|Maintenance|191|Identify the device by making the green light flash on the selected eTRV for 60 seconds||No|
-|SET_REPORTING_INTERVAL|Maintenance|210|Update reporting interval to requested value|300-3600 seconds|No|
-|REQUEST_VOLTAGE|Maintenance|226|Report current voltage of the batteries||VOLTAGE|
-|TEMP_SET|TEMPERATURE|244|Send new target temperature for eTRV.<br>NOTE: The VALVE_STATE must be set to 'Auto' for this to work.|int|No|
+|Clear|Maintenance|0|Cancel current outstanding cached command for the device (set command & retries to 0)| "Cancel Command"|All Msgs|
+|Exercise Valve|Maintenance EXERCISE_VALVE|163|Send exercise valve command, recommended once a week to calibrate eTRV|"Exercise Valve"|DIAGNOSTICS|
+|Low power mode|Maintenance LOW_POWER_MODE|164|This is used to enhance battery life by limiting the hunting of the actuator, ie it limits small adjustments to degree of opening, when the room temperature is close to the *TEMP_SET* point. A consequence of the Low Power mode is that it may cause larger errors in controlling room temperature to the set temperature.|0=Off<br>1=On OR "Low Power Mode ON" "Low Power Mode OFF"|No*|
+|Valve state|Maintenance<br>VALVE_STATE|165|Set valve state|"Valve Auto"<br>"Valve Open"<br>"Valve Closed"<br> OR 0=Open<br>1=Closed<br>2=Auto (default)|No|
+|Diagnostics|Maintenance<br>DIAGNOSTICS|166|Request diagnostic data from device, if all is OK it will return 0. Otherwise see additional monitored values for status messages|"Request Diagnostics"|DIAGNOSTICS|
+|Identify|Maintenance<br>IDENTIFY|191|Identify the device by making the green light flash on the selected eTRV for 60 seconds|"Identify"|No|
+|Reporting Interval|Maintenance REPORTING_INTERVAL|210|Update reporting interval to requested value|300-3600 seconds|No|
+|Voltage|Maintenance<br>VOLTAGE|226|Report current voltage of the batteries||VOLTAGE|
+|Target temperature|TARGET_TEMP|244|Send new target temperature for eTRV.<br>NOTE: The VALVE_STATE must be set to 'Auto' for this to work.|5-40<br>(Integer)|No|
 
 > \* Although this will not auto-report, a subsequent call to *REQUEST_DIAGNOTICS* will confirm the *LOW_POWER_MODE* setting
 
@@ -261,7 +284,7 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 |REPORTING_INTERVAL|Frequency the eTRV will work up and report (in seconds)|command|300-3600|Number|
 |TARGET_TEMP|Target temperature in celcius|command|5-40|Number|
 |TEMPERATURE|The current temperature in celcius|state|float|sensor|
-|VALVE_STATE|Current valve mode/state|state|Auto, Open, Closed|sensor|
+|VALVE_STATE|Current valve mode/state|state|0=Open<br>1=Closed<br>2=Auto|sensor|
 |VOLTAGE|Current battery voltage|state|float|sensor|
 
 ## Change History
@@ -298,4 +321,4 @@ Future work is detailed on the [github issues page](https://github.com/Achronite
 https://github.com/Achronite/mqtt-energenie-ener314rt/issues
 
 
-@Achronite - January 2023 - v0.1.0 Alpha
+@Achronite - January 2023
