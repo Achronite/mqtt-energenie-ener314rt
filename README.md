@@ -47,7 +47,7 @@ unzip master.zip
 
 5) Install node's dependencies:
 ```
-npm install mqtt-energenie-ener314rt
+npm install
 ```
 6) Create/edit `config.json` file in the same directory as the install (mqtt-energenie-ener314rt).
 It should contain the following entities configured for your environment:
