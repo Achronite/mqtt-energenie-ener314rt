@@ -11,16 +11,18 @@
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
-## [0.1.1] 2023-01-XX Alpha
+## [0.1.1] 2023-01-31 Alpha
 
 ### Added
-* Group a devices parameters for MQTT discovery [#15](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/15)
+* Grouped a devices parameters for HA MQTT discovery [#15](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/15)
 * Request Voltage added to Maintenance commands for eTRV
 * Set retain flag on irregular reported values on MQTT for 'VALVE_STATE', 'LOW_POWER_MODE', 'REPORTING_INTERVAL', 'TARGET_TEMP' & 'ERROR_TEXT':
 * Added 'last_seen' topic as epoch for all OpenThings devices at device level [#18](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/18)
 * Guidance added to README for formatting epoch timestamps in Home Assistant
 * Added overall availability of application, including basing all discovery devices on this overall availability topic [#19](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/15)
-* Replaced underscores with spaces for MQTT discovery entity namese
+* Replaced underscores with spaces for MQTT discovery entity names
+* Reduced MQTT discovery message lengths by expanding '~' to include the device type and id
+* Implemented 'climate' card for applicable eTRV parameters in MQTT discovery [#16](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/16)
 
 ### Fixed
 * Issue in MQTT discovery that prevented battery voltage being shown for eTRV and House Energy monitor
