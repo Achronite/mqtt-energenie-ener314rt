@@ -579,7 +579,15 @@ forked.on("message", msg => {
 					client.publish(state_topic,state);
 				}
 
-				// TODO - Update state for values that are NEVER returned, e.g. TARGET_TEMP
+				// Store cached state for values that are NEVER returned by eTRV monitor messages (confirmed by energenie)
+				if (msg.productId == 3 && msg.command == 'VALVE_STATE'){
+					state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/${msg.command}/state`;
+					state = String(msg.data);
+
+					// send response back via MQTT
+					console.log(`< ${state_topic}: ${state} (optimistic retained)`);
+					client.publish(state_topic,state,{retain: true});
+				}
 				
 			};
 			break;
