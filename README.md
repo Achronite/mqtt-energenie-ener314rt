@@ -37,11 +37,19 @@ sudo apt upgrade -y
 curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -   // latest long term supported release
 sudo apt install -y nodejs npm
 ```
-3) Install this application and it's dependencies:
+3) Download this application e.g:
+```
+wget https://github.com/Achronite/mqtt-energenie-ener314rt/archive/refs/heads/master.zip
+unzip master.zip
+```
+
+4) `cd mqtt-energenie-ener314rt`
+
+5) Install node's dependencies:
 ```
 npm install mqtt-energenie-ener314rt
 ```
-4) Create/edit `config.json` file in the same directory as the install (mqtt-energenie-ener314rt).
+6) Create/edit `config.json` file in the same directory as the install (mqtt-energenie-ener314rt).
 It should contain the following entities configured for your environment:
 ```
 {
@@ -64,7 +72,7 @@ It should contain the following entities configured for your environment:
 * If you are using this module with Home Assistant include the `discovery_prefix` line as above.  The value shown above is the default MQTT discovery topic used by Home Assistant.
 * `ook_xmits` and `fsk_xmits` (optional) contain the number of times to transmit a radio message for `Control` (OOK) and `Control & Monitor` (FSK) devices.  Defaults to 20 otherwise
 
-5) Run the application manually first using the command: ``node app.js``.  When you know this runs OK a system service can then be set-up as shown in the [Systemd Service](#systemd-service) below.
+7) Run the application manually first using the command: ``node app.js``.  When you know this runs OK a system service can then be set-up as shown in the [Systemd Service](#systemd-service) below.
 
 ## Enabling The Hardware based SPI driver
 This application works best using the linux hardware based SPI driver (spidev).  The application attempts to open this driver on start-up, if it has not been enabled it falls back to using the software driver. The hardware SPI driver is enabled using `sudo raspi-config` choosing `Interface Options` and `SPI`. Do this whilst this software is not running.  The driver in use is reported within the log on startup.
@@ -127,11 +135,11 @@ The following table shows some examples of the topics used:
 |MIHO002|energenie/ook/*zone*/*switchNum*|~/command|~/state|ON,OFF|
 |MIHO010|energenie/ook/*zone*/dimmer|~/command|~/state|ON,OFF,1-10|
 |MIHO004|energenie/1/*deviceNum*|-|~/REAL_POWER/state<br>~/REACTIVE_POWER/state<br>~/VOLTAGE/state<br>~/FREQUENCY/state<br>~/last_seen/state|Number<br>Number<br>Number<br>Float<br>epoch|
-|MIHO005|energenie/2/*deviceNum*|~/switch/command|~/switch/state<br>~/REAL_POWER/state<br>~/REACTIVE_POWER/state<br>~/VOLTAGE/state<br>~/FREQUENCY/state<br>~/last_seen/state|ON,OFF<br>Number<br>Number<br>Number<br>Float<br>epoch|
-|MIHO006|energenie/5/*deviceNum*|-|~/APPARENT_POWER/state<br>~/VOLTAGE/state<br>~/CURRENT/state<br>~/last_seen/state|Number<br>Float<br>Float<br>epoch|
+|MIHO005|energenie/2/*deviceNum*|~/switch/command|\~/switch/state<br>\~/REAL_POWER/state<br>\~/REACTIVE_POWER/state<br>\~/VOLTAGE/state<br>\~/FREQUENCY/state<br>\~/last_seen/state|ON,OFF<br>Number<br>Number<br>Number<br>Float<br>epoch|
+|MIHO006|energenie/5/*deviceNum*|-|\~/APPARENT_POWER/state<br>\~/VOLTAGE/state<br>\~/CURRENT/state<br>\~/last_seen/state|Number<br>Float<br>Float<br>epoch|
 |MIHO013|*(see eTRV topics below)*||||
-|MIHO032|energenie/12/*deviceNum*|-|~/motion/state<br>~/last_seen/state|ON,OFF|
-|MIHO033|energenie/13/*deviceNum*|-|~/contact/state<br>~/last_seen/state|ON,OFF<br>epoch|
+|MIHO032|energenie/12/*deviceNum*|-|\~/motion/state<br>\~/last_seen/state|ON,OFF|
+|MIHO033|energenie/13/*deviceNum*|-|\~/contact/state<br>\~/last_seen/state|ON,OFF<br>epoch|
 
 epoch = Unix timestamp
 
