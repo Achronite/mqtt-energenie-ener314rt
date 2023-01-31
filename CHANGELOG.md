@@ -12,7 +12,7 @@
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
-## [0.1.1] 2023-01-31 Alpha
+## [0.2.0] 2023-01-31 Alpha
 
 ### Added
 * Grouped a devices parameters for HA MQTT discovery [#15](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/15)
