@@ -1,19 +1,25 @@
 {"mdl":"Radiator",
     "parameters":[
-        {"id": "TARGET_TEMP",   "component":"number", "stat_t":"~@/state","cmd_t":"~@/command","config": {"dev_cla":"temperature","unit_of_meas":"°C","icon":"mdi:radiator", "min": 5, "max": 40, "opt": true}},
         {"id": "VOLTAGE",       "component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:battery","unit_of_meas":"V"}},
-        {"id": "TEMPERATURE",   "component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"temperature","unit_of_meas":"°C"}},   
         {"id": "EXERCISE_VALVE","component":"binary_sensor", "stat_t":"~@/state","cmd_t":"~@/command","config": {"dev_cla":"moving", "payload_on": "success", "payload_off": "fail"}},
         {"id": "LOW_POWER_MODE","component":"binary_sensor", "stat_t":"~@/state","cmd_t":"~@/command","config": {}},
         {"id": "ERRORS",        "component":"binary_sensor", "stat_t":"~@/state","config": {"dev_cla":"problem", "ent_cat": "diagnostic", "en": false}},
         {"id": "ERROR_TEXT",    "component":"sensor", "stat_t":"~@/state","config": {"ent_cat": "diagnostic", "en": false}},
-        {"id": "VALVE_STATE",   "component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:radiator"}},
         {"id": "REPORTING_INTERVAL","component":"number","cmd_t":"~@/command","config": {"dev_cla":"time","unit_of_meas":"seconds","min": 300, "max": 3600, "opt": true}},
         {"id": "retries","component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:cached"}},
         {"id": "command","component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:traffic-light"}},
         {"id": "last_seen","component":"sensor", "stat_t":"~@/state","config": {"value_template": "{{ as_datetime(value) }}", "dev_cla": "timestamp"}},
         {"id": "Maintenance", "component":"select","stat_t":"~@/state","cmd_t":"~@/command", "config": {"icon":"mdi:radiator","opt":true,"options":[
             "None","Cancel Command","Request Diagnostics","Request Voltage","Exercise Valve","Identify","Low Power Mode ON","Low Power Mode OFF","Valve Auto","Valve Open","Valve Closed"
-            ]}}
+            ]}},
+        {"id": "Climate_Control","component":"climate","config": {
+            "current_temperature_topic": "~TEMPERATURE/state",
+            "max_temp": 40, "min_temp": 5,
+            "modes": ["auto","heat","off"],
+            "mode_command_topic": "~VALVE_STATE/command","mode_state_topic": "~VALVE_STATE/state",
+            "mode_command_template": "{% if value == 'off' %} Closed {% elif value == 'heat' %} Open {%- else %} Auto {% endif %}",
+            "temperature_command_topic": "~TARGET_TEMP/command","temperature_state_topic": "~TARGET_TEMP/state",
+            "icon": "mdi:radiator"
+        }}
     ]
 }
