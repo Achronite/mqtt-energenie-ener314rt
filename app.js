@@ -561,7 +561,9 @@ forked.on("message", msg => {
 			break;
 
 		case 'cacheCmd':
-			// response from a cacheCmd, just store the command (as text) and retries
+			// response from a cacheCmd, store the command (as text) and retries
+
+			// TODO: Should I spoof VALVE_STATE and TEMP_SET state?
 
 			console.log(`^ cached: ${JSON.stringify(msg)}`);
 
@@ -656,16 +658,16 @@ function publishDiscovery( device, index ){
 					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${object_id}/config`;
 //					var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
 					var dmsg = Object.assign( { device: { name: `${group_name}`, ids: [`ener314rt-${device.deviceId}`], mdl: `${device_defaults.mdl}`, mf: 'energenie', sw: 'mqtt-ener314rt' }, 
-											uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, availability_topic: `${CONFIG.topic_stub}availability/state` },
+											uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`, name: `${name}`, availability_topic: `${CONFIG.topic_stub}availability/state` },
 											parameter.config,);
 
 					// replace @ in topics with the address where each of the data items are published (state) or read (command)
 					if (parameter.stat_t){
-						dmsg.stat_t = parameter.stat_t.replace("@", `${device.productId}/${device.deviceId}/${parameter.id}`);
+						dmsg.stat_t = parameter.stat_t.replace("@", `${parameter.id}`);
 					}
 
 					if (parameter.cmd_t){
-						dmsg.cmd_t = parameter.cmd_t.replace("@", `${device.productId}/${device.deviceId}/${parameter.id}`);
+						dmsg.cmd_t = parameter.cmd_t.replace("@", `${parameter.id}`);
 					}
 
 					console.log(`<C ${discoveryTopic}`);
