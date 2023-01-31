@@ -13,13 +13,15 @@
             "None","Cancel Command","Request Diagnostics","Request Voltage","Exercise Valve","Identify","Low Power Mode ON","Low Power Mode OFF","Valve Auto","Valve Open","Valve Closed"
             ]}},
         {"id": "Climate_Control","component":"climate","config": {
-            "current_temperature_topic": "~TEMPERATURE/state",
+            "curr_temp_t": "~TEMPERATURE/state",
             "max_temp": 40, "min_temp": 5,
             "modes": ["auto","heat","off"],
-            "mode_command_topic": "~VALVE_STATE/command","mode_state_topic": "~VALVE_STATE/state",
-            "mode_command_template": "{% if value == 'off' %} Closed {% elif value == 'heat' %} Open {%- else %} Auto {% endif %}",
-            "temperature_command_topic": "~TARGET_TEMP/command","temperature_state_topic": "~TARGET_TEMP/state",
-            "icon": "mdi:radiator"
+            "mode_cmd_t": "~VALVE_STATE/command","mode_stat_t": "~VALVE_STATE/state",
+            "mode_cmd_tpl": "{% if value == 'off' %} 1 {% elif value == 'heat' %} 0 {%- else %} 2 {% endif %}",
+            "mode_stat_tpl": "{% if value == '1' %} off {% elif value == '0' %} heat {%- else %} auto {% endif %}",
+            "temp_cmd_t": "~TARGET_TEMP/command","temp_stat_t": "~TARGET_TEMP/state",
+            "icon": "mdi:radiator",
+            "opt": true
         }}
     ]
 }
