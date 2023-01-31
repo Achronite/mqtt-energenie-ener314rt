@@ -118,16 +118,17 @@ The commands and monitor messages are sent/received using MQTT topics.  The topi
 
 The following table shows some examples of the topics used:
 
-|device|example topic stem|command topic|state topic(s)|valid values|
+|device|topic stem (~)|command topic|state topic(s)|valid values|
 |---|---|---|---|---|
-|MIHO002|energenie/ook/*zone*/*switchNum*|*stem*/command|*stem*/state|ON,OFF|
-|MIHO010|energenie/ook/*zone*/dimmer|*stem*/command|*stem*/state|ON,OFF,1-10|
-|MIHO004|energenie/1/*deviceNum*|-|*stem*/REAL_POWER/state<br>*stem*/REACTIVE_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/FREQUENCY/state<br>*stem*/last_seen/state|Number<br>Number<br>Number<br>Float<br>epoch|
-|MIHO005|energenie/2/*deviceNum*|*stem*/switch/command|*stem*/switch/state<br>*stem*/REAL_POWER/state<br>*stem*/REACTIVE_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/FREQUENCY/state<br>*stem*/last_seen/state|ON,OFF<br>Number<br>Number<br>Number<br>Float<br>epoch|
-|MIHO006|energenie/5/*deviceNum*|-|*stem*/APPARENT_POWER/state<br>*stem*/VOLTAGE/state<br>*stem*/CURRENT/state<br>*stem*/last_seen/state|Number<br>Float<br>Float<br>epoch|
+| All |energenie/availability| |~/state|online,offline|
+|MIHO002|energenie/ook/*zone*/*switchNum*|~/command|~/state|ON,OFF|
+|MIHO010|energenie/ook/*zone*/dimmer|~/command|~/state|ON,OFF,1-10|
+|MIHO004|energenie/1/*deviceNum*|-|~/REAL_POWER/state<br>~/REACTIVE_POWER/state<br>~/VOLTAGE/state<br>~/FREQUENCY/state<br>~/last_seen/state|Number<br>Number<br>Number<br>Float<br>epoch|
+|MIHO005|energenie/2/*deviceNum*|~/switch/command|~/switch/state<br>~/REAL_POWER/state<br>~/REACTIVE_POWER/state<br>~/VOLTAGE/state<br>~/FREQUENCY/state<br>~/last_seen/state|ON,OFF<br>Number<br>Number<br>Number<br>Float<br>epoch|
+|MIHO006|energenie/5/*deviceNum*|-|~/APPARENT_POWER/state<br>~/VOLTAGE/state<br>~/CURRENT/state<br>~/last_seen/state|Number<br>Float<br>Float<br>epoch|
 |MIHO013|*(see eTRV topics below)*||||
-|MIHO032|energenie/12/*deviceNum*|-|*stem*/motion/state<br>*stem*/last_seen/state|ON,OFF|
-|MIHO033|energenie/13/*deviceNum*|-|*stem*/contact/state<br>*stem*/last_seen/state|ON,OFF<br>epoch|
+|MIHO032|energenie/12/*deviceNum*|-|~/motion/state<br>~/last_seen/state|ON,OFF|
+|MIHO033|energenie/13/*deviceNum*|-|~/contact/state<br>~/last_seen/state|ON,OFF<br>epoch|
 
 epoch = Unix timestamp
 
@@ -139,12 +140,11 @@ Other devices will return other OpenThings parameters which you can use. I have 
 Enable the [MQTT Integration](https://www.home-assistant.io/integrations/mqtt/) in Home Assistant (if not already enabled).
 
 ### MQTT Discovery
-Most MiHome Monitor devices will auto-add and be available in Home Assistant via [MQTT discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery), consult the table above to see if your devices are supported.  The default discovery topics for the devices follow this pattern:
-`homeassistant/<component>/ener314rt/<deviceId>-<ParameterName>`
+Most MiHome Monitor devices will auto-add and be available in Home Assistant via [MQTT discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery), consult the table above to see if your devices are supported.  The default discovery topics for the devices follow the pattern `homeassistant/<component>/ener314rt/<deviceId>-<ParameterName>`, the value `homeassistant/` can be changed in the `config.json` file if your discovery topic is configured differently.
 
-The MQTT discovery configuration is updated one minute after the program starts, and then every 10 minutes thereafter for performance reasons.
+The MQTT discovery configuration is updated one minute after the program starts for seen devices, and then every 10 minutes thereafter for performance reasons.
 
->WARNING: Discovery currently bases the availability of OpenThings devices upon the overall availability of this application, it does not currently work to the device level (see #19 for latest)
+>WARNING: Discovery currently bases the availability of OpenThings devices upon the overall availability of this application (MQTT topic: energenie/availability/state), it does not currently work to the device level (see #19 for latest)
 
 ### MQTT Manual setup
 For other devices (particularly the 'Control Only' devices) you will **need to add them manually** by editting your Home Assistant `configuration.yaml` file for lights, dimmers, switches and reported values as applicable. For example:
