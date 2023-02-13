@@ -57,6 +57,7 @@ It should contain the following entities configured for your environment:
   "mqtt_broker": "mqtt://pi3.local",
   "mqtt_options": {
     "username":"node-ener314rt",
+    "password":"password",
     "clean": true
     },
   "monitoring": true,
