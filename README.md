@@ -137,7 +137,7 @@ The following table shows some examples of the topics used:
 |MIHO010|energenie/ook/*zone*/dimmer|~/command|~/state|ON,OFF,1-10|
 |MIHO004|energenie/1/*deviceNum*|-|~/REAL_POWER/state<br>~/REACTIVE_POWER/state<br>~/VOLTAGE/state<br>~/FREQUENCY/state<br>~/last_seen/state|Number<br>Number<br>Number<br>Float<br>epoch|
 |MIHO005|energenie/2/*deviceNum*|~/switch/command|\~/switch/state<br>\~/REAL_POWER/state<br>\~/REACTIVE_POWER/state<br>\~/VOLTAGE/state<br>\~/FREQUENCY/state<br>\~/last_seen/state|ON,OFF<br>Number<br>Number<br>Number<br>Float<br>epoch|
-|MIHO006|energenie/5/*deviceNum*|-|\~/APPARENT_POWER/state<br>\~/VOLTAGE/state<br>\~/CURRENT/state<br>\~/last_seen/state|Number<br>Float<br>Float<br>epoch|
+|MIHO006|energenie/5/*deviceNum*|-|\~/APPARENT_POWER/state<br>\~/VOLTAGE/state<br>\~/CURRENT/state<br>\~/battery/state<br>\~/last_seen/state|Number<br>Float<br>Float<br>%<br>epoch|
 |MIHO013|*(see eTRV topics below)*||||
 |MIHO032|energenie/12/*deviceNum*|-|\~/motion/state<br>\~/last_seen/state|ON,OFF|
 |MIHO033|energenie/13/*deviceNum*|-|\~/contact/state<br>\~/last_seen/state|ON,OFF<br>epoch|
@@ -295,6 +295,7 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 |TEMPERATURE|The current temperature in celcius|state|float|sensor|
 |VALVE_STATE|Current valve mode/state|state|0=Open<br>1=Closed<br>2=Auto|sensor|
 |VOLTAGE|Current battery voltage|state|float|sensor|
+|battery|Estimated battery percentage|state|0-100|sensor|
 
 ## Change History
 See [CHANGELOG.md](./CHANGELOG.md)
