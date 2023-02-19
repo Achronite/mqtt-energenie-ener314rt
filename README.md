@@ -133,6 +133,8 @@ The following table shows some examples of the topics used:
 |device|topic stem (~)|command topic|state topic(s)|valid values|
 |---|---|---|---|---|
 | All |energenie/availability| |~/state|online,offline|
+|ENER002|energenie/ook/*zone*/*switchNum*|~/command|~/state|ON,OFF|
+|ENER010|energenie/ook/*zone*/*0-4*|~/command|~/state|ON,OFF|
 |MIHO002|energenie/ook/*zone*/*switchNum*|~/command|~/state|ON,OFF|
 |MIHO010|energenie/ook/*zone*/dimmer|~/command|~/state|ON,OFF,1-10|
 |MIHO004|energenie/1/*deviceNum*|-|~/REAL_POWER/state<br>~/REACTIVE_POWER/state<br>~/VOLTAGE/state<br>~/FREQUENCY/state<br>~/last_seen/state|Number<br>Number<br>Number<br>Float<br>epoch|
@@ -169,6 +171,12 @@ mqtt:
       optimistic: false
       state_topic: energenie/ook/87/1/state
       availability_topic: energenie/availability/state
+      device:
+        name: "energenie OOK"
+        identifiers: ["ook"]
+        model: "MIHO008"
+        manufacturer: "energenie"
+        software: "mqtt-ener314rt"
 
   switch:
     - unique_id: ENER002_socket
@@ -177,6 +185,12 @@ mqtt:
       optimistic: false
       state_topic: energenie/ook/89/1/state
       availability_topic: energenie/availability/state
+      device:
+        name: "energenie OOK"
+        identifiers: ["ook"]
+        model: "ENER002"
+        manufacturer: "energenie"
+        software: "mqtt-ener314rt"
 
     - unique_id: ENER010_socket_2
       name: "Subwoofer"
@@ -184,6 +198,12 @@ mqtt:
       optimistic: false
       state_topic: energenie/ook/564/2/state
       availability_topic: energenie/availability/state
+      device:
+        name: "energenie OOK"
+        identifiers: ["ook-4gang"]
+        model: "ENER010"
+        manufacturer: "energenie"
+        software: "mqtt-ener314rt"
 
     - unique_id: MIHO010_Dimmer1
       name: "Kitchen Dimmer Switch"
@@ -198,15 +218,28 @@ mqtt:
       on_command_type: "brightness"
       optimistic: false
       availability_topic: energenie/availability/state
+      device:
+        name: "energenie OOK"
+        identifiers: ["ook"]
+        model: "MIHO010"
+        manufacturer: "energenie"
+        software: "mqtt-ener314rt"
 
   sensor:
     - name: "MiHome Thermometer Temperature"
       state_topic: energenie/18/12345/TEMPERATURE/state
       device_class: temperature
       unit_of_measurement: "C"
+      device:
+        name: "energenie FSK"
+        identifiers: ["ener314rt-12345"]
+        model: "Thermometer"
+        manufacturer: "energenie"
+        software: "mqtt-ener314rt"   
 
 ```
->TIP: If you do not know the existing zone and switch number for any of your 'Control Only' (Blue) devices you can 're-teach' the device...
+Adding the `device` section enables easier access to the underlying switches within Home Assistant automations etc.
+>TIP: If you do not know the existing `zone` and `switch number` for any of your 'Control Only' (Blue) devices you can 're-teach' the device...
 
 ### Converting an epoch timestamp
 Timestamps are sent via MQTT as epoch timestamps. To convert these to datetime objects in HA do the following (example shown is the conversion of the eTRV VALVE_TS epoch in Home Assistant `configuration.yaml`):
