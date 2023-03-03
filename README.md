@@ -49,12 +49,12 @@ unzip master.zip
 ```
 npm install mqtt-energenie-ener314rt
 ```
-6) Create/edit `config.json` file in the same directory as the install (mqtt-energenie-ener314rt).
-It should contain the following entities configured for your environment:
+6) Copy/Rename the file `config_sample.json` to `config.json` in the same directory as the install (mqtt-energenie-ener314rt), and edit it to match your MQTT broker details and user.
+It should contain the following entities configured for your environment. The example shown here uses the default [Mosquitto MQTT broker](https://github.com/home-assistant/hassio-addons/tree/master/mosquitto) Add-on in a Home Assistant installation:
 ```
 {
   "topic_stub": "energenie/",
-  "mqtt_broker": "mqtt://pi3.local",
+  "mqtt_broker": "mqtt://homeassistant.local",
   "mqtt_options": {
     "username":"node-ener314rt",
     "password":"password",
@@ -333,7 +333,6 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 ## Change History
 See [CHANGELOG.md](./CHANGELOG.md)
 
-
 ## Built With
 
 * [NodeJS](https://nodejs.org/dist/latest-v10.x/docs/api/) - JavaScript runtime built on Chrome's V8 JavaScript engine.
@@ -364,4 +363,4 @@ Future work is detailed on the [github issues page](https://github.com/Achronite
 https://github.com/Achronite/mqtt-energenie-ener314rt/issues
 
 
-@Achronite - January 2023
+@Achronite - March 2023

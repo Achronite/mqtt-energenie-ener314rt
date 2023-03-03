@@ -2,28 +2,28 @@
 
 ## [Unreleased]
 
-* Improvements to error handling (partial fix has already been included) [#11](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/11)
 * Periodic eTRV commands [#10](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/10)
 * Update state of all OOK switches within a single device when switch 0 used [#4](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/4)
 * Enhance availability (or publish guidance) on OpenThings devices based on `last_seen`
-* MiHome Thermostat control & MQTT discovery
+* MiHome Thermostat control, including MQTT discovery of Thermostat
 * Configurable xmits for eTRV - requires `energenie-ener314rt` module change
+* Configurable logging levels [#24](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/24)
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
-## [0.3.0] 2023-02-19 Alpha
+## [0.3.0] 2023-03-03 Alpha
 
 ### Added
 
 * Added `device` section to manual MQTT setup for Home Assistant (to assist in HA automations)
 * Added estimated `battery` topics for eTRV and Whole house monitor [#17]
+* Renamed default `config.json` file to `config_sample.json` to prevent user config overwrites upon update of code
 
 ### Fixed
 
 * Fixed README instructions for install
-* MQTT Discovery: Renamed measurement VAR to var for devices #[#25]
+* MQTT Discovery: Renamed measurement unit VAR to var for devices #[#25]
 * MQTT Discovery: Fixed REPORTING_INTERVAL device_class [#26] for eTRV
-
 
 ## [0.2.0] 2023-01-31 Alpha
 
