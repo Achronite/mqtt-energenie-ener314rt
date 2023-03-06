@@ -11,13 +11,14 @@
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
-## [0.3.0] 2023-03-03 Alpha
+## [0.3.0] 2023-03-06 Alpha
 
 ### Added
 
 * Added `device` section to manual MQTT setup for Home Assistant (to assist in HA automations)
 * Added estimated `battery` topics for eTRV and Whole house monitor [#17]
 * Renamed default `config.json` file to `config_sample.json` to prevent user config overwrites upon update of code
+* MQTT Discovery: Added `ALARM` reportng for PIR, it is believed a value of 66 = `Low battery alert` See [#28](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/28)
 
 ### Fixed
 
