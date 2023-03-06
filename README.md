@@ -49,7 +49,7 @@ unzip master.zip
 ```
 npm install mqtt-energenie-ener314rt
 ```
-6) Copy/Rename the file `config_sample.json` to `config.json` in the same directory as the install (mqtt-energenie-ener314rt), and edit it to match your MQTT broker details and user.
+6) Copy/Rename the file `config_sample.json` to `config.json` in the same directory as the install (mqtt-energenie-ener314rt), and edit it to match your MQTT broker and user details.
 It should contain the following entities configured for your environment. The example shown here uses the default [Mosquitto MQTT broker](https://github.com/home-assistant/hassio-addons/tree/master/mosquitto) Add-on in a Home Assistant installation:
 ```
 {
@@ -239,7 +239,7 @@ mqtt:
 
 ```
 Adding the `device` section enables easier access to the underlying switches within Home Assistant automations etc.
->TIP: If you do not know the existing `zone` and `switch number` for any of your 'Control Only' (Blue) devices you can 're-teach' the device...
+>TIP: If you do not know the existing `zone` and `switch number` for any of your 'Control Only' (Blue) devices you can 're-teach' the device (see below)
 
 ### Converting an epoch timestamp
 Timestamps are sent via MQTT as epoch timestamps. To convert these to datetime objects in HA do the following (example shown is the conversion of the eTRV VALVE_TS epoch in Home Assistant `configuration.yaml`):
