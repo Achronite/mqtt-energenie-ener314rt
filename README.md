@@ -49,14 +49,15 @@ unzip master.zip
 ```
 npm install
 ```
-6) Create/edit `config.json` file in the same directory as the install (mqtt-energenie-ener314rt).
-It should contain the following entities configured for your environment:
+6) Copy/Rename the file `config_sample.json` to `config.json` in the same directory as the install (mqtt-energenie-ener314rt), and edit it to match your MQTT broker and user details.
+It should contain the following entities configured for your environment. The example shown here uses the default [Mosquitto MQTT broker](https://github.com/home-assistant/hassio-addons/tree/master/mosquitto) Add-on in a Home Assistant installation:
 ```
 {
   "topic_stub": "energenie/",
-  "mqtt_broker": "mqtt://pi3.local",
+  "mqtt_broker": "mqtt://homeassistant.local",
   "mqtt_options": {
     "username":"node-ener314rt",
+    "password":"password",
     "clean": true
     },
   "monitoring": true,
@@ -132,11 +133,13 @@ The following table shows some examples of the topics used:
 |device|topic stem (~)|command topic|state topic(s)|valid values|
 |---|---|---|---|---|
 | All |energenie/availability| |~/state|online,offline|
+|ENER002|energenie/ook/*zone*/*switchNum*|~/command|~/state|ON,OFF|
+|ENER010|energenie/ook/*zone*/*0-4*|~/command|~/state|ON,OFF|
 |MIHO002|energenie/ook/*zone*/*switchNum*|~/command|~/state|ON,OFF|
 |MIHO010|energenie/ook/*zone*/dimmer|~/command|~/state|ON,OFF,1-10|
 |MIHO004|energenie/1/*deviceNum*|-|~/REAL_POWER/state<br>~/REACTIVE_POWER/state<br>~/VOLTAGE/state<br>~/FREQUENCY/state<br>~/last_seen/state|Number<br>Number<br>Number<br>Float<br>epoch|
 |MIHO005|energenie/2/*deviceNum*|~/switch/command|\~/switch/state<br>\~/REAL_POWER/state<br>\~/REACTIVE_POWER/state<br>\~/VOLTAGE/state<br>\~/FREQUENCY/state<br>\~/last_seen/state|ON,OFF<br>Number<br>Number<br>Number<br>Float<br>epoch|
-|MIHO006|energenie/5/*deviceNum*|-|\~/APPARENT_POWER/state<br>\~/VOLTAGE/state<br>\~/CURRENT/state<br>\~/last_seen/state|Number<br>Float<br>Float<br>epoch|
+|MIHO006|energenie/5/*deviceNum*|-|\~/APPARENT_POWER/state<br>\~/VOLTAGE/state<br>\~/CURRENT/state<br>\~/battery/state<br>\~/last_seen/state|Number<br>Float<br>Float<br>%<br>epoch|
 |MIHO013|*(see eTRV topics below)*||||
 |MIHO032|energenie/12/*deviceNum*|-|\~/motion/state<br>\~/last_seen/state|ON,OFF|
 |MIHO033|energenie/13/*deviceNum*|-|\~/contact/state<br>\~/last_seen/state|ON,OFF<br>epoch|
@@ -168,6 +171,12 @@ mqtt:
       optimistic: false
       state_topic: energenie/ook/87/1/state
       availability_topic: energenie/availability/state
+      device:
+        name: "energenie OOK"
+        identifiers: ["ook"]
+        model: "MIHO008"
+        manufacturer: "energenie"
+        software: "mqtt-ener314rt"
 
   switch:
     - unique_id: ENER002_socket
@@ -176,6 +185,12 @@ mqtt:
       optimistic: false
       state_topic: energenie/ook/89/1/state
       availability_topic: energenie/availability/state
+      device:
+        name: "energenie OOK"
+        identifiers: ["ook"]
+        model: "ENER002"
+        manufacturer: "energenie"
+        software: "mqtt-ener314rt"
 
     - unique_id: ENER010_socket_2
       name: "Subwoofer"
@@ -183,6 +198,12 @@ mqtt:
       optimistic: false
       state_topic: energenie/ook/564/2/state
       availability_topic: energenie/availability/state
+      device:
+        name: "energenie OOK"
+        identifiers: ["ook-4gang"]
+        model: "ENER010"
+        manufacturer: "energenie"
+        software: "mqtt-ener314rt"
 
     - unique_id: MIHO010_Dimmer1
       name: "Kitchen Dimmer Switch"
@@ -197,15 +218,28 @@ mqtt:
       on_command_type: "brightness"
       optimistic: false
       availability_topic: energenie/availability/state
+      device:
+        name: "energenie OOK"
+        identifiers: ["ook"]
+        model: "MIHO010"
+        manufacturer: "energenie"
+        software: "mqtt-ener314rt"
 
   sensor:
     - name: "MiHome Thermometer Temperature"
       state_topic: energenie/18/12345/TEMPERATURE/state
       device_class: temperature
       unit_of_measurement: "C"
+      device:
+        name: "energenie FSK"
+        identifiers: ["ener314rt-12345"]
+        model: "Thermometer"
+        manufacturer: "energenie"
+        software: "mqtt-ener314rt"   
 
 ```
->TIP: If you do not know the existing zone and switch number for any of your 'Control Only' (Blue) devices you can 're-teach' the device...
+Adding the `device` section enables easier access to the underlying switches within Home Assistant automations etc.
+>TIP: If you do not know the existing `zone` and `switch number` for any of your 'Control Only' (Blue) devices you can 're-teach' the device (see below)
 
 ### Converting an epoch timestamp
 Timestamps are sent via MQTT as epoch timestamps. To convert these to datetime objects in HA do the following (example shown is the conversion of the eTRV VALVE_TS epoch in Home Assistant `configuration.yaml`):
@@ -294,10 +328,10 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 |TEMPERATURE|The current temperature in celcius|state|float|sensor|
 |VALVE_STATE|Current valve mode/state|state|0=Open<br>1=Closed<br>2=Auto|sensor|
 |VOLTAGE|Current battery voltage|state|float|sensor|
+|battery|Estimated battery percentage|state|0-100|sensor|
 
 ## Change History
 See [CHANGELOG.md](./CHANGELOG.md)
-
 
 ## Built With
 
@@ -329,4 +363,4 @@ Future work is detailed on the [github issues page](https://github.com/Achronite
 https://github.com/Achronite/mqtt-energenie-ener314rt/issues
 
 
-@Achronite - January 2023
+@Achronite - March 2023

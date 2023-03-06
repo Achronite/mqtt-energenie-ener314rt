@@ -3,9 +3,9 @@
         {"id": "VOLTAGE",       "component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:battery","unit_of_meas":"V"}},
         {"id": "EXERCISE_VALVE","component":"binary_sensor", "stat_t":"~@/state","cmd_t":"~@/command","config": {"dev_cla":"moving", "payload_on": "success", "payload_off": "fail"}},
         {"id": "LOW_POWER_MODE","component":"binary_sensor", "stat_t":"~@/state","cmd_t":"~@/command","config": {}},
-        {"id": "ERRORS",        "component":"binary_sensor", "stat_t":"~@/state","config": {"dev_cla":"problem", "ent_cat": "diagnostic", "en": false}},
-        {"id": "ERROR_TEXT",    "component":"sensor", "stat_t":"~@/state","config": {"ent_cat": "diagnostic", "en": false}},
-        {"id": "REPORTING_INTERVAL","component":"number","cmd_t":"~@/command","config": {"dev_cla":"time","unit_of_meas":"seconds","min": 300, "max": 3600, "opt": true}},
+        {"id": "ERRORS",        "component":"binary_sensor", "stat_t":"~@/state","config": {"dev_cla":"problem", "ent_cat": "diagnostic"}},
+        {"id": "ERROR_TEXT",    "component":"sensor", "stat_t":"~@/state","config": {"ent_cat": "diagnostic"}},
+        {"id": "REPORTING_INTERVAL","component":"number","cmd_t":"~@/command","config": {"unit_of_meas":"s","min": 300, "max": 3600, "opt": true, "icon":"mdi:timelapse"}},
         {"id": "retries","component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:cached"}},
         {"id": "command","component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:traffic-light"}},
         {"id": "last_seen","component":"sensor", "stat_t":"~@/state","config": {"value_template": "{{ as_datetime(value) }}", "dev_cla": "timestamp"}},
@@ -22,6 +22,7 @@
             "temp_cmd_t": "~TARGET_TEMP/command","temp_stat_t": "~TARGET_TEMP/state",
             "icon": "mdi:radiator",
             "opt": true
-        }}
+        }},
+        {"id": "battery","component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"battery","icon":"mdi:battery"}}
     ]
 }

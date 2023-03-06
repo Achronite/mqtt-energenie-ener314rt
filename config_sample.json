@@ -1,8 +1,9 @@
 {
     "topic_stub": "energenie/",
-    "mqtt_broker": "mqtt://pi3.local",
+    "mqtt_broker": "mqtt://homeassistant.local",
     "mqtt_options": {
         "username":"node-ener314rt",
+        "password":"password",
         "clean": true
     },
     "monitoring": true,

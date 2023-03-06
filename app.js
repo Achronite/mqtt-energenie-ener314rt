@@ -27,6 +27,7 @@ const TARGET_TEMP 		= 244;
 const VOLTAGE 			= 226;
 const REPORTING_INTERVAL= 210;
 
+
 const MQTT = require('mqtt');
 var fs = require('fs');
 
@@ -518,6 +519,49 @@ forked.on("message", msg => {
 						// These values need to be retained on MQTT as they are irregularly reported
 						retain = true;
 						break;
+					case 'VOLTAGE':
+					case 'BATTERY_LEVEL':
+						let batteries = 0;
+						// Voltage values are device specific
+						switch(msg.productId){
+							case 3:		// eTRV
+								batteries = 2;
+								retain = true;
+								break;
+							case 5:		// Energy Monitor
+								batteries = 3;
+								break;
+							case 18:	// Future support for Thermostat
+								batteries = 2;	
+						}
+						if (batteries > 0){
+							// calculate battery % where applicable assuming alkaline batteries, calculations from internet ;)
+							let v = msg[key];
+							let charge = 0;
+							if (v >= (1.55*batteries)){
+								charge = 100;
+							} else if (v <=0 ){
+								charge = 0;
+							} else if (v > (1.4*batteries)){
+								charge = 60.6*v/batteries + 6;
+							} else if ( v < (1.1*batteries)){
+								charge = 8.3*v/batteries;
+							} else {
+								charge = 9412 - 23449*(v/batteries) + 19240*(v*v/batteries) - 5176*(v*v*v/batteries); // cubic regression
+							}
+							
+							// send addition battery percentage response back via MQTT state topic
+							state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/battery/state`;
+							state = String(Math.round(charge));
+							if (retain) {
+								console.log(`< ${state_topic}: ${state} (retained)`);
+								client.publish(state_topic,state,{retain: true});
+							} else {
+								console.log(`< ${state_topic}: ${state}`);
+								client.publish(state_topic,state);
+							}
+						}
+
 					default:
 						// assume an unknown key we need to set in topic tree
 				}

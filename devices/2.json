@@ -2,5 +2,5 @@
     "parameters":[
         {"id": "switch",        "component":"switch", "stat_t":"~@/state","cmd_t":"~@/command", "config": {"icon":"mdi:power-socket-uk","opt":false}},
         {"id": "REAL_POWER",    "component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"power","unit_of_meas":"W"}},
-        {"id": "REACTIVE_POWER","component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"reactive_power","unit_of_meas":"VAR"}}    ]
+        {"id": "REACTIVE_POWER","component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"reactive_power","unit_of_meas":"var"}}    ]
 }

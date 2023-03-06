@@ -2,21 +2,29 @@
 
 ## [Unreleased]
 
-* Home Assistant MQTT discovery for 'Control Only' devices for  [#7](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/7)
-* Improvements to error handling (partial fix has already been included) [#11](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/11)
 * Periodic eTRV commands [#10](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/10)
 * Update state of all OOK switches within a single device when switch 0 used [#4](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/4)
 * Enhance availability (or publish guidance) on OpenThings devices based on `last_seen`
-* MiHome Thermostat control & MQTT discovery
+* MiHome Thermostat control, including MQTT discovery of Thermostat
 * Configurable xmits for eTRV - requires `energenie-ener314rt` module change
+* Configurable logging levels [#24](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/24)
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
-## [0.2.1] 2023-01-31 Alpha
+## [0.3.0] 2023-03-06 Alpha
+
+### Added
+
+* Added `device` section to manual MQTT setup for Home Assistant (to assist in HA automations)
+* Added estimated `battery` topics for eTRV and Whole house monitor [#17]
+* Renamed default `config.json` file to `config_sample.json` to prevent user config overwrites upon update of code
+* MQTT Discovery: Added `ALARM` reportng for PIR, it is believed a value of 66 = `Low battery alert` See [#28](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/28)
 
 ### Fixed
-* Fixed README instructions for install 
 
+* Fixed README instructions for install
+* MQTT Discovery: Renamed measurement unit VAR to var for devices #[#25]
+* MQTT Discovery: Fixed REPORTING_INTERVAL device_class [#26] for eTRV
 
 ## [0.2.0] 2023-01-31 Alpha
 
