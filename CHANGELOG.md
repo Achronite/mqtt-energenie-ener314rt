@@ -11,6 +11,17 @@
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
+
+## [0.3.1] 2023-03-XX Alpha
+
+### Added
+
+* Translated `ALARM: 66` to `ALARM: Low battery alert`. Fixes [#28](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/28)
+
+### Fixed
+
+* 
+
 ## [0.3.0] 2023-03-06 Alpha
 
 ### Added

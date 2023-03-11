@@ -562,6 +562,13 @@ forked.on("message", msg => {
 							}
 						}
 
+					case 'ALARM':
+						// Translate suspected low battery alert to text
+						if (msg[key] == 66 | msg[key] == '66'){
+							// send low battery alert - NOT retained as this never clears
+							msg[key] = "Low Battery";
+						}
+
 					default:
 						// assume an unknown key we need to set in topic tree
 				}
