@@ -47,7 +47,7 @@ unzip master.zip
 
 5) Install node's dependencies:
 ```
-npm install mqtt-energenie-ener314rt
+npm install
 ```
 6) Copy/Rename the file `config_sample.json` to `config.json` in the same directory as the install (mqtt-energenie-ener314rt), and edit it to match your MQTT broker and user details.
 It should contain the following entities configured for your environment. The example shown here uses the default [Mosquitto MQTT broker](https://github.com/home-assistant/hassio-addons/tree/master/mosquitto) Add-on in a Home Assistant installation:
