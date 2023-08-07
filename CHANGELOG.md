@@ -11,6 +11,18 @@
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
+
+## [0.4.0] 2023-08-07 Alpha
+
+### Added
+
+* Translated `ALARM: 66` to `ALARM: Low battery alert`. Fixes [#28](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/28)
+
+### Fixed
+
+* MQTT Discovery: Battery missing unit of measurement. Fixes [#30](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/30)
+* MQTT Discovery: Removed name of entity from the device name. Fixes [#34](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/34)
+
 ## [0.3.0] 2023-03-06 Alpha
 
 ### Added
