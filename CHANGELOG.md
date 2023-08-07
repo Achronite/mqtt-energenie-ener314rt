@@ -12,7 +12,7 @@
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
 
-## [0.3.1] 2023-03-XX Alpha
+## [0.4.0] 2023-08-07 Alpha
 
 ### Added
 
@@ -20,7 +20,8 @@ Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) 
 
 ### Fixed
 
-* 
+* MQTT Discovery: Battery missing unit of measurement. Fixes [#30](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/30)
+* MQTT Discovery: Removed name of entity from the device name. Fixes [#34](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/34)
 
 ## [0.3.0] 2023-03-06 Alpha
 
