@@ -693,23 +693,25 @@ function publishDiscovery( device, index ){
 					//
 					var object_id = `${device.deviceId}-${parameter.id}`;
 					var unique_id = `ener314rt-${object_id}`;
-					var name;
-					var group_name = `${device_defaults.mdl} ${device.deviceId}`;
+					var entity_name = `${parameter.id.toLowerCase().replace(/_/g, ' ')}`
+					var device_name = `${device_defaults.mdl} ${device.deviceId}`;
+/*
 					if ((parameter.component == 'switch') ||
-					    (parameter.component == 'binary_sensor' && (parameter.id == 'MOTION_DETECTOR' || parameter.id == 'DOOR_SENSOR') )) {
+					   (parameter.component == 'binary_sensor' && (parameter.id == 'MOTION_DETECTOR' || parameter.id == 'DOOR_SENSOR') )) {
 						// Shorten name for obvious parameters
 						name = group_name;
 					} else if (parameter.id == 'retries') {
 						// pretty command retries
-						name = `${group_name} command retries`;
+						name = `command retries`;
 					} else {
 						// Convert to prettier lowercase entity name without underscores
-						name = `${group_name} ${parameter.id.toLowerCase().replace(/_/g, ' ')}`
+						name = `${parameter.id.toLowerCase().replace(/_/g, ' ')}`
 					}
+*/
 					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${object_id}/config`;
 //					var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
-					var dmsg = Object.assign( { device: { name: `${group_name}`, ids: [`ener314rt-${device.deviceId}`], mdl: `${device_defaults.mdl}`, mf: 'energenie', sw: 'mqtt-ener314rt' }, 
-											uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`, name: `${name}`, availability_topic: `${CONFIG.topic_stub}availability/state` },
+					var dmsg = Object.assign( { device: { name: `${device_name}`, ids: [`ener314rt-${device.deviceId}`], mdl: `${device_defaults.mdl}`, mf: 'energenie', sw: 'mqtt-ener314rt' }, 
+											uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`, name: `${entity_name}`, availability_topic: `${CONFIG.topic_stub}availability/state` },
 											parameter.config,);
 
 					// replace @ in topics with the address where each of the data items are published (state) or read (command)
