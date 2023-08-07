@@ -3,6 +3,6 @@
         {"id": "APPARENT_POWER","component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"apparent_power","unit_of_meas":"VA"}},
         {"id": "VOLTAGE",       "component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:battery","unit_of_meas":"V"}},         
         {"id": "CURRENT",       "component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"current","unit_of_meas":"A"}},
-        {"id": "battery",       "component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"battery","icon":"mdi:battery"}}
+        {"id": "battery",       "component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"battery","icon":"mdi:battery","unit_of_meas":"%"}}
     ]
 }
