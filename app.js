@@ -536,18 +536,18 @@ forked.on("message", msg => {
 						}
 						if (batteries > 0){
 							// calculate battery % where applicable assuming alkaline batteries, calculations from internet ;)
-							let v = msg[key];
+							let v = msg[key]/batteries;
 							let charge = 0;
-							if (v >= (1.55*batteries)){
+							if (v >= 1.55){
 								charge = 100;
-							} else if (v <=0 ){
-								charge = 0;
-							} else if (v > (1.4*batteries)){
-								charge = 60.6*v/batteries + 6;
-							} else if ( v < (1.1*batteries)){
-								charge = 8.3*v/batteries;
+							} else if (v < 1.1 ){
+								charge = 0
+							} else if (v < 1.18 ){
+								charge = 5;
 							} else {
-								charge = 9412 - 23449*(v/batteries) + 19240*(v*v/batteries) - 5176*(v*v*v/batteries); // cubic regression
+								// use a simple linear equation for the rest (y=mx+c), based on 1.44v=90% and 1.2v=10%
+								charge = (333.3*v) - 390;
+								//charge = 9412 - 23449*(v/batteries) + 19240*(v*v/batteries) - 5176*(v*v*v/batteries); // cubic regression
 							}
 							
 							// send addition battery percentage response back via MQTT state topic

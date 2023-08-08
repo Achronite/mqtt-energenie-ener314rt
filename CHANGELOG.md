@@ -11,6 +11,15 @@
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
+## [0.X.X] 2023-XX-XX Alpha
+
+### Added
+
+* 
+
+### Fixed
+
+* Simplified algorithm for battery % calculation. Tries to close [#31](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/31)
 
 ## [0.4.0] 2023-08-07 Alpha
 
