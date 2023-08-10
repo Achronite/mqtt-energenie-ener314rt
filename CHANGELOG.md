@@ -11,7 +11,7 @@
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
-## [0.X.X] 2023-XX-XX Alpha
+## [0.5.0] 2023-XX-XX Beta
 
 ### Added
 
@@ -20,6 +20,10 @@ Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) 
 ### Fixed
 
 * Simplified algorithm for battery % calculation. Tries to close [#31](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/31)
+
+### Changed
+
+* Dependencies: Bumped MQTT.js version to 5.0.2 and node.js minimum version to 15. [#38](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/38)
 
 ## [0.4.0] 2023-08-07 Alpha
 
