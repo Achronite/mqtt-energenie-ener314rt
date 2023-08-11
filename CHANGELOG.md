@@ -11,6 +11,22 @@
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
+## [0.5.0] 2023-08-11 Alpha
+
+### Added
+
+* Configurable levels of logging within the application [#24](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/24).<br>
+The log level can now be configured in the `config.json` file using `log_level`.  The file is read **once** on startup. The default log_level is `http`, which logs all incoming and outgoing commands/messages.
+
+### Fixed
+
+* Simplified algorithm for battery % calculation. Tries to close [#31](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/31)
+* Fixed a bug where the target switch state sometimes fails to be updated in MQTT for OOK devices due to a bug in dependency [energenie-ener314rt#32](https://github.com/Achronite/energenie-ener314rt/issues/32)
+* Fixed a bug where a stack trace was sometimes output for MQTT connection when exiting application
+
+### Changed
+
+* Dependencies: Bumped MQTT.js version to 5.0.2 and node.js minimum version to 15. [#38](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/38)
 
 ## [0.4.0] 2023-08-07 Alpha
 

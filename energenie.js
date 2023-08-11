@@ -7,6 +7,16 @@
 //
 "use strict";
 
+// logging framework
+var log = require('npmlog');
+log.heading = 'mqtt-energenie';
+
+// log level should be command parameter
+log.level = process.argv[2];
+if (log.level === undefined || log.level === null){
+    log.level = 'error';
+}
+
 var path = require('path');
 let monitoring = false;
 let initialised = false;
@@ -21,7 +31,7 @@ const MIHO033 = 13;
 const MIHO069 = 18;
 //const MIHO089|MiHome Click - Smart Button|?|No|Yes||
 
-console.log("energenie: child process started");
+log.info("energenie", "child process started");
 
 // Handle signals cleanly
 process.once('SIGINT', handleSignal);
@@ -37,7 +47,7 @@ var ener314rt = require('energenie-ener314rt');
 
 // main processing section that does stuff when asked by parent
 process.on('message', msg => {
-    console.log(">energenie: cmd:", msg);
+    log.verbose("energenie","cmd: %j", msg);
     switch (msg.cmd) {
         case 'init':
         case 'reset':
@@ -45,7 +55,6 @@ process.on('message', msg => {
             process.send({ cmd: "initialised" })
             break;
         case 'send':
-            //console.log("energenie: Sending:", msg.payload);
             // Check xmit times (advanced), 26ms per payload transmission
             var xmits = Number(msg.repeat) || 20;
             let switchState = Boolean(msg.switchState);
@@ -56,24 +65,23 @@ process.on('message', msg => {
                     // Check and set parameters
                     let zone = Number(msg.zone);
                     if (zone < 0 || zone > 1048575 || isNaN(zone)) {
-                        console.log("ERROR: zone err: " + msg.zone + " (" + typeof (msg.zone) + ")");
+                        log.warn("energenie", "zone err: %j + (%j)",msg.zone, typeof(msg.zone));
                         break;
                     }
 
                     let switchNum = Number(msg.switchNum);
                     if (switchNum < 0 || switchNum > 6 || isNaN(switchNum)) {
-                        console.log("ERROR: SwitchNum not 0-6: " + msg.switchNum + " (" + typeof (msg.switchNum) + ")");
+                        log.warn("energenie", "switchNum not 0-6: %j + (%j)", msg.switchNum, typeof(msg.switchNum));
                         break;
                     }
 
                     // Invoke C function to do the send
                     if (initialised){
                         var ret = ener314rt.ookSwitch(zone, switchNum, switchState, xmits);
-                        if (ret == 0){
-                            msg.state = switchState;
-                        }
+                        // ignore ret as workaround for https://github.com/Achronite/energenie-ener314rt/issues/32
+                        msg.state = switchState;
                     } else {
-                        console.log("EMULATION: calling ookSwitch(", zone, ",", switchNum, ",", switchState,",", xmits,")");
+                        log.verbose('emulator',"calling ookSwitch( %d, %d, %s, %d )", zone, switchNum, switchState, xmits);
                         msg.emulated = true;
                         msg.state = switchState;
                     }
@@ -89,7 +97,7 @@ process.on('message', msg => {
 
                     let deviceId = Number(msg.deviceId);
                     if (deviceId < 0 || isNaN(deviceId)) {
-                        console.log("ERROR: deviceId err: " + msg.deviceId + " (" + typeof (msg.deviceId) + ")");
+                        log.warn("energenie", "ERROR: deviceId err: %j (%j)", msg.deviceId, typeof(msg.deviceId));
                         break;
                     }
                     switch (productId){
@@ -98,9 +106,9 @@ process.on('message', msg => {
                             // Invoke C function to do the send
                             if (initialised){
                                 var res = ener314rt.openThingsSwitch(productId, deviceId, switchState, xmits);
-                                console.log(`>energenie: openThingsSwitch(${productId}, ${deviceId}, ${switchState}, ${xmits}) returned ${res}`);// monitoring loop should respond for us
+                                log.verbose("energenie", "openThingsSwitch(%d,%d,%j,%d) returned $j",productId, deviceId, switchState, xmits, res);// monitoring loop should respond for us
                             } else {
-                                console.log(`EMULATION: calling openThingsSwitch( ${productId}, ${deviceId}, ${switchState}, ${xmits})`);
+                                log.verbose('emulator',"simulate calling openThingsSwitch(%d,%d,%j,%d)",productId, deviceId, switchState, xmits);
                                 // for emulation mode we need to respond, otherwise monitoring loop will do it for us
                                 msg.emulated = true;
                                 msg.state = switchState;
@@ -110,10 +118,9 @@ process.on('message', msg => {
                             break;
                         case MIHO013:  //eTRV
                             if (initialised){
-                                //var res = ener314rt.openThingsSwitch(productId, deviceId, switchState, xmits);
-                                console.log(`energenie: TRV command (${productId}, ${deviceId}, ${switchState}, ${xmits}) returned ${res}`);// monitoring loop should respond for us
+                                log.warn("energenie", "unable to send immediate command to eTRV, use cacheCmd instead");
                             } else {
-                                console.log(`EMULATION: not implemented for eTRV`);
+                                log.verbose('emulator',"not implemented for eTRV");
                                 // for emulation mode we need to respond, otherwise monitoring loop will do it for us                           
                             }  
                             break;
@@ -129,21 +136,20 @@ process.on('message', msg => {
             break;
             
         case 'monitor':
-            //console.log("energenie: monitor enabled=", msg.enabled);
             if (msg.enabled){
                 // start monitoring thread (if not started already)
                 if (!monitoring && initialised) {
                     monitoring = true;
                     //getMonitorMsg();
                     startMonitoringThread();
-                    console.log("INFO energenie: Monitoring thread started");
+                    log.info("energenie","monitoring thread started");
                 } else if (!initialised){
-                    console.log("ERROR energenie: Monitoring thread cannot be started, ENER314-RT unavailable");
+                    log.warn("energenie","monitoring thread cannot be started, ENER314-RT unavailable");
                 } 
             }
             break;
         case 'close':
-            console.log("energenie: closing");
+            log.info("energenie","closing");
             ener314rt.closeEner314rt();
             process.exit(0);
         case 'cacheCmd':
@@ -161,25 +167,24 @@ process.on('message', msg => {
                 }
                 process.send(msg);
             }
-            console.log(`energenie: cached cmd=${msg.otCommand} res=${res}`);
+            log.verbose("energenie","cached cmd=%j, res=%d", msg.otCommand, res);
             break;
         case 'discovery':
             // Update the MQTT discovery topics after requesting devicelist
             var response = ener314rt.openThingsDeviceList(msg.scan);
             var discovery = JSON.parse(response);
-            //console.log(`energenie.js: discovery returned: ${response}`);
             msg.numDevices = discovery.numDevices;
             msg.devices = discovery.devices;
             process.send(msg);
             break;
         default:
-            console.log("energenie: Unknown or missing command:", msg.cmd);
+            log.info("energenie", "Unknown or missing command: %j", msg.cmd);
     }
 });
 
 // Crude error handler - Handle uncaught exceptions - exit process cleanly
 process.on('uncaughtException', error => {
-    console.log(`ERROR energenie: unhandled Exception: ${error}`);   
+    log.error("energenie", "uncaughtException: %j, kill(%d,SIGABT)",process.pid,error);   
     process.kill(process.pid, "SIGABRT");
 });
 
@@ -188,7 +193,7 @@ process.on('uncaughtException', error => {
 function handleSignal(signal) {
     if (initialised){
         if (monitoring) {
-            console.log(`energenie: signal ${signal}, closing adaptor and monitoring thread..`);
+            log.info("energenie", "signal %j, closing adaptor and monitoring thread...", signal);
             ener314rt.stopMonitoring();
 
             // Allow time for monitor thread to complete after config.timeout and close properly, do this as a cb to not block main event loop
@@ -196,22 +201,22 @@ function handleSignal(signal) {
                 ener314rt.closeEner314rt();
                 initialised = false;
                 monitoring = false;
-                console.log(`energenie: done - ${signal}`)
+                log.info("energenie", "done - %j, exit(3)", signal);
                 process.exit(3);
             }, 10000);
         
         } else {
             // no monitoring close immediately
-            console.log(`energenie: signal ${signal}, closing adaptor...`);
+            log.info("energenie", "signal %j, closing adaptor...", signal);
             ener314rt.closeEner314rt();
             initialised = false;
             monitoring = false;
-            console.log(`energenie: done - ${signal}`)
+            log.info("energenie", "done - %j, exit(2)", signal);
             process.exit(2);        
         }
     } else {
         // not even initialised yet!
-        console.log(`energenie: done - ${signal}`)
+        log.error("energenie", "signal handler not initialised, signal %j, exiting", signal );
         process.exit(1); }
 
 };
@@ -219,8 +224,7 @@ function handleSignal(signal) {
 // monitor thread version in ener314rt uses a callback to return monitor messages directly (collected below), it needs the callback passing in
 function startMonitoringThread() {
     ener314rt.openThingsReceiveThread(10000, (msg) => {
-        //console.log(`asyncOpenThingsReceive ret=${ret}`);
-        console.log(`monitor: received=${msg}`);
+        log.verbose("energenie", "received=%j", msg);
         var OTmsg = JSON.parse(msg);
         OTmsg.cmd = 'monitor';
         process.send(OTmsg);
@@ -228,11 +232,10 @@ function startMonitoringThread() {
 };
 
 // Initialise
-//console.log("energenie: Initialising adaptor");
 var ret = ener314rt.initEner314rt(false);
 if (ret==0){
     initialised = true;
-    console.log(`energenie: ENER314-RT initialised succesfully.`);
+    log.info("energenie", "ENER314-RT initialised succesfully");
 } else {
-    console.log(`energenie ERROR: failed to initialise ENER314-RT ${ret}, EMULATION mode enabled`);
+    log.warn("energenie", "failed to initialise ENER314-RT, err=%j, EMULATOR mode enabled",ret);
 }
