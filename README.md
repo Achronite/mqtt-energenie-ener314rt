@@ -336,10 +336,10 @@ i
 
 From v0.5.0 the application can be configured with different logging levels by the key ```log_level``` in the configuration file.  The log level is read and set once during startup. The valid levels, using [npmlog](https://www.npmjs.com/package/npmlog), in increasing level are:
 * error   - Only logs fatal errors
-* warn    - reports minor errors that do not affect normal operation
-* http    - logs all incoming/outgoing messages (default)
-* info    - adds startup/discovery/internal details
-* verbose - all logging - use for debugging purposes
+* warn    + reports minor errors that do not affect normal operation
+* http    + logs all incoming/outgoing messages (default)
+* info    + adds startup/discovery/internal details
+* verbose + all logging - use for debugging purposes
 
 In normal operation you will not see any messages (after the 2 uncofigurable starting messages) in the log for settings 'warn' level or below.
 
