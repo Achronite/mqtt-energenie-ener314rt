@@ -63,7 +63,8 @@ It should contain the following entities configured for your environment. The ex
   "monitoring": true,
   "discovery_prefix": "homeassistant/",
   "ook_xmits": 10,
-  "fsk_xmits": 5
+  "fsk_xmits": 5,
+  "log_level": "info"
 }
 ```
 * `topic_stub` should contain the base topic where your energenie messages should reside on mqtt, the default value should suit most installations.
@@ -72,6 +73,7 @@ It should contain the following entities configured for your environment. The ex
 * If you have any energenie 'Control & Monitor' or 'Monitor' devices then set `"monitoring": true` otherwise remove or set false.
 * If you are using this module with Home Assistant include the `discovery_prefix` line as above.  The value shown above is the default MQTT discovery topic used by Home Assistant.
 * `ook_xmits` and `fsk_xmits` (optional) contain the number of times to transmit a radio message for `Control` (OOK) and `Control & Monitor` (FSK) devices.  Defaults to 20 otherwise
+* `log_level` the application logging level, see [Logging](#logging) below
 
 7) Run the application manually first using the command: ``node app.js``.  When you know this runs OK a system service can then be set-up as shown in the [Systemd Service](#systemd-service) below.
 
@@ -329,6 +331,17 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 |VALVE_STATE|Current valve mode/state|state|0=Open<br>1=Closed<br>2=Auto|sensor|
 |VOLTAGE|Current battery voltage|state|float|sensor|
 |battery|Estimated battery percentage|state|0-100|sensor|
+i
+### Logging
+
+From v0.5.0 the application can be configured with different logging levels by the key ```log_level``` in the configuration file.  The log level is read and set once during startup. The valid levels, using [npmlog](https://www.npmjs.com/package/npmlog), in increasing level are:
+* error   -
+* warn    - reports minor errors that do not affect normal operation
+* http    - logs all incoming/outgoing messages (default)
+* info    - adds startup/discovery/internal details
+* verbose - all logging - use for debugging purposes
+
+In normal operation you will not see any messages (after the 2 uncofigurable starting messages) in the log for settings 'warn' level or below.
 
 ## Change History
 See [CHANGELOG.md](./CHANGELOG.md)
