@@ -718,7 +718,7 @@ function publishDiscovery( device, index ){
 */
 					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${object_id}/config`;
 //					var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
-					var dmsg = Object.assign( { device: { name: `${device_name}`, ids: [`ener314rt-${device.deviceId}`], mdl: `${device_defaults.mdl}`, mf: 'energenie', sw: 'mqtt-ener314rt' }, 
+					var dmsg = Object.assign( { device: { name: `${device_name}`, ids: [`ener314rt-${device.deviceId}`], mdl: `${device_defaults.mdl}`, mf: 'Energenie', sw: 'mqtt-ener314rt' }, 
 											uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`, name: `${entity_name}`, availability_topic: `${CONFIG.topic_stub}availability/state` },
 											parameter.config,);
 
