@@ -8,6 +8,7 @@
     },
     "monitoring": true,
     "discovery_prefix": "homeassistant/",
+    "discovery_entityname_prefix_with_devicename": true,
     "ook_xmits": 10,
     "fsk_xmits": 5,
     "log_level": "info"

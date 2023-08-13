@@ -703,6 +703,11 @@ function publishDiscovery( device, index ){
 					var unique_id = `ener314rt-${object_id}`;
 					var entity_name = `${parameter.id.toLowerCase().replace(/_/g, ' ')}`
 					var device_name = `${device_defaults.mdl} ${device.deviceId}`;
+					if (CONFIG.discovery_entityname_prefix_with_devicename) {
+						// Since Home Assistant builds the `entity_id` from the `name` property of an HA discovery packet, this ensures entity_ids are more specific than just `apparent_power` or similar
+						// Home Assistant will not display the (somewhat redundant) device name when showing the entities in the UI, because it will match the device name
+						entity_name = `${device_name} ${entity_name}`;
+					};
 /*
 					if ((parameter.component == 'switch') ||
 					   (parameter.component == 'binary_sensor' && (parameter.id == 'MOTION_DETECTOR' || parameter.id == 'DOOR_SENSOR') )) {
