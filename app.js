@@ -701,7 +701,7 @@ function publishDiscovery( device, index ){
 					//
 					var object_id = `${device.deviceId}-${parameter.id}`;
 					var unique_id = `ener314rt-${object_id}`;
-					var entity_name = `${parameter.id.toLowerCase().replace(/_/g, ' ')}`
+					var entity_name = `${parameter.id.toLowerCase().replace(/_/g, ' ')}`;
 					var device_name = `${device_defaults.mdl} ${device.deviceId}`;
 /*
 					if ((parameter.component == 'switch') ||
