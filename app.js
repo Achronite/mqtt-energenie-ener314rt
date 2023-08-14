@@ -557,6 +557,11 @@ forked.on("message", msg => {
 							} else {
 								// use a simple linear equation for the rest (y=mx+c), based on 1.44v=90% and 1.2v=10%
 								charge = (333.3*v) - 390;
+
+								// Can produce high values at top end, restrict down
+								if (charge>95){
+									charge=95;
+								}
 								//charge = 9412 - 23449*(v/batteries) + 19240*(v*v/batteries) - 5176*(v*v*v/batteries); // cubic regression
 							}
 							
