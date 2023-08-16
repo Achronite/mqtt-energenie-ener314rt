@@ -10,6 +10,16 @@
 * Configurable logging levels [#24](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/24)
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
+## [0.5.1] 2023-08-16 Alpha
+
+### Fixed
+
+* Battery level calculation modified (again) to prevent values above 100% [#37](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/37)
+### Changed
+
+* Software version added to the startup log message and the `sw_version` for HA discovery (@webash)
+* MQTT Discovery: 'Energenie' capitalised in manufacturer (@webash)
+
 
 ## [0.5.0] 2023-08-11 Alpha
 
