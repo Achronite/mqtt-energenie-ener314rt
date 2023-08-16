@@ -3,8 +3,10 @@
 // Copyright Achronite 2023
 //
 
+const APP_VERSION = (require('./package.json')).version;
+
 // Add one console.log entry to show we are alive, the rest are configurable by npmlog
-console.log("mqtt-energenie-ener314rt: starting");
+console.log(`mqtt-energenie-ener314rt version ${APP_VERSION}: starting`);
 
 // logging framework
 var log = require('npmlog');
@@ -557,6 +559,11 @@ forked.on("message", msg => {
 							} else {
 								// use a simple linear equation for the rest (y=mx+c), based on 1.44v=90% and 1.2v=10%
 								charge = (333.3*v) - 390;
+
+								// Can produce high values at top end, restrict down
+								if (charge>95){
+									charge=95;
+								}
 								//charge = 9412 - 23449*(v/batteries) + 19240*(v*v/batteries) - 5176*(v*v*v/batteries); // cubic regression
 							}
 							
@@ -701,7 +708,7 @@ function publishDiscovery( device, index ){
 					//
 					var object_id = `${device.deviceId}-${parameter.id}`;
 					var unique_id = `ener314rt-${object_id}`;
-					var entity_name = `${parameter.id.toLowerCase().replace(/_/g, ' ')}`
+					var entity_name = `${parameter.id.toLowerCase().replace(/_/g, ' ')}`;
 					var device_name = `${device_defaults.mdl} ${device.deviceId}`;
 /*
 					if ((parameter.component == 'switch') ||
@@ -718,7 +725,7 @@ function publishDiscovery( device, index ){
 */
 					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${object_id}/config`;
 //					var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
-					var dmsg = Object.assign( { device: { name: `${device_name}`, ids: [`ener314rt-${device.deviceId}`], mdl: `${device_defaults.mdl}`, mf: 'energenie', sw: 'mqtt-ener314rt' }, 
+					var dmsg = Object.assign( { device: { name: `${device_name}`, ids: [`ener314rt-${device.deviceId}`], mdl: `${device_defaults.mdl}`, mf: 'Energenie', sw: `mqtt-ener314rt ${APP_VERSION}` }, 
 											uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`, name: `${entity_name}`, availability_topic: `${CONFIG.topic_stub}availability/state` },
 											parameter.config,);
 
