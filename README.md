@@ -43,13 +43,18 @@ wget https://github.com/Achronite/mqtt-energenie-ener314rt/archive/refs/heads/ma
 unzip master.zip
 ```
 
-4) `cd mqtt-energenie-ener314rt`
+4) Rename folder
+```
+mv mqtt-energenie-ener314rt-master mqtt-energenie-ener314rt
+```
 
-5) Install node's dependencies:
+5) `cd mqtt-energenie-ener314rt`
+
+6) Install node's dependencies:
 ```
 npm install
 ```
-6) Copy/Rename the file `config_sample.json` to `config.json` in the same directory as the install (mqtt-energenie-ener314rt), and edit it to match your MQTT broker and user details.
+7) Copy/Rename the file `config_sample.json` to `config.json` in the same directory as the install (mqtt-energenie-ener314rt), and edit it to match your MQTT broker and user details.
 It should contain the following entities configured for your environment. The example shown here uses the default [Mosquitto MQTT broker](https://github.com/home-assistant/hassio-addons/tree/master/mosquitto) Add-on in a Home Assistant installation:
 ```
 {
@@ -75,7 +80,7 @@ It should contain the following entities configured for your environment. The ex
 * `ook_xmits` and `fsk_xmits` (optional) contain the number of times to transmit a radio message for `Control` (OOK) and `Control & Monitor` (FSK) devices.  Defaults to 20 otherwise
 * `log_level` the application logging level, see [Logging](#logging) below
 
-7) Run the application manually first using the command: ``node app.js``.  When you know this runs OK a system service can then be set-up as shown in the [Systemd Service](#systemd-service) below.
+8) Run the application manually first using the command: ``node app.js``.  When you know this runs OK a system service can then be set-up as shown in the [Systemd Service](#systemd-service) below.
 
 ## Enabling The Hardware based SPI driver
 This application works best using the linux hardware based SPI driver (spidev).  The application attempts to open this driver on start-up, if it has not been enabled it falls back to using the software driver. The hardware SPI driver is enabled using `sudo raspi-config` choosing `Interface Options` and `SPI`. Do this whilst this software is not running.  The driver in use is reported within the log on startup.
