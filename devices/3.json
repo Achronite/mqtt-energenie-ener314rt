@@ -15,7 +15,7 @@
         {"id": "Climate_Control","component":"climate","config": {
             "name":"Radiator",
             "curr_temp_t": "~TEMPERATURE/state",
-            "max_temp": 30, "min_temp": 6,
+            "max_temp": 40, "min_temp": 5,
             "modes": ["auto","heat","off"],
             "mode_cmd_t": "~VALVE_STATE/command","mode_stat_t": "~VALVE_STATE/state",
             "mode_cmd_tpl": "{% if value == 'off' %} 1 {% elif value == 'heat' %} 0 {%- else %} 2 {% endif %}",
