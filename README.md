@@ -30,24 +30,10 @@ The number of individual devices this module can control is over 4 million, so i
 1) Plug in your ENER314-RT-VER01 board from Energenie onto the 26 pin or 40 pin connector of your Raspberry Pi.
 
 2) Ensure that the Raspberry Pi is up to date, and has node.js v15+ and npm installed.
-For example for Debian https://github.com/nodesource/distributions#debian-versions:
+For instructions to install node.js v15+ see https://github.com/nodesource/distributions
 ```
 sudo apt update
 sudo apt upgrade -y
-
-sudo apt-get install -y ca-certificates curl gnupg
-
-sudo mkdir -p /etc/apt/keyrings
-
-curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-
-NODE_MAJOR=16
-echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
-
-sudo apt-get update
-sudo apt-get install nodejs -y
-
-sudo apt install npm -y
 ```
 
 3) Download this application e.g:
