@@ -1,6 +1,19 @@
 {"mdl":"Smart Plug+",
     "parameters":[
-        {"id": "switch",        "component":"switch", "stat_t":"~@/state","cmd_t":"~@/command", "config": {"icon":"mdi:power-socket-uk","opt":false}},
-        {"id": "REAL_POWER",    "component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"power","unit_of_meas":"W"}},
-        {"id": "REACTIVE_POWER","component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"reactive_power","unit_of_meas":"var"}}    ]
+        {"id": "switch", "component":"switch", "stat_t":"~@/state", "cmd_t":"~@/command", "config": {
+            "name":"Switch",
+            "dev_cla":"outlet",
+            "icon":"mdi:power-socket-uk",
+            "opt":false,
+            "payload_on":"ON",
+            "payload_off":"OFF",
+            "state_on":"ON",
+            "state_off":"OFF"
+            }},
+        {"id": "REAL_POWER",    "component":"sensor", "stat_t":"~@/state","config": {"name":"Power","dev_cla":"power","unit_of_meas":"W"}},
+        {"id": "REACTIVE_POWER","component":"sensor", "stat_t":"~@/state","config": {"name":"Reactive Power","dev_cla":"reactive_power","unit_of_meas":"var"}},
+        {"id": "FREQUENCY",     "component":"sensor", "stat_t":"~@/state","config": {"name":"Frequency","value_template":"{{ value|round(2) }}","dev_cla":"frequency","unit_of_meas":"Hz"}},
+        {"id": "VOLTAGE",       "component":"sensor", "stat_t":"~@/state","config": {"name":"Voltage","dev_cla":"voltage","unit_of_meas":"V"}},
+        {"id": "switch",        "component":"binary_sensor", "stat_t":"~@/state","config": {"name":"Switch State","dev_cla":"power","entity_category":"diagnostic", "payload_on":"ON", "payload_off":"OFF"}}
+    ]
 }

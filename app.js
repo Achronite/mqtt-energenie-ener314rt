@@ -724,10 +724,22 @@ function publishDiscovery( device, index ){
 					}
 */
 					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${object_id}/config`;
-//					var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
-					var dmsg = Object.assign( { device: { name: `${device_name}`, ids: [`ener314rt-${device.deviceId}`], mdl: `${device_defaults.mdl}`, mf: 'Energenie', sw: `mqtt-ener314rt ${APP_VERSION}` }, 
-											uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`, name: `${entity_name}`, availability_topic: `${CONFIG.topic_stub}availability/state` },
-											parameter.config,);
+
+					var dmsg = Object.assign({
+						device: {
+							name: `${device_name}`,
+							ids: [`ener314rt-${device.deviceId}`],
+							mdl: `${device_defaults.mdl}`,
+							mf: 'Energenie (via ENER314-RT Raspberry Pi Shield)',
+							sw: `mqtt-ener314rt ${APP_VERSION}`,
+							configuration_url: 'https://github.com/Achronite/mqtt-energenie-ener314rt'
+						},
+						uniq_id: `${unique_id}`,
+						"~": `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`,
+						name: `${entity_name}`,
+						availability_topic: `${CONFIG.topic_stub}availability/state`
+					},
+					parameter.config, );
 
 					// replace @ in topics with the address where each of the data items are published (state) or read (command)
 					if (parameter.stat_t){
