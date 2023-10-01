@@ -730,14 +730,19 @@ function publishDiscovery( device, index ){
 							name: `${device_name}`,
 							ids: [`ener314rt-${device.deviceId}`],
 							mdl: `${device_defaults.mdl}`,
-							mf: 'Energenie (via ENER314-RT Raspberry Pi Shield)',
-							sw: `mqtt-ener314rt ${APP_VERSION}`,
-							configuration_url: 'https://github.com/Achronite/mqtt-energenie-ener314rt'
+							mf: `Energenie`,
+							sw: `${APP_VERSION}`,
+							hw: `mqtt-ener314rt`
 						},
 						uniq_id: `${unique_id}`,
 						"~": `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`,
 						name: `${entity_name}`,
-						availability_topic: `${CONFIG.topic_stub}availability/state`
+						availability_topic: `${CONFIG.topic_stub}availability/state`,
+						origin: {
+							name: `mqtt-ener314rt with ENER314-RT Raspberry Pi Shield`,
+							sw_version: `${APP_VERSION}`,
+							support_url: `https://github.com/Achronite/mqtt-energenie-ener314rt`
+						}
 					},
 					parameter.config, );
 

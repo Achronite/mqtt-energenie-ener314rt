@@ -6,7 +6,7 @@
   },
   "name": "mqtt-energenie-ener314rt",
   "description": "MQTT node.js application to control the Energenie line of products via the ENER314-RT add-on board for the Raspberry Pi.",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "main": "app.js",
   "devDependencies": {},
   "scripts": {
@@ -25,7 +25,9 @@
     "homeassistant",
     "hassio",
     "energenie",
-    "ener314-rt"
+    "ener314-rt",
+    "433Mhz",
+    "MiHome"
   ],
   "author": "Achronite",
   "license": "MIT",

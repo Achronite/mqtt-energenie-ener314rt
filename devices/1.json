@@ -1,8 +1,8 @@
 {"mdl":"Monitor Plug",
     "parameters":[
-        {"id": "REAL_POWER",    "component":"sensor", "stat_t":"~@/state","config": {"name":"Power","dev_cla":"power","unit_of_meas":"W"}},
-        {"id": "REACTIVE_POWER","component":"sensor", "stat_t":"~@/state","config": {"name":"Reactive Power","dev_cla":"reactive_power","unit_of_meas":"var"}},
-        {"id": "FREQUENCY",     "component":"sensor", "stat_t":"~@/state","config": {"name":"Frequency","value_template":"{{ value|round(2) }}","dev_cla":"frequency","unit_of_meas":"Hz"}},
-        {"id": "VOLTAGE",     "component":"sensor", "stat_t":"~@/state","config": {"name":"Voltage","dev_cla":"voltage","unit_of_meas":"V"}}
+        {"id": "REAL_POWER",    "component":"sensor", "stat_t":"~@/state","config": {"name":"Power","dev_cla":"power","unit_of_meas":"W","enabled_by_default":"true"}},
+        {"id": "REACTIVE_POWER","component":"sensor", "stat_t":"~@/state","config": {"name":"Reactive Power","dev_cla":"reactive_power","unit_of_meas":"var","enabled_by_default":"true"}},
+        {"id": "FREQUENCY",     "component":"sensor", "stat_t":"~@/state","config": {"name":"Frequency","value_template":"{{ value|round(2) }}","dev_cla":"frequency","unit_of_meas":"Hz","enabled_by_default":"true"}},
+        {"id": "VOLTAGE",     "component":"sensor", "stat_t":"~@/state","config": {"name":"Voltage","dev_cla":"voltage","unit_of_meas":"V","enabled_by_default":"true"}}
     ]
 }
