@@ -708,7 +708,7 @@ function publishDiscovery( device, index ){
 					//
 					var object_id = `${device.deviceId}-${parameter.id}`;
 					var unique_id = `ener314rt-${object_id}`;
-					var entity_name = `${parameter.id.toLowerCase().replace(/_/g, ' ')}`;
+					var entity_name = toTitleCase(parameter.id);
 					var device_name = `${device_defaults.mdl} ${device.deviceId}`;
 /*
 					if ((parameter.component == 'switch') ||
@@ -798,4 +798,20 @@ function handleSignal(signal) {
 	//disconnect from MQTT
 	client.end();
 
-  }
+}
+
+// Convert Uppercase '_' delimited string to TitleCase replacing _ with spaces
+function toTitleCase(str) {
+	let upper = false;
+	let newStr = str[0];
+	for (let i = 1, l = str.length; i < l; i++) {
+		if (str[i] == "_") {
+			upper = true;
+			newStr += ' ';
+			continue;
+		}
+		newStr += upper ? str[i] : str[i].toLowerCase();
+		upper = false;
+	}
+return newStr;
+}
