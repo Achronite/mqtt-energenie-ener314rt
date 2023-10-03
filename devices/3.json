@@ -13,7 +13,7 @@
         {"id": "Maintenance",   "component":"select","stat_t":"~@/state","cmd_t":"~@/command", "config": {"ent_cat":"config","icon":"mdi:radiator","opt":true,"options":[
             "None","Cancel Command","Request Diagnostics","Request Voltage","Exercise Valve","Identify","Low Power Mode ON","Low Power Mode OFF","Valve Auto","Valve Open","Valve Closed"
             ]}},
-        {"id": "Radiator","component":"climate","config": {
+        {"id": "Climate_Control","component":"climate","config": {
             "curr_temp_t": "~TEMPERATURE/state",
             "max_temp": 40, "min_temp": 5,
             "modes": ["auto","heat","off"],
