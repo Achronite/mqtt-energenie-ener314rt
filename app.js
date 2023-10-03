@@ -708,7 +708,7 @@ function publishDiscovery( device, index ){
 					//
 					var object_id = `${device.deviceId}-${parameter.id}`;
 					var unique_id = `ener314rt-${object_id}`;
-					var entity_name = `${parameter.id.toLowerCase().replace(/_/g, ' ')}`;
+					var entity_name = toTitleCase(parameter.id);
 					var device_name = `${device_defaults.mdl} ${device.deviceId}`;
 /*
 					if ((parameter.component == 'switch') ||
@@ -724,24 +724,22 @@ function publishDiscovery( device, index ){
 					}
 */
 					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${object_id}/config`;
-
 					var dmsg = Object.assign({
 						device: {
 							name: `${device_name}`,
 							ids: [`ener314rt-${device.deviceId}`],
 							mdl: `${device_defaults.mdl}`,
 							mf: `Energenie`,
-							sw: `${APP_VERSION}`,
-							hw: `mqtt-ener314rt`
+							sw: `${APP_VERSION}`
 						},
 						uniq_id: `${unique_id}`,
 						"~": `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`,
 						name: `${entity_name}`,
-						availability_topic: `${CONFIG.topic_stub}availability/state`,
-						origin: {
-							name: `mqtt-ener314rt with ENER314-RT Raspberry Pi Shield`,
-							sw_version: `${APP_VERSION}`,
-							support_url: `https://github.com/Achronite/mqtt-energenie-ener314rt`
+						avty_t: `${CONFIG.topic_stub}availability/state`,
+						o: {
+							name: `mqtt-energenie-ener314rt`,
+							sw: `${APP_VERSION}`,
+							url: `https://github.com/Achronite/mqtt-energenie-ener314rt`
 						}
 					},
 					parameter.config, );
@@ -815,4 +813,21 @@ function handleSignal(signal) {
 	//disconnect from MQTT
 	client.end();
 
-  }
+}
+
+// Convert '_' delimited string to Title Case, preserving existing title case and replacing '_' with spaces
+function toTitleCase(str) {
+    str = str.toLowerCase();
+    let upper = false;
+    let newStr = str[0].toUpperCase();
+    for (let i = 1, l = str.length; i < l; i++) {
+        if (str[i] == "_") {
+            upper = true;
+            newStr += ' ';
+            continue;
+        }
+        newStr += upper ? str[i].toUpperCase() : str[i];
+        upper = false;
+    }
+    return newStr;
+}
