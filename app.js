@@ -724,10 +724,26 @@ function publishDiscovery( device, index ){
 					}
 */
 					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${object_id}/config`;
-//					var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
-					var dmsg = Object.assign( { device: { name: `${device_name}`, ids: [`ener314rt-${device.deviceId}`], mdl: `${device_defaults.mdl}`, mf: 'Energenie', sw: `mqtt-ener314rt ${APP_VERSION}` }, 
-											uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`, name: `${entity_name}`, availability_topic: `${CONFIG.topic_stub}availability/state` },
-											parameter.config,);
+//          var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
+					var dmsg = Object.assign({
+						device: {
+							name: `${device_name}`,
+							ids: [`ener314rt-${device.deviceId}`],
+							mdl: `${device_defaults.mdl}`,
+							mf: `Energenie`,
+							sw: `mqtt-ener314rt ${APP_VERSION}`
+						},
+						uniq_id: `${unique_id}`,
+						"~": `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`,
+						name: `${entity_name}`,
+						avty_t: `${CONFIG.topic_stub}availability/state`,
+						o: {
+							name: `mqtt-energenie-ener314rt`,
+							sw: `${APP_VERSION}`,
+							url: `https://github.com/Achronite/mqtt-energenie-ener314rt`
+						}
+					},
+					parameter.config, );
 
 					// replace @ in topics with the address where each of the data items are published (state) or read (command)
 					if (parameter.stat_t){
@@ -800,18 +816,19 @@ function handleSignal(signal) {
 
 }
 
-// Convert Uppercase '_' delimited string to TitleCase replacing _ with spaces
+// Convert '_' delimited string to Title Case, preserving existing title case and replacing '_' with spaces
 function toTitleCase(str) {
-	let upper = false;
-	let newStr = str[0];
-	for (let i = 1, l = str.length; i < l; i++) {
-		if (str[i] == "_") {
-			upper = true;
-			newStr += ' ';
-			continue;
-		}
-		newStr += upper ? str[i] : str[i].toLowerCase();
-		upper = false;
-	}
-return newStr;
+    str = str.toLowerCase();
+    let upper = false;
+    let newStr = str[0].toUpperCase();
+    for (let i = 1, l = str.length; i < l; i++) {
+        if (str[i] == "_") {
+            upper = true;
+            newStr += ' ';
+            continue;
+        }
+        newStr += upper ? str[i].toUpperCase() : str[i];
+        upper = false;
+    }
+    return newStr;
 }
