@@ -262,11 +262,11 @@ client.on('message', function (topic, msg, packet) {
 							break;
 						case 'Low Power Mode ON':
 							otCommand = LOW_POWER_MODE;
-							msg_data = true;
+							msg_data = 1;
 							break;
 						case 'Low Power Mode OFF':
 							otCommand = LOW_POWER_MODE;
-							msg_data = false;
+							msg_data = 0;
 							break;
 						case 'Valve Auto':
 							otCommand = VALVE_STATE;
