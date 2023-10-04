@@ -10,6 +10,14 @@
 * Configurable logging levels [#24](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/24)
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
+## [0.n.n] 2023-10-nn
+### Fixed
+
+* Type error on Maintenance LOW_POWER_MODE causing crash [#49](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/49)
+### Changed
+
+* MQTT Discovery: Entity names are now in Title Case (instead of all lower case)
+
 ## [0.5.1] 2023-08-16 Alpha
 
 ### Fixed
