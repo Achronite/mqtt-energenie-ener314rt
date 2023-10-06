@@ -10,13 +10,28 @@
 * Configurable logging levels [#24](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/24)
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
-## [0.n.n] 2023-10-nn
+## [0.6.0] 2023-10-nn
+
+### Added
+
+* Extra keys '433MHz' and 'MiHome' added to `package.json` (@genestealer)
+
 ### Fixed
 
 * Type error on Maintenance LOW_POWER_MODE causing crash [#49](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/49)
 ### Changed
 
 * MQTT Discovery: Entity names are now in Title Case (instead of all lower case)
+* MQTT Discovery: eTRV Climate now operates differently to align closer to the Climate modes in Home Assistant (note: the numbers in brackets show the equivalent eTRV VALVE_STATE)
+  * 'auto' (2) mode in HA means it is run by an external schedule, so has therefore been removed as not applicable 
+  * 'heat' (was 0 now 2) mode operates to the set-point temperature
+  * 'off' (1) mode unchanged
+  * 'always on' (0) has been removed, as there isn't an equivalent in HA
+* MQTT Discovery: Origin added to device discovery message (@genestealer)
+* MQTT Discovery: Device Class for Smart Plug set to Outlet (@genestealer)
+* MQTT Discovery: eTRV `REPORTING_INTERVAL` Entity category set to config (@genestealer)
+* MQTT Discovery: eTRV temperature step added and set to 0.5 (@genestealer)
+* MQTT Discovery: Battery % now shows as dynamic icon in Home Assistant for eTRV (@genestealer) and Home Energy Monitor (@Achronite)
 
 ## [0.5.1] 2023-08-16 Alpha
 
