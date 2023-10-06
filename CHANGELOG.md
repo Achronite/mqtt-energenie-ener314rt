@@ -22,7 +22,7 @@ Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) 
 ### Changed
 
 * MQTT Discovery: Entity names are now in Title Case (instead of all lower case)
-* MQTT Discovery: eTRV Climate now operates differently to align closer to the Climate modes in Home Assistant (note: the numbers in brackets show the equivalent eTRV `VALVE_STATE`)
+* MQTT Discovery: eTRV Climate now operates differently to align closer to the Climate modes in Home Assistant [#47](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/47) (note: the numbers in brackets show the equivalent eTRV `VALVE_STATE`)
   * 'auto' (2) mode in HA means it is run by an external schedule, so has therefore been removed as not applicable 
   * 'heat' (was 0 now 2) mode operates to the set-point temperature
   * 'off' (1) mode unchanged
