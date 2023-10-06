@@ -816,9 +816,8 @@ function handleSignal(signal) {
 
 }
 
-// Convert '_' delimited string to Title Case, preserving existing title case and replacing '_' with spaces
+// Convert '_' delimited string to Title Case, replacing '_' with spaces
 function toTitleCase(str) {
-    str = str.toLowerCase();
     let upper = false;
     let newStr = str[0].toUpperCase();
     for (let i = 1, l = str.length; i < l; i++) {
@@ -827,7 +826,7 @@ function toTitleCase(str) {
             newStr += ' ';
             continue;
         }
-        newStr += upper ? str[i].toUpperCase() : str[i];
+        newStr += upper ? str[i].toUpperCase() : str[i].toLowerCase();
         upper = false;
     }
     return newStr;
