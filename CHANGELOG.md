@@ -15,6 +15,7 @@ Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) 
 ### Added
 
 * Extra keys '433MHz' and 'MiHome' added to `package.json` (@genestealer)
+* Instructions added to README for joining undiscovered Monitor devices [#52](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/52)
 
 ### Fixed
 
