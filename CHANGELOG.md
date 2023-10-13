@@ -10,7 +10,7 @@
 * Configurable logging levels [#24](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/24)
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
-## [0.6.0] 2023-10-nn
+## [0.6.0] 2023-10-13
 
 ### Added
 
@@ -33,7 +33,7 @@ Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) 
 * MQTT Discovery: eTRV `REPORTING_INTERVAL` and `Maintenance` Entity categories set to config (@genestealer)
 * MQTT Discovery: eTRV temperature step added and set to 0.5 (@genestealer)
 * MQTT Discovery: Battery % now shows as dynamic icon in Home Assistant for eTRV (@genestealer) and Home Energy Monitor (@Achronite)
-* MQTT Discovery: `FREQUENCY` and `VOLTAGE` added as HA disabled for Monitor Plug, and Smart Plug+
+* MQTT Discovery: `FREQUENCY` and `VOLTAGE` added as HA 'disabled entities' for Monitor Plug, and Smart Plug+
 
 ## [0.5.1] 2023-08-16 Alpha
 
