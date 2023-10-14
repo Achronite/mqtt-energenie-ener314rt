@@ -34,6 +34,9 @@ Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) 
 * MQTT Discovery: eTRV temperature step added and set to 0.5 (@genestealer)
 * MQTT Discovery: Battery % now shows as dynamic icon in Home Assistant for eTRV (@genestealer) and Home Energy Monitor (@Achronite)
 * MQTT Discovery: `FREQUENCY` and `VOLTAGE` added as HA 'disabled entities' for Monitor Plug, and Smart Plug+
+* MQTT Discovery: `FREQUENCY` and `VOLTAGE` added option in config file to control default HA 'disabled entities' behaviour for Monitor Plug, and Smart Plug+ (@genestealer)
+
+Suggest adding 
 
 ## [0.5.1] 2023-08-16 Alpha
 
