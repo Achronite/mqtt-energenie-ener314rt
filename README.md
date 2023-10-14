@@ -64,7 +64,8 @@ It should contain the following entities configured for your environment. The ex
   "discovery_prefix": "homeassistant/",
   "ook_xmits": 10,
   "fsk_xmits": 5,
-  "log_level": "info"
+  "log_level": "info",
+  "enable_volt_freq": false
 }
 ```
 * `topic_stub` should contain the base topic where your energenie messages should reside on mqtt, the default value should suit most installations.
@@ -74,6 +75,7 @@ It should contain the following entities configured for your environment. The ex
 * If you are using this module with Home Assistant include the `discovery_prefix` line as above.  The value shown above is the default MQTT discovery topic used by Home Assistant.
 * `ook_xmits` and `fsk_xmits` (optional) contain the number of times to transmit a radio message for `Control` (OOK) and `Control & Monitor` (FSK) devices.  Defaults to 20 otherwise
 * `log_level` the application logging level, see [Logging](#logging) below
+* `enable_volt_freq` set to `true` to enable the Voltage and frequency sensors for smart plugs, reported in MQTT discovery (disabled by default)
 
 7) Run the application manually first using the command: ``node app.js``.  When you know this runs OK a system service can then be set-up as shown in the [Systemd Service](#systemd-service) below.
 
