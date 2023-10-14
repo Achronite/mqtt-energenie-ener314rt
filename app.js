@@ -65,6 +65,11 @@ if (CONFIG.ook_xmits)
 if (CONFIG.fsk_xmits)
 	fsk_xmits = CONFIG.fsk_xmits;
 
+// Set a default value for enable_volt_freq if it's missing from the config file
+if (typeof CONFIG.enable_volt_freq === 'undefined') {
+    CONFIG.enable_volt_freq = false; // Set to false by default
+}
+
 // connect to MQTT
 log.info('MQTT', "connecting to broker %s", CONFIG.mqtt_broker);
 
@@ -710,6 +715,13 @@ function publishDiscovery( device, index ){
 					var unique_id = `ener314rt-${object_id}`;
 					var entity_name = toTitleCase(parameter.id);
 					var device_name = `${device_defaults.mdl} ${device.deviceId}`;
+
+			
+                    // Condition to check if CONFIG.monitoring is true and if the parameter component is 'FREQUENCY' or 'VOLTAGE'
+					// Enables Frequency and Voltage reporting via MQTT discovery.
+                    if (CONFIG.enable_volt_freq && (parameter.id == 'FREQUENCY' || parameter.id == 'VOLTAGE')) {
+                        parameter.config.en = true;
+                    }
 /*
 					if ((parameter.component == 'switch') ||
 					   (parameter.component == 'binary_sensor' && (parameter.id == 'MOTION_DETECTOR' || parameter.id == 'DOOR_SENSOR') )) {
