@@ -62,8 +62,8 @@ It should contain the following entities configured for your environment. The ex
     },
   "monitoring": true,
   "discovery_prefix": "homeassistant/",
-  "ook_xmits": 10,
-  "fsk_xmits": 5,
+  "ook_xmits": 20,
+  "fsk_xmits": 20,
   "log_level": "info"
 }
 ```
