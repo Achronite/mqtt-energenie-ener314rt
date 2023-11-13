@@ -10,7 +10,7 @@
 * Configurable logging levels [#24](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/24)
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
-## [0.6.0] 2023-10-13
+## [0.6.0] 2023-11-13
 
 ### Added
 
