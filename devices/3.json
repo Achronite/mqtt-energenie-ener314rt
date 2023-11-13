@@ -1,28 +1,29 @@
 {"mdl":"Radiator",
     "parameters":[
         {"id": "VOLTAGE",       "component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:battery","unit_of_meas":"V"}},
-        {"id": "EXERCISE_VALVE","component":"binary_sensor", "stat_t":"~@/state","cmd_t":"~@/command","config": {"dev_cla":"moving", "payload_on": "success", "payload_off": "fail"}},
+        {"id": "EXERCISE_VALVE","component":"binary_sensor", "stat_t":"~@/state","cmd_t":"~@/command","config": {"dev_cla":"moving", "pl_on": "success", "pl_off": "fail"}},
         {"id": "LOW_POWER_MODE","component":"binary_sensor", "stat_t":"~@/state","cmd_t":"~@/command","config": {}},
         {"id": "ERRORS",        "component":"binary_sensor", "stat_t":"~@/state","config": {"dev_cla":"problem", "ent_cat": "diagnostic"}},
         {"id": "ERROR_TEXT",    "component":"sensor", "stat_t":"~@/state","config": {"ent_cat": "diagnostic"}},
-        {"id": "REPORTING_INTERVAL","component":"number","cmd_t":"~@/command","config": {"unit_of_meas":"s","min": 300, "max": 3600, "opt": true, "icon":"mdi:timelapse"}},
-        {"id": "retries","component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:cached"}},
-        {"id": "command","component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:traffic-light"}},
-        {"id": "last_seen","component":"sensor", "stat_t":"~@/state","config": {"value_template": "{{ as_datetime(value) }}", "dev_cla": "timestamp"}},
-        {"id": "Maintenance", "component":"select","stat_t":"~@/state","cmd_t":"~@/command", "config": {"icon":"mdi:radiator","opt":true,"options":[
+        {"id": "REPORTING_INTERVAL","component":"number","cmd_t":"~@/command","config": {"ent_cat":"config","unit_of_meas":"s","min": 300, "max": 3600, "opt": true, "icon":"mdi:timelapse"}},
+        {"id": "retries",       "component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:cached"}},
+        {"id": "command",       "component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:traffic-light"}},
+        {"id": "last_seen",     "component":"sensor", "stat_t":"~@/state","config": {"value_template": "{{ as_datetime(value) }}", "dev_cla": "timestamp"}},
+        {"id": "Maintenance", "component":"select","stat_t":"~@/state","cmd_t":"~@/command", "config": {"ent_cat":"config","icon":"mdi:radiator","opt":true,"options":[
             "None","Cancel Command","Request Diagnostics","Request Voltage","Exercise Valve","Identify","Low Power Mode ON","Low Power Mode OFF","Valve Auto","Valve Open","Valve Closed"
             ]}},
         {"id": "Climate_Control","component":"climate","config": {
             "curr_temp_t": "~TEMPERATURE/state",
             "max_temp": 40, "min_temp": 5,
-            "modes": ["auto","heat","off"],
+            "modes": ["heat","off"],
             "mode_cmd_t": "~VALVE_STATE/command","mode_stat_t": "~VALVE_STATE/state",
-            "mode_cmd_tpl": "{% if value == 'off' %} 1 {% elif value == 'heat' %} 0 {%- else %} 2 {% endif %}",
-            "mode_stat_tpl": "{% if value == '1' %} off {% elif value == '0' %} heat {%- else %} auto {% endif %}",
+            "mode_cmd_tpl": "{% if value == 'off' %} 1 {% else %} 2 {% endif %}",
+            "mode_stat_tpl": "{% if value == '1' %} off {% else %} heat {% endif %}",
             "temp_cmd_t": "~TARGET_TEMP/command","temp_stat_t": "~TARGET_TEMP/state",
             "icon": "mdi:radiator",
-            "opt": true
+            "opt": "true",
+            "temp_step": "0.5"
         }},
-        {"id": "battery","component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"battery","icon":"mdi:battery","unit_of_meas":"%"}}
+        {"id": "battery","component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"battery","unit_of_meas":"%"}}
     ]
 }

@@ -160,7 +160,7 @@ Other devices will return other OpenThings parameters which you can use. I have 
 Enable the [MQTT Integration](https://www.home-assistant.io/integrations/mqtt/) in Home Assistant (if not already enabled).
 
 ### MQTT Discovery
-Most MiHome Monitor devices will auto-add and be available in Home Assistant via [MQTT discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery), consult the table above to see if your devices are supported.  The default discovery topics for the devices follow the pattern `homeassistant/<component>/ener314rt/<deviceId>-<ParameterName>`, the value `homeassistant/` can be changed in the `config.json` file if your discovery topic is configured differently.
+Most MiHome Monitor devices will auto-add and be available in Home Assistant via [MQTT discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery), consult the table above to see if your devices are supported.  If your Monitor device is not found you can force it to transmit a 'join' request by holding down the button on the device for 5 seconds. The default discovery topics for the devices follow the pattern `homeassistant/<component>/ener314rt/<deviceId>-<ParameterName>`, the value `homeassistant/` can be changed in the `config.json` file if your discovery topic is configured differently.
 
 The MQTT discovery configuration is updated one minute after the program starts for seen devices, and then every 10 minutes thereafter for performance reasons.
 
@@ -297,7 +297,7 @@ Where .data shows an entry in "", this is the string that should be sent as the 
 |Clear|Maintenance|0|Cancel current outstanding cached command for the device (set command & retries to 0)| "Cancel Command"|All Msgs|
 |Exercise Valve|Maintenance EXERCISE_VALVE|163|Send exercise valve command, recommended once a week to calibrate eTRV|"Exercise Valve"|DIAGNOSTICS|
 |Low power mode|Maintenance LOW_POWER_MODE|164|This is used to enhance battery life by limiting the hunting of the actuator, ie it limits small adjustments to degree of opening, when the room temperature is close to the *TEMP_SET* point. A consequence of the Low Power mode is that it may cause larger errors in controlling room temperature to the set temperature.|0=Off<br>1=On OR "Low Power Mode ON" "Low Power Mode OFF"|No*|
-|Valve state|Maintenance<br>VALVE_STATE|165|Set valve state|"Valve Auto"<br>"Valve Open"<br>"Valve Closed"<br> OR 0=Open<br>1=Closed<br>2=Auto (default)|No|
+|Valve state^|Maintenance<br>VALVE_STATE|165|Set valve state|"Valve Auto"<br>"Valve Open"<br>"Valve Closed"<br> OR 0=Open<br>1=Closed<br>2=Auto (default)|No|
 |Diagnostics|Maintenance<br>DIAGNOSTICS|166|Request diagnostic data from device, if all is OK it will return 0. Otherwise see additional monitored values for status messages|"Request Diagnostics"|DIAGNOSTICS|
 |Identify|Maintenance<br>IDENTIFY|191|Identify the device by making the green light flash on the selected eTRV for 60 seconds|"Identify"|No|
 |Reporting Interval|Maintenance REPORTING_INTERVAL|210|Update reporting interval to requested value|300-3600 seconds|No|
@@ -306,6 +306,7 @@ Where .data shows an entry in "", this is the string that should be sent as the 
 
 > \* Although this will not auto-report, a subsequent call to *REQUEST_DIAGNOTICS* will confirm the *LOW_POWER_MODE* setting
 
+> \^ Do not set *VALVE_STATE* 0='Valve Open' When used with Home Assistant in MQTT Discovery mode as it will interfere with the Climate Control Entity
 ### Command Caching
 Battery powered energenie devices, such as the eTRV or Thermostat do not constantly listen for commands.  For example, the eTRV reports its temperature at the *SET_REPORTING_INTERVAL* (default 5 minutes) after which the receiver is then activated to listen for commands. The receiver only remains active for 200ms or until a message is received.
 
@@ -380,4 +381,4 @@ Future work is detailed on the [github issues page](https://github.com/Achronite
 https://github.com/Achronite/mqtt-energenie-ener314rt/issues
 
 
-@Achronite - August 2023
+@Achronite - October 2023
