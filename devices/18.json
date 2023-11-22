@@ -1,0 +1,15 @@
+{"mdl":"Radiator",
+    "parameters":[
+        {"id": "BATTERY_LEVEL", "component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:battery","unit_of_meas":"V"}},
+        {"id": "THERMOSTAT_MODE", "component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:thermostat"}},
+        {"id": "REL_HUMIDITY", "component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"humidity"}},
+        {"id": "TEMPERATURE", "component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"temperature"}},
+        {"id": "SWITCH_STATE", "component":"sensor", "stat_t":"~@/state"},
+        {"id": "WAKEUP", "component":"sensor", "stat_t":"~@/state"},
+        {"id": "MOTION_DETECTOR",    "component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"motion"}},
+        {"id": "retries",       "component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:cached"}},
+        {"id": "command",       "component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:traffic-light"}},
+        {"id": "last_seen",     "component":"sensor", "stat_t":"~@/state","config": {"value_template": "{{ as_datetime(value) }}", "dev_cla": "timestamp"}},
+        {"id": "battery","component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"battery","unit_of_meas":"%"}}
+    ]
+}
