@@ -39,6 +39,8 @@ const IDENTIFY			= 191;
 const TARGET_TEMP 		= 244;
 const VOLTAGE 			= 226;
 const REPORTING_INTERVAL= 210;
+const THERMOSTAT_MODE   = 170;  // Thermostat
+const SWITCH_STATE    	= 243;
 
 // import dependencies
 const MQTT = require('mqtt');
@@ -343,6 +345,70 @@ client.on('message', function (topic, msg, packet) {
 
 
 				// All eTRV commands are cached
+				var ener_cmd = {
+					cmd: 'cacheCmd', mode: 'fsk', repeat: fsk_xmits,
+					command: cmd_array[MQTTM_OT_CMD],
+					productId: Number(cmd_array[MQTTM_OT_PRODUCTID]),
+					deviceId: Number(cmd_array[MQTTM_OT_DEVICEID]),
+					otCommand: otCommand,
+					data: msg_data
+				};
+			} else {
+				log.warn('cmd',"Invalid otCommand for eTRV: %j",otCommand);
+			}
+			break;
+
+		case '18':
+		case 18:
+			var otCommand = 0;
+			// MIHO069 - Smart Thermostat (alpha)
+
+			msg_data = Number(msg);
+
+			// Convert OpenThings Cmd String to Numeric
+			switch (cmd_array[MQTTM_OT_CMD]) {
+				case 'TARGET_TEMP':
+					otCommand = TARGET_TEMP;
+					break;
+				case 'LOW_POWER_MODE':
+					otCommand = LOW_POWER_MODE;
+					break;
+				case 'REPORTING_INTERVAL':
+					otCommand = REPORTING_INTERVAL;
+					break;
+				case 'THERMOSTAT_MODE':
+					otCommand = THERMOSTAT_MODE;
+					break;				
+				case 'SWITCH_STATE':
+					otCommand = SWITCH_STATE;
+					break;					
+				default:
+					// unsupported command
+					log.warn('cmd', "Unsupported cacheCmd for Thermostat: %j %j",cmd_array[MQTTM_OT_CMD], msg);
+					return;
+			} // switch 3: MQTTM_OT_CMD;
+
+			if (otCommand > 0) {
+				// We have a valid eTRV command
+
+				// swap out CANCEL for 0
+				if (otCommand == CANCEL ){
+					otCommand = 0;
+				} else {
+					// Convert booleans from HA default (ON/OFF)
+					if (typeof msg_data != typeof true) {
+						if (msg_data == "ON" || msg_data == "on") {
+							msg_data = 1;
+						} else if (msg_data == "OFF" || msg_data == "off") {
+							msg_data = 0;
+						} else {
+							// non-boolean, pass on as is
+						}
+					}
+				}
+
+
+				// All Thermostat commands are cached
 				var ener_cmd = {
 					cmd: 'cacheCmd', mode: 'fsk', repeat: fsk_xmits,
 					command: cmd_array[MQTTM_OT_CMD],
