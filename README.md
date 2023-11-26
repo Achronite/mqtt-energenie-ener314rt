@@ -171,49 +171,84 @@ For other devices (particularly the 'Control Only' devices) you will **need to a
 ```
 mqtt:
   light:
-    - unique_id: MIHO008_light1
-      name: "Lounge Light Switch"
+    # Note for MIHO009: If you have a MiHome 2 gang socket or light switch, the same zone must be used for controlling the 2 switches.
+    # Ref https://flows.nodered.org/node/node-red-contrib-energenie-ener314rt
+    - name: "Upstairs Hallway Light"
+      unique_id: MIHO009_light_hallway_up
       command_topic: energenie/ook/87/1/command
       optimistic: false
       state_topic: energenie/ook/87/1/state
       availability_topic: energenie/availability/state
       device:
-        name: "energenie OOK"
-        identifiers: ["ook"]
-        model: "MIHO008"
-        manufacturer: "energenie"
-        software: "mqtt-ener314rt"
+        identifiers: "miho009_light_hallway_up"
+        model: "2-Gang Light Switch (MIHO009) [87/1]"
+        manufacturer: "Energenie"
+        via_device: "mqtt-ener314rt"
 
-  switch:
-    - unique_id: ENER002_socket
-      name: "Coffee Maker"
-      command_topic: energenie/ook/89/1/command
+    - name: "Downstairs Hallway Light"
+      unique_id: MIHO009_light_hallway_down
+      command_topic: energenie/ook/87/2/command
       optimistic: false
-      state_topic: energenie/ook/89/1/state
+      state_topic: energenie/ook/87/2/state
       availability_topic: energenie/availability/state
       device:
-        name: "energenie OOK"
-        identifiers: ["ook"]
-        model: "ENER002"
-        manufacturer: "energenie"
-        software: "mqtt-ener314rt"
+        identifiers: "miho009_light_hallway_down"
+        model: "2-Gang Light Switch (MIHO009) [87/2]"
+        manufacturer: "Energenie"
+        via_device: "mqtt-ener314rt"
 
-    - unique_id: ENER010_socket_2
-      name: "Subwoofer"
-      command_topic: energenie/ook/564/2/command
+    - name: "All Hallway Lights"
+      unique_id: MIHO008_light_hallway_all
+      command_topic: energenie/ook/87/0/command
       optimistic: false
-      state_topic: energenie/ook/564/2/state
+      state_topic: energenie/ook/87/0/state
       availability_topic: energenie/availability/state
       device:
-        name: "energenie OOK"
-        identifiers: ["ook-4gang"]
-        model: "ENER010"
-        manufacturer: "energenie"
-        software: "mqtt-ener314rt"
+        identifiers: "miho009_light_hallway_all"
+        model: "2-Gang Light Switch (MIHO009) [87/0]"
+        manufacturer: "Energenie"
+        via_device: "mqtt-ener314rt"
 
-    - unique_id: MIHO010_Dimmer1
-      name: "Kitchen Dimmer Switch"
+    - name: "Living Room Ceiling Light"
+      unique_id: MIHO008_light_living
+      command_topic: energenie/ook/88/1/command
+      optimistic: false
+      state_topic: energenie/ook/88/1/state
+      availability_topic: energenie/availability/state
+      device:
+        identifiers: "miho008_light_living"
+        model: "Light Switch (MIHO008) [88/1]"
+        manufacturer: "Energenie"
+        via_device: "mqtt-ener314rt"
+
+    - name: "Guest Bedroom Ceiling Light"
+      unique_id: MIHO008_light_guest_bed
+      command_topic: energenie/ook/500/1/command
+      optimistic: false
+      state_topic: energenie/ook/500/1/state
+      availability_topic: energenie/availability/state
+      device:
+        identifiers: "miho008_light_guest_bed"
+        model: "Light Switch (MIHO008) [500/1]"
+        manufacturer: "Energenie"
+        via_device: "mqtt-ener314rt"
+
+    - name: "Bedroom Ceiling Light"
+      unique_id: MIHO008_light_bedroom
+      command_topic: energenie/ook/600/1/command
+      optimistic: false
+      state_topic: energenie/ook/600/1/state
+      availability_topic: energenie/availability/state
+      device:
+        identifiers: "miho008_light_bedroom"
+        model: "Light Switch (MIHO008) [600/1]"
+        manufacturer: "Energenie"
+        via_device: "mqtt-ener314rt"
+
+    - name: "Kitchen Dimmer Switch"
+      unique_id: MIHO010_Dimmer1
       command_topic: energenie/ook/669/dimmer/command
+      optimistic: false
       state_topic: energenie/ook/669/dimmer/state
       state_value_template: "{{ 'OFF' if value == 'OFF' else 'ON' }}"
       brightness_state_topic: energenie/ook/669/dimmer/state
@@ -222,26 +257,65 @@ mqtt:
       payload_on: 'ON'
       payload_off: 'OFF'
       on_command_type: "brightness"
-      optimistic: false
       availability_topic: energenie/availability/state
       device:
-        name: "energenie OOK"
-        identifiers: ["ook"]
-        model: "MIHO010"
+        identifiers: "miho010_dimmer1"
+        model: "Dimmer Switch (MIHO010) [669]"
         manufacturer: "energenie"
-        software: "mqtt-ener314rt"
+        via_device: "mqtt-ener314rt"
+
+
+  switch:
+    - name: "TV Speakers (Button 2)"
+      unique_id: MIHO002_socket1
+      command_topic: energenie/ook/697441/2/command
+      optimistic: false
+      state_topic: energenie/ook/697441/2/state
+      availability_topic: energenie/availability/state
+      device:
+        identifiers: "miho002_socket1"
+        model: "Smart Plug (MIHO002) [697441/2]"
+        manufacturer: "Energenie"
+        via_device: "mqtt-ener314rt"
+
+    - name: "Laptop Power (Button 3)"
+      unique_id: MIHO002_socket2
+      command_topic: energenie/ook/697441/3/command
+      optimistic: false
+      state_topic: energenie/ook/697441/3/state
+      availability_topic: energenie/availability/state
+      device:
+        identifiers: "miho002_socket2"
+        model: "Smart Plug (MIHO002) [697441/3]"
+        manufacturer: "Energenie"
+        via_device: "mqtt-ener314rt"
+
 
   sensor:
-    - name: "MiHome Thermometer Temperature"
+    # Note the use of "- name: null" to inherit the device name for the entity and group all sensors of a device together.
+    # https://www.home-assistant.io/integrations/mqtt/
+    - name: null
+      unique_id: MIHO069_thermostat1_temperature
       state_topic: energenie/18/12345/TEMPERATURE/state
       device_class: temperature
       unit_of_measurement: "C"
       device:
-        name: "energenie FSK"
-        identifiers: ["ener314rt-12345"]
-        model: "Thermometer"
-        manufacturer: "energenie"
-        software: "mqtt-ener314rt"   
+        name: "MiHome Thermostat"
+        identifiers: "miho069_thermostat1"
+        model: "Thermostat (MIHO069) [18/12345]"
+        manufacturer: "Energenie"
+        via_device: "mqtt-ener314rt"  
+    - name: null
+      unique_id: MIHO069_thermostat1_humidity
+      state_topic: energenie/18/12345/REL_HUMIDITY/state
+      device_class: humidity
+      unit_of_measurement: "%"
+      device:
+        name: "MiHome Thermostat"
+        identifiers: "miho069_thermostat1"
+        model: "Thermostat (MIHO069) [18/12345]"
+        manufacturer: "Energenie"
+        via_device: "mqtt-ener314rt"  
 
 ```
 Adding the `device` section enables easier access to the underlying switches within Home Assistant automations etc.
