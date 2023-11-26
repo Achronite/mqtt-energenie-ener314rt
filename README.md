@@ -357,6 +357,8 @@ mqtt:
 * Each zone can contain up to 6 separate switches (1-6) - NOTE: officially energenie state this is only 4 devices (1-4)
 * All devices within the **same** zone can be switched **at the same time** using a switch number of '0'.
 * A default zone '0' can be used to use Energenie's default zone (0x6C6C6).
+* If you have a MiHome 4 gang Multiplug, the same zone must be used for controlling all 4 switches, use switch #0 to control all, 1-4 for each socket
+* If you have a MiHome 2 gang socket or light switch, the same zone must be used for controlling the 2 switches
 
 ## MiHome Radiator Valve (eTRV) Support
 MiHome Thermostatic Radiator valves (eTRV) are supported, but due to the way the eTRV works there may be a delay from when a command is sent to it being processed by the device. See **Command Caching** below.
