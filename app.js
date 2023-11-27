@@ -35,11 +35,11 @@ const EXERCISE_VALVE 	= 163;
 const LOW_POWER_MODE 	= 164;
 const VALVE_STATE 		= 165;
 const DIAGNOSTICS 		= 166;
+const THERMOSTAT_MODE   = 170;  // Thermostat
 const IDENTIFY			= 191;
+const REPORTING_INTERVAL= 210;
 const TARGET_TEMP 		= 244;
 const VOLTAGE 			= 226;
-const REPORTING_INTERVAL= 210;
-const THERMOSTAT_MODE   = 170;  // Thermostat
 const SWITCH_STATE    	= 243;
 
 // import dependencies
@@ -121,6 +121,8 @@ client.on('message', function (topic, msg, packet) {
 	// format is OOK: 'energenie/c/ook/zone/switchNum/command' or OT: 'energenie/c/2/deviceNum/command'
 	log.verbose('>',"%s: %s", topic, msg);
 	const cmd_array = topic.split("/");
+
+	let otCommand = 0;
 
 	switch (cmd_array[MQTTM_DEVICE]) {
 		case 'ook':
@@ -221,7 +223,6 @@ client.on('message', function (topic, msg, packet) {
 			break;
 		case '3':
 		case 3:
-			var otCommand = 0;
 			// MIHO013 - Smart Radiator Valve
 			//
 			// TODO: Check data values (msg) passed in is valid for the command
@@ -237,8 +238,8 @@ client.on('message', function (topic, msg, packet) {
 				TEMP_SET
 			*/
 
-			let stateTopic = null;
-			let msg_data = Number(msg);
+			var stateTopic = null;
+			var msg_data = Number(msg);
 
 			// Convert OpenThings Cmd String to Numeric
 			switch (cmd_array[MQTTM_OT_CMD]) {
@@ -360,10 +361,10 @@ client.on('message', function (topic, msg, packet) {
 
 		case '18':
 		case 18:
-			var otCommand = 0;
 			// MIHO069 - Smart Thermostat (alpha)
 
-			msg_data = Number(msg);
+			var stateTopic = null;
+			var msg_data = Number(msg);
 
 			// Convert OpenThings Cmd String to Numeric
 			switch (cmd_array[MQTTM_OT_CMD]) {
