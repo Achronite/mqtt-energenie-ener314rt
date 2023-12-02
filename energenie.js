@@ -117,6 +117,7 @@ process.on('message', msg => {
 
                             break;
                         case MIHO013:  //eTRV
+                        case MIHO069:  //Thermostat (assumed cached device)
                             if (initialised){
                                 log.warn("energenie", "unable to send immediate command to eTRV, use cacheCmd instead");
                             } else {
@@ -167,7 +168,7 @@ process.on('message', msg => {
                 }
                 process.send(msg);
             }
-            log.verbose("energenie","cached cmd=%j, res=%d", msg.otCommand, res);
+            log.verbose("energenie","cached deviceId=%d, cmd=%j, data=%j, res=%d", msg.deviceId, msg.otCommand, msg.data, res);
             break;
         case 'discovery':
             // Update the MQTT discovery topics after requesting devicelist
