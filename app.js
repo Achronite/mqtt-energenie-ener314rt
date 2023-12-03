@@ -387,10 +387,10 @@ client.on('message', function (topic, msg, packet) {
 					// unsupported command
 					log.warn('cmd', "Unsupported cacheCmd for Thermostat: %j %j",cmd_array[MQTTM_OT_CMD], msg);
 					return;
-			} // switch 3: MQTTM_OT_CMD;
+			} // switch 18: MQTTM_OT_CMD;
 
 			if (otCommand > 0) {
-				// We have a valid eTRV command
+				// We have a valid Thermostat command
 
 				// swap out CANCEL for 0
 				if (otCommand == CANCEL ){
@@ -407,7 +407,6 @@ client.on('message', function (topic, msg, packet) {
 						}
 					}
 				}
-
 
 				// All Thermostat commands are cached
 				var ener_cmd = {

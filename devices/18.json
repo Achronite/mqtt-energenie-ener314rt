@@ -1,32 +1,125 @@
-{"mdl":"Thermostat",
-    "parameters":[
-        {"id": "BATTERY_LEVEL",  "component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:battery","unit_of_meas":"V", "suggested_display_precision": 2}},
-        {"id": "THERMOSTAT_MODE","component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:thermostat"}},
-        {"id": "REL_HUMIDITY",   "component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"humidity","unit_of_meas":"%"}},
-        {"id": "TEMPERATURE",    "component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"temperature","unit_of_meas":"°C"}},
-        {"id": "TARGET_TEMP", "component":"number", "stat_t":"~@/state","cmd_t":"~@/command","config": {"dev_cla":"temperature","unit_of_meas":"°C"}},
-        {"id": "SWITCH_STATE",   "component":"switch", "stat_t":"~@/state", "cmd_t":"~@/command"},
-        {"id": "WAKEUP",         "component":"sensor", "stat_t":"~@/state"},
-        {"id": "MOTION_DETECTOR","component":"sensor", "stat_t":"~@/state"},
-        {"id": "retries",        "component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:cached"}},
-        {"id": "command",        "component":"sensor", "stat_t":"~@/state","config": {"icon":"mdi:traffic-light"}},
-        {"id": "last_seen",      "component":"sensor", "stat_t":"~@/state","config": {"value_template": "{{ as_datetime(value) }}", "dev_cla": "timestamp"}},
-        {"id": "Climate_Control","component":"climate","config": {
-            "curr_temp_t": "~TEMPERATURE/state",
-            "max_temp": 30, "min_temp": 10,
-            "modes": ["heat","off"],
-            "mode_command_topic": "~SWITCH_STATE/command",
-            "mode_state_topic": "~THERMOSTAT_MODE/state",
-            "mode_command_template": "{% if value == 'off' %} 0 {% else %} 1 {% endif %}",
-            "mode_state_template": "{% if value == '0' %} off {% else %} heat {% endif %}",
-            "temperature_command_topic": "~TARGET_TEMP/command",
-            "temperature_state_topic": "~TEMPERATURE/state",
-            "current_humidity_topic": "~REL_HUMIDITY/state",
-            "icon": "mdi:thermostat",
-            "opt": "true",
-            "temp_step": "0.5",
-            "temperature_unit": "°C"
-        }},
-        {"id": "battery","component":"sensor", "stat_t":"~@/state","config": {"dev_cla":"battery","unit_of_meas":"%"}}
+{
+    "mdl": "Thermostat",
+    "parameters": [
+        {
+            "id": "BATTERY_LEVEL",
+            "component": "sensor",
+            "stat_t": "~@/state",
+            "config": {
+                "icon": "mdi:battery",
+                "unit_of_meas": "V",
+                "suggested_display_precision": 2
+            }
+        },
+        {
+            "id": "THERMOSTAT_MODE",
+            "component": "sensor",
+            "stat_t": "~@/state",
+            "config": {
+                "icon": "mdi:thermostat"
+            }
+        },
+        {
+            "id": "REL_HUMIDITY",
+            "component": "sensor",
+            "stat_t": "~@/state",
+            "config": {
+                "dev_cla": "humidity",
+                "unit_of_meas": "%"
+            }
+        },
+        {
+            "id": "TEMPERATURE",
+            "component": "sensor",
+            "stat_t": "~@/state",
+            "config": {
+                "dev_cla": "temperature",
+                "unit_of_meas": "°C"
+            }
+        },
+        {
+            "id": "TARGET_TEMP",
+            "component": "number",
+            "stat_t": "~@/state",
+            "cmd_t": "~@/command",
+            "config": {
+                "dev_cla": "temperature",
+                "unit_of_meas": "°C"
+            }
+        },
+        {
+            "id": "SWITCH_STATE",
+            "component": "switch",
+            "stat_t": "~@/state",
+            "cmd_t": "~@/command"
+        },
+        {
+            "id": "WAKEUP",
+            "component": "sensor",
+            "stat_t": "~@/state"
+        },
+        {
+            "id": "MOTION_DETECTOR",
+            "component": "sensor",
+            "stat_t": "~@/state"
+        },
+        {
+            "id": "retries",
+            "component": "sensor",
+            "stat_t": "~@/state",
+            "config": {
+                "icon": "mdi:cached"
+            }
+        },
+        {
+            "id": "command",
+            "component": "sensor",
+            "stat_t": "~@/state",
+            "config": {
+                "icon": "mdi:traffic-light"
+            }
+        },
+        {
+            "id": "last_seen",
+            "component": "sensor",
+            "stat_t": "~@/state",
+            "config": {
+                "value_template": "{{ as_datetime(value) }}",
+                "dev_cla": "timestamp"
+            }
+        },
+        {
+            "id": "Climate_Control",
+            "component": "climate",
+            "config": {
+                "curr_temp_t": "~TEMPERATURE/state",
+                "max_temp": 30,
+                "min_temp": 10,
+                "modes": [
+                    "heat",
+                    "off"
+                ],
+                "mode_command_topic": "~SWITCH_STATE/command",
+                "mode_state_topic": "~THERMOSTAT_MODE/state",
+                "mode_command_template": "{% if value == 'off' %} 0 {% else %} 1 {% endif %}",
+                "mode_state_template": "{% if value == '0' %} off {% else %} heat {% endif %}",
+                "temperature_command_topic": "~TARGET_TEMP/command",
+                "temperature_state_topic": "~TEMPERATURE/state",
+                "current_humidity_topic": "~REL_HUMIDITY/state",
+                "icon": "mdi:thermostat",
+                "opt": "true",
+                "temp_step": "0.5",
+                "temperature_unit": "°C"
+            }
+        },
+        {
+            "id": "battery",
+            "component": "sensor",
+            "stat_t": "~@/state",
+            "config": {
+                "dev_cla": "battery",
+                "unit_of_meas": "%"
+            }
+        }
     ]
 }
