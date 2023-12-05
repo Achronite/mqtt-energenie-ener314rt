@@ -381,11 +381,12 @@ client.on('message', function (topic, msg, packet) {
 					otCommand = THERMOSTAT_MODE;
 					break;				
 				case 'SWITCH_STATE':
+				case 'switch':
 					otCommand = SWITCH_STATE;
 					break;					
 				default:
 					// unsupported command
-					log.warn('cmd', "Unsupported cacheCmd for Thermostat: %j %j",cmd_array[MQTTM_OT_CMD], msg);
+					log.warn('cmd', "Unsupported Cmd for Thermostat: %j %j",cmd_array[MQTTM_OT_CMD], msg);
 					return;
 			} // switch 18: MQTTM_OT_CMD;
 
@@ -408,9 +409,9 @@ client.on('message', function (topic, msg, packet) {
 					}
 				}
 
-				// All Thermostat commands are cached
+				// Assume Thermostat commands are NOT cached
 				var ener_cmd = {
-					cmd: 'cacheCmd', mode: 'fsk', repeat: fsk_xmits,
+					cmd: 'send', mode: 'fsk', repeat: fsk_xmits,
 					command: cmd_array[MQTTM_OT_CMD],
 					productId: Number(cmd_array[MQTTM_OT_PRODUCTID]),
 					deviceId: Number(cmd_array[MQTTM_OT_DEVICEID]),
@@ -798,6 +799,7 @@ function publishDiscovery( device, index ){
 							mdl: `${device_defaults.mdl}`,
 							mf: `Energenie`,
 							sw: `mqtt-ener314rt ${APP_VERSION}`
+							
 						},
 						uniq_id: `${unique_id}`,
 						"~": `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`,

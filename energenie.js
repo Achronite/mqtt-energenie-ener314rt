@@ -116,8 +116,25 @@ process.on('message', msg => {
                             }                     
 
                             break;
+                        case MIHO069:  //Thermostat
+                            // Which command? - ONLY use openThingsSwitch() for now until we prove it is a cached or uncached device
+                            if (initialised){
+                                if (Number(msg.otCommand) == 243) {
+                                    var res = ener314rt.openThingsSwitch(productId, deviceId, switchState, xmits);
+                                    log.verbose("energenie", "openThingsSwitch(%d,%d,%j,%d) returned $j",productId, deviceId, switchState, xmits, res);
+                                } else {
+                                    log.verbose("energenie", "only the switch command is currently supported");
+                                }
+                            } else {
+                                log.verbose('emulator',"simulate calling openThingsSwitch(%d,%d,%j,%d)",productId, deviceId, switchState, xmits);
+                                // for emulation mode we need to respond, otherwise monitoring loop will do it for us
+                                msg.emulated = true;
+                                msg.state = switchState;
+                                process.send(msg);                                
+                            }           
+
+                            break;
                         case MIHO013:  //eTRV
-                        case MIHO069:  //Thermostat (assumed cached device)
                             if (initialised){
                                 log.warn("energenie", "unable to send immediate command to eTRV, use cacheCmd instead");
                             } else {
