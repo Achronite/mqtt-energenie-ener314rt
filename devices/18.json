@@ -109,7 +109,7 @@
                 "icon": "mdi:thermostat",
                 "opt": "true",
                 "temp_step": "0.5",
-                "temperature_unit": "°C"
+                "temperature_unit": "C"
             }
         },
         {
