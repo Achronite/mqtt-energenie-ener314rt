@@ -363,22 +363,25 @@ client.on('message', function (topic, msg, packet) {
 		case 18:
 			// MIHO069 - Smart Thermostat (alpha)
 
-			var stateTopic = null;
-			var msg_data = Number(msg);
+			var msg_data = msg;
+			log.verbose('cmd', "Thermostat msg_data : %j",msg_data);
 
 			// Convert OpenThings Cmd String to Numeric
 			switch (cmd_array[MQTTM_OT_CMD]) {
 				case 'TARGET_TEMP':
 					otCommand = TARGET_TEMP;
+					msg_data = Number(msg);
 					break;
 				case 'LOW_POWER_MODE':
 					otCommand = LOW_POWER_MODE;
 					break;
 				case 'REPORTING_INTERVAL':
 					otCommand = REPORTING_INTERVAL;
+					msg_data = Number(msg);
 					break;
 				case 'THERMOSTAT_MODE':
 					otCommand = THERMOSTAT_MODE;
+					msg_data = Number(msg);
 					break;				
 				case 'SWITCH_STATE':
 				case 'switch':
