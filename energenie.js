@@ -106,7 +106,7 @@ process.on('message', msg => {
                             // Invoke C function to do the send
                             if (initialised){
                                 var res = ener314rt.openThingsSwitch(productId, deviceId, switchState, xmits);
-                                log.verbose("energenie", "openThingsSwitch(%d,%d,%j,%d) returned $j",productId, deviceId, switchState, xmits, res);// monitoring loop should respond for us
+                                log.verbose("energenie", "openThingsSwitch(%d,%d,%j,%d) returned %j",productId, deviceId, switchState, xmits, res);// monitoring loop should respond for us
                             } else {
                                 log.verbose('emulator',"simulate calling openThingsSwitch(%d,%d,%j,%d)",productId, deviceId, switchState, xmits);
                                 // for emulation mode we need to respond, otherwise monitoring loop will do it for us
@@ -114,6 +114,25 @@ process.on('message', msg => {
                                 msg.state = switchState;
                                 process.send(msg);                                
                             }                     
+
+                            break;
+                        case MIHO069:  //Thermostat
+                            // Which command? - ONLY use openThingsSwitch() for now until we prove it is a cached or uncached device
+                            if (initialised){
+                                if (Number(msg.otCommand) == 243) {
+                                    let switchState = Boolean(msg.data);
+                                    var res = ener314rt.openThingsSwitch(productId, deviceId, switchState, xmits);
+                                    log.verbose("energenie", "openThingsSwitch(%d,%d,%j,%d) returned %j",productId, deviceId, switchState, xmits, res);
+                                } else {
+                                    log.verbose("energenie", "only the switch command is currently supported");
+                                }
+                            } else {
+                                log.verbose('emulator',"simulate calling openThingsSwitch(%d,%d,%j,%d)",productId, deviceId, switchState, xmits);
+                                // for emulation mode we need to respond, otherwise monitoring loop will do it for us
+                                msg.emulated = true;
+                                msg.state = switchState;
+                                process.send(msg);                                
+                            }           
 
                             break;
                         case MIHO013:  //eTRV
@@ -167,7 +186,7 @@ process.on('message', msg => {
                 }
                 process.send(msg);
             }
-            log.verbose("energenie","cached cmd=%j, res=%d", msg.otCommand, res);
+            log.verbose("energenie","cached deviceId=%d, cmd=%j, data=%j, res=%d", msg.deviceId, msg.otCommand, msg.data, res);
             break;
         case 'discovery':
             // Update the MQTT discovery topics after requesting devicelist

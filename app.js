@@ -35,11 +35,11 @@ const EXERCISE_VALVE 	= 163;
 const LOW_POWER_MODE 	= 164;
 const VALVE_STATE 		= 165;
 const DIAGNOSTICS 		= 166;
+const THERMOSTAT_MODE   = 170;  // Thermostat
 const IDENTIFY			= 191;
+const REPORTING_INTERVAL= 210;
 const TARGET_TEMP 		= 244;
 const VOLTAGE 			= 226;
-const REPORTING_INTERVAL= 210;
-const THERMOSTAT_MODE   = 170;  // Thermostat
 const SWITCH_STATE    	= 243;
 
 // import dependencies
@@ -121,6 +121,8 @@ client.on('message', function (topic, msg, packet) {
 	// format is OOK: 'energenie/c/ook/zone/switchNum/command' or OT: 'energenie/c/2/deviceNum/command'
 	log.verbose('>',"%s: %s", topic, msg);
 	const cmd_array = topic.split("/");
+
+	let otCommand = 0;
 
 	switch (cmd_array[MQTTM_DEVICE]) {
 		case 'ook':
@@ -221,7 +223,6 @@ client.on('message', function (topic, msg, packet) {
 			break;
 		case '3':
 		case 3:
-			var otCommand = 0;
 			// MIHO013 - Smart Radiator Valve
 			//
 			// TODO: Check data values (msg) passed in is valid for the command
@@ -237,8 +238,8 @@ client.on('message', function (topic, msg, packet) {
 				TEMP_SET
 			*/
 
-			let stateTopic = null;
-			let msg_data = Number(msg);
+			var stateTopic = null;
+			var msg_data = Number(msg);
 
 			// Convert OpenThings Cmd String to Numeric
 			switch (cmd_array[MQTTM_OT_CMD]) {
@@ -360,36 +361,40 @@ client.on('message', function (topic, msg, packet) {
 
 		case '18':
 		case 18:
-			var otCommand = 0;
 			// MIHO069 - Smart Thermostat (alpha)
 
-			msg_data = Number(msg);
+			var msg_data = msg;
+			log.verbose('cmd', "Thermostat msg_data : %j",msg_data);
 
 			// Convert OpenThings Cmd String to Numeric
 			switch (cmd_array[MQTTM_OT_CMD]) {
 				case 'TARGET_TEMP':
 					otCommand = TARGET_TEMP;
+					msg_data = Number(msg);
 					break;
 				case 'LOW_POWER_MODE':
 					otCommand = LOW_POWER_MODE;
 					break;
 				case 'REPORTING_INTERVAL':
 					otCommand = REPORTING_INTERVAL;
+					msg_data = Number(msg);
 					break;
 				case 'THERMOSTAT_MODE':
 					otCommand = THERMOSTAT_MODE;
+					msg_data = Number(msg);
 					break;				
 				case 'SWITCH_STATE':
+				case 'switch':
 					otCommand = SWITCH_STATE;
 					break;					
 				default:
 					// unsupported command
-					log.warn('cmd', "Unsupported cacheCmd for Thermostat: %j %j",cmd_array[MQTTM_OT_CMD], msg);
+					log.warn('cmd', "Unsupported Cmd for Thermostat: %j %j",cmd_array[MQTTM_OT_CMD], msg);
 					return;
-			} // switch 3: MQTTM_OT_CMD;
+			} // switch 18: MQTTM_OT_CMD;
 
 			if (otCommand > 0) {
-				// We have a valid eTRV command
+				// We have a valid Thermostat command
 
 				// swap out CANCEL for 0
 				if (otCommand == CANCEL ){
@@ -407,10 +412,9 @@ client.on('message', function (topic, msg, packet) {
 					}
 				}
 
-
-				// All Thermostat commands are cached
+				// Assume Thermostat commands are NOT cached
 				var ener_cmd = {
-					cmd: 'cacheCmd', mode: 'fsk', repeat: fsk_xmits,
+					cmd: 'send', mode: 'fsk', repeat: fsk_xmits,
 					command: cmd_array[MQTTM_OT_CMD],
 					productId: Number(cmd_array[MQTTM_OT_PRODUCTID]),
 					deviceId: Number(cmd_array[MQTTM_OT_DEVICEID]),
@@ -798,6 +802,7 @@ function publishDiscovery( device, index ){
 							mdl: `${device_defaults.mdl} (${device_defaults.mdlpn}) [${device.deviceId}]`,
 							mf: `Energenie`,
 							sw: `mqtt-ener314rt ${APP_VERSION}`
+							
 						},
 						uniq_id: `${unique_id}`,
 						"~": `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`,
