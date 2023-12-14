@@ -51,8 +51,7 @@
         {
             "id": "SWITCH_STATE",
             "component": "switch",
-            "stat_t": "~@/state",
-            "cmd_t": "~@/command"
+            "stat_t": "~@/state"
         },
         {
             "id": "WAKEUP",
@@ -100,17 +99,17 @@
                     "heat",
                     "off"
                 ],
-                "mode_command_topic": "~SWITCH_STATE/command",
-                "mode_state_topic": "~THERMOSTAT_MODE/state",
-                "mode_command_template": "{% if value == 'off' %} 0 {% else %} 1 {% endif %}",
-                "mode_state_template": "{% if value == '0' %} off {% else %} heat {% endif %}",
-                "temperature_command_topic": "~TARGET_TEMP/command",
-                "temperature_state_topic": "~TEMPERATURE/state",
+                "mode_cmd_t": "~THERMOSTAT_MODE/command",
+                "mode_stat_t": "~THERMOSTAT_MODE/state",
+                "mode_cmd_tpl": "{% if value == 'off' %} 0 {% else %} 1 {% endif %}",
+                "mode_stat_tpl": "{% if value == '0' %} off {% else %} heat {% endif %}",
+                "temp_cmd_t": "~TARGET_TEMP/command",
+                "temp_stat_t": "~TEMPERATURE/state",
                 "current_humidity_topic": "~REL_HUMIDITY/state",
                 "icon": "mdi:thermostat",
                 "opt": "true",
                 "temp_step": "0.5",
-                "temperature_unit": "C"
+                "temp_unit": "C"
             }
         },
         {
