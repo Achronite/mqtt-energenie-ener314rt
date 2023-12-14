@@ -362,35 +362,41 @@ client.on('message', function (topic, msg, packet) {
 		case '18':
 		case 18:
 			// MIHO069 - Smart Thermostat (alpha)
+			var msg_data = Number(msg);
+			log.verbose('cmd', "Thermostat msg_data : %s",msg);
 
-			var msg_data = msg;
-			log.verbose('cmd', "Thermostat msg_data : %j",msg_data);
+			// Convert booleans from HA default (ON/OFF)
+			/* NOT NEEDED: No booleans
+			switch(msg_data.toUpperCase()) {
+				case "ON":
+					msg_data = 1;
+					break;
+				case "OFF":
+					msg_data = 0;
+					break;
+				default:
+					// non-HA boolean, convert back to a number
+					msg_data = Number(msg);
+			}
+			*/
 
-			// Convert OpenThings Cmd String to Numeric
+			log.verbose('cmd', "Thermostat msg_data2 : %j",msg_data);
+
+			// Process (cached) command
 			switch (cmd_array[MQTTM_OT_CMD]) {
 				case 'TARGET_TEMP':				// TEST PASSED CACHED
 					otCommand = TARGET_TEMP;
-					msg_data = Number(msg);
-					break;
-				case 'LOW_POWER_MODE':			// UNTESTED
-					otCommand = LOW_POWER_MODE;
-					break;
-				case 'REPORTING_INTERVAL':		// UNTESTED
-					otCommand = REPORTING_INTERVAL;
-					msg_data = Number(msg);
 					break;
 				case 'THERMOSTAT_MODE':			// TEST PASSED CACHED
 					otCommand = THERMOSTAT_MODE;
-					msg_data = Number(msg);
-					break;				
-				case 'SWITCH_STATE':			// TEST FAILED (It does however report)
-				case 'switch':
-					otCommand = SWITCH_STATE;
-					break;					
+					break;
+				case 'CANCEL':
+				case 1:
+					otCommand = CANCEL;
 				default:
-					// unsupported command
+					// unsupported command (but allow it through)
 					log.warn('cmd', "Unsupported Cmd for Thermostat: %j %j",cmd_array[MQTTM_OT_CMD], msg);
-					return;
+
 			} // switch 18: MQTTM_OT_CMD;
 
 			if (otCommand > 0) {
@@ -399,17 +405,6 @@ client.on('message', function (topic, msg, packet) {
 				// swap out CANCEL for 0
 				if (otCommand == CANCEL ){
 					otCommand = 0;
-				} else {
-					// Convert booleans from HA default (ON/OFF)
-					if (typeof msg_data != typeof true) {
-						if (msg_data == "ON" || msg_data == "on") {
-							msg_data = 1;
-						} else if (msg_data == "OFF" || msg_data == "off") {
-							msg_data = 0;
-						} else {
-							// non-boolean, pass on as is
-						}
-					}
 				}
 
 				// Thermostat commands are cached
