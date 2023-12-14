@@ -1,6 +1,23 @@
-{"mdl":"Door Sensor",
-    "parameters":[
-        {"id": "last_seen", "component":"sensor",        "stat_t":"~@/state","config": {"value_template": "{{ as_datetime(value) }}", "dev_cla": "timestamp"}},
-        {"id": "contact",   "component":"binary_sensor", "stat_t":"~@/state","config": {"dev_cla":"door"}}
+{
+    "mdl": "Door Sensor",
+    "mdlpn": "MIHO033",
+    "parameters": [
+       {
+          "id": "last_seen",
+          "component": "sensor",
+          "stat_t": "~@/state",
+          "config": {
+             "value_template": "{{ as_datetime(value) }}",
+             "dev_cla": "timestamp"
+          }
+       },
+       {
+          "id": "contact",
+          "component": "binary_sensor",
+          "stat_t": "~@/state",
+          "config": {
+             "dev_cla": "door"
+          }
+       }
     ]
-}
+ }

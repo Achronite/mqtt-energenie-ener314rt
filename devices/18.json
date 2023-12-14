@@ -1,5 +1,6 @@
 {
     "mdl": "Thermostat",
+    "mdlpn": "MIHO069",
     "parameters": [
         {
             "id": "BATTERY_LEVEL",

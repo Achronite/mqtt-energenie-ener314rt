@@ -799,7 +799,7 @@ function publishDiscovery( device, index ){
 						device: {
 							name: `${device_name}`,
 							ids: [`ener314rt-${device.deviceId}`],
-							mdl: `${device_defaults.mdl}`,
+							mdl: `${device_defaults.mdl} (${device_defaults.mdlpn}) [${device.deviceId}]`,
 							mf: `Energenie`,
 							sw: `mqtt-ener314rt ${APP_VERSION}`
 							
