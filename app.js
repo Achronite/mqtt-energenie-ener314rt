@@ -368,22 +368,22 @@ client.on('message', function (topic, msg, packet) {
 
 			// Convert OpenThings Cmd String to Numeric
 			switch (cmd_array[MQTTM_OT_CMD]) {
-				case 'TARGET_TEMP':
+				case 'TARGET_TEMP':				// TEST PASSED CACHED
 					otCommand = TARGET_TEMP;
 					msg_data = Number(msg);
 					break;
-				case 'LOW_POWER_MODE':
+				case 'LOW_POWER_MODE':			// UNTESTED
 					otCommand = LOW_POWER_MODE;
 					break;
-				case 'REPORTING_INTERVAL':
+				case 'REPORTING_INTERVAL':		// UNTESTED
 					otCommand = REPORTING_INTERVAL;
 					msg_data = Number(msg);
 					break;
-				case 'THERMOSTAT_MODE':
+				case 'THERMOSTAT_MODE':			// TEST PASSED CACHED
 					otCommand = THERMOSTAT_MODE;
 					msg_data = Number(msg);
 					break;				
-				case 'SWITCH_STATE':
+				case 'SWITCH_STATE':			// TEST FAILED (It does however report)
 				case 'switch':
 					otCommand = SWITCH_STATE;
 					break;					
@@ -412,9 +412,9 @@ client.on('message', function (topic, msg, packet) {
 					}
 				}
 
-				// Assume Thermostat commands are NOT cached
+				// Thermostat commands are cached
 				var ener_cmd = {
-					cmd: 'send', mode: 'fsk', repeat: fsk_xmits,
+					cmd: 'cacheCmd', mode: 'fsk', repeat: fsk_xmits,
 					command: cmd_array[MQTTM_OT_CMD],
 					productId: Number(cmd_array[MQTTM_OT_PRODUCTID]),
 					deviceId: Number(cmd_array[MQTTM_OT_DEVICEID]),
@@ -422,7 +422,7 @@ client.on('message', function (topic, msg, packet) {
 					data: msg_data
 				};
 			} else {
-				log.warn('cmd',"Invalid otCommand for eTRV: %j",otCommand);
+				log.warn('cmd',"Invalid otCommand for Thermostat : %j",otCommand);
 			}
 			break;
 
