@@ -117,22 +117,12 @@ process.on('message', msg => {
 
                             break;
                         case MIHO069:  //Thermostat
-                            // Which command? - ONLY use openThingsSwitch() for now until we prove it is a cached or uncached device
                             if (initialised){
-                                if (Number(msg.otCommand) == 243) {
-                                    let switchState = Boolean(msg.data);
-                                    var res = ener314rt.openThingsSwitch(productId, deviceId, switchState, xmits);
-                                    log.verbose("energenie", "openThingsSwitch(%d,%d,%j,%d) returned %j",productId, deviceId, switchState, xmits, res);
-                                } else {
-                                    log.verbose("energenie", "only the switch command is currently supported");
-                                }
+                                log.warn("energenie", "unable to send immediate command to thermostat, use cacheCmd instead");
                             } else {
-                                log.verbose('emulator',"simulate calling openThingsSwitch(%d,%d,%j,%d)",productId, deviceId, switchState, xmits);
-                                // for emulation mode we need to respond, otherwise monitoring loop will do it for us
-                                msg.emulated = true;
-                                msg.state = switchState;
-                                process.send(msg);                                
-                            }           
+                                log.verbose('emulator',"not implemented for thermostat");
+                                // for emulation mode we need to respond, otherwise monitoring loop will do it for us                           
+                            }            
 
                             break;
                         case MIHO013:  //eTRV
@@ -172,7 +162,7 @@ process.on('message', msg => {
             ener314rt.closeEner314rt();
             process.exit(0);
         case 'cacheCmd':
-            // Queue a cached command (usually for eTRV)
+            // Queue a cached command (usually for eTRV or Thermostat)
             if (msg.data === undefined || msg.data === null){
                 msg.data = 0;
             }
