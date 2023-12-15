@@ -558,11 +558,13 @@ forked.on("message", msg => {
 
 						break;
 					case 'MOTION_DETECTOR':
-						topic_key = 'motion';
+						// TO DO - This passes back the weird values sent back by the thermostat; these need interpreting properly
 						if (msg[key] == 1 || msg[key] == '1') {
 							msg[key] = "ON";
-						} else {
+							topic_key = 'motion';
+						} else if (msg[key] == 0 || msg[key] == '0') {
 							msg[key] = "OFF";
+							topic_key = 'motion';
 						}
 						break;
 					case 'DOOR_SENSOR':
@@ -593,6 +595,7 @@ forked.on("message", msg => {
 					case 'REPORTING_INTERVAL':
 					case 'TARGET_TEMP':
 					case 'ERROR_TEXT':
+					case 'THERMOSTAT_MODE':
 						// These values need to be retained on MQTT as they are irregularly reported
 						retain = true;
 						break;
@@ -608,7 +611,7 @@ forked.on("message", msg => {
 							case 5:		// Energy Monitor
 								batteries = 3;
 								break;
-							case 18:	// Future support for Thermostat
+							case 18:	// Thermostat
 								batteries = 2;	
 						}
 						if (batteries > 0){
@@ -669,8 +672,8 @@ forked.on("message", msg => {
 						client.publish(state_topic,state);
 					}
 
-					// Update Maintenance if retries=0
-					if (topic_key == "retries" && state == '0'){
+					// Update Maintenance if retries=0 for trv
+					if (msg.productId == '3' && topic_key == "retries" && state == '0'){
 						// retries are now empty, also change the Maintenance Select back to None
 						state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/Maintenance/state`;
 						log.verbose('<', "%s: None", state_topic);
