@@ -92,7 +92,6 @@
             "id": "Climate_Control",
             "component": "climate",
             "config": {
-                "curr_temp_t": "~TEMPERATURE/state",
                 "max_temp": 30,
                 "min_temp": 10,
                 "modes": [
