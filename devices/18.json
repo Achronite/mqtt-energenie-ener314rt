@@ -49,7 +49,7 @@
             }
         },
         {
-            "id": "SWITCH_STATE",
+            "id": "switch",
             "component": "switch",
             "stat_t": "~@/state"
         },
@@ -110,7 +110,9 @@
                 "icon": "mdi:thermostat",
                 "opt": "true",
                 "temp_step": "0.5",
-                "temp_unit": "C"
+                "temp_unit": "C",
+                "action_template": "{% if value == 'ON' %} heating {% else %} off {% endif %}",
+                "action_topic": "~switch/state"
             }
         },
         {
