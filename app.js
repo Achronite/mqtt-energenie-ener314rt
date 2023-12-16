@@ -380,8 +380,6 @@ client.on('message', function (topic, msg, packet) {
 			}
 			*/
 
-			log.verbose('cmd', "Thermostat msg_data2 : %j",msg_data);
-
 			// Process (cached) command
 			switch (cmd_array[MQTTM_OT_CMD]) {
 				case 'TARGET_TEMP':				// TEST PASSED CACHED
@@ -540,6 +538,7 @@ forked.on("message", msg => {
 					case 'deviceId':
 					case 'mfrId':
 					case 'cmd':
+					case 'WAKEUP':
 						// do not send via MQTT
 						topic_key = null;
 						break;

@@ -49,14 +49,10 @@
             }
         },
         {
-            "id": "switch",
-            "component": "switch",
-            "stat_t": "~@/state"
-        },
-        {
-            "id": "WAKEUP",
-            "component": "sensor",
-            "stat_t": "~@/state"
+            "id": "Boiler",
+            "component": "binary_sensor",
+            "stat_t": "~switch/state",
+            "dev_cla": "heat"
         },
         {
             "id": "MOTION_DETECTOR",
