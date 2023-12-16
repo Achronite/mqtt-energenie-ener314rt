@@ -54,7 +54,7 @@
             "component": "binary_sensor",
             "stat_t": "~switch/state",
             "config": {
-                "dev_cla": "heat"
+                "icon": "mdi:water-boiler"
             }
         },
         {
