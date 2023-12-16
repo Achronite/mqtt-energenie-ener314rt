@@ -175,6 +175,7 @@ mqtt:
       state_topic: energenie/ook/87/1/state
       availability_topic: energenie/availability/state
       device:
+        name: "Energenie OOK"
         identifiers: ["ook"]
         model: "Light Switch (MIHO008) [87/1]"
         manufacturer: "Energenie"
@@ -194,6 +195,7 @@ mqtt:
       on_command_type: "brightness"
       availability_topic: energenie/availability/state
       device:
+        name: "Energenie OOK"
         identifiers: ["ook"]
         model: "Dimmer Switch (MIHO010) [669]"
         manufacturer: "energenie"
@@ -209,6 +211,7 @@ mqtt:
       state_topic: energenie/ook/87/1/state
       availability_topic: energenie/availability/state
       device:
+        name: "Energenie OOK"
         identifiers: ["ook"]
         model: "2-Gang Light Switch (MIHO009) [87/1]"
         manufacturer: "Energenie"
@@ -221,6 +224,7 @@ mqtt:
       state_topic: energenie/ook/87/2/state
       availability_topic: energenie/availability/state
       device:
+        name: "Energenie OOK"
         identifiers: ["ook"]
         model: "2-Gang Light Switch (MIHO009) [87/2]"
         manufacturer: "Energenie"
@@ -233,6 +237,7 @@ mqtt:
       state_topic: energenie/ook/87/0/state
       availability_topic: energenie/availability/state
       device:
+        name: "Energenie OOK"
         identifiers: ["ook"]
         model: "2-Gang Light Switch (MIHO009) [87/0]"
         manufacturer: "Energenie"
@@ -245,6 +250,7 @@ mqtt:
       state_topic: energenie/ook/88/1/state
       availability_topic: energenie/availability/state
       device:
+        name: "Energenie OOK"
         identifiers: ["ook"]
         model: "Light Switch (MIHO008) [88/1]"
         manufacturer: "Energenie"
@@ -257,6 +263,7 @@ mqtt:
       state_topic: energenie/ook/500/1/state
       availability_topic: energenie/availability/state
       device:
+        name: "Energenie OOK"
         identifiers: ["ook"]
         model: "Light Switch (MIHO008) [500/1]"
         manufacturer: "Energenie"
@@ -269,6 +276,7 @@ mqtt:
       state_topic: energenie/ook/600/1/state
       availability_topic: energenie/availability/state
       device:
+        name: "Energenie OOK"
         identifiers: ["ook"]
         model: "Light Switch (MIHO008) [600/1]"
         manufacturer: "Energenie"
@@ -284,6 +292,7 @@ mqtt:
       state_topic: energenie/ook/89/1/state
       availability_topic: energenie/availability/state
       device:
+        name: "Energenie OOK"
         identifiers: ["ook"]
         model: "Smart Plug (MIHO002) [89/1]"
         manufacturer: "Energenie"
@@ -296,6 +305,7 @@ mqtt:
       state_topic: energenie/ook/564/2/state
       availability_topic: energenie/availability/state
       device:
+        name: "Energenie OOK"
         identifiers: ["ook-4gang"]
         model: "4-Gang (ENER010) [564/2]"
         manufacturer: "Energenie"
@@ -309,6 +319,7 @@ mqtt:
       state_topic: energenie/ook/697441/2/state
       availability_topic: energenie/availability/state
       device:
+        name: "Energenie OOK"
         identifiers: ["miho002_socket1"]
         model: "Smart Plug (MIHO002) [697441/2]"
         manufacturer: "Energenie"
@@ -321,6 +332,7 @@ mqtt:
       state_topic: energenie/ook/697441/3/state
       availability_topic: energenie/availability/state
       device:
+        name: "Energenie OOK"
         identifiers: ["miho002_socket2"]
         model: "Smart Plug (MIHO002) [697441/3]"
         manufacturer: "Energenie"
@@ -336,7 +348,7 @@ mqtt:
       device_class: temperature
       unit_of_measurement: "C"
       device:
-        name: "MiHome Thermostat"
+        name: "Energenie FSK"
         identifiers: ["miho069_thermostat1"]
         model: "Thermostat (MIHO069) [18/12345]"
         manufacturer: "Energenie"
@@ -347,7 +359,7 @@ mqtt:
       device_class: humidity
       unit_of_measurement: "%"
       device:
-        name: "MiHome Thermostat"
+        name: "Energenie FSK"
         identifiers: ["miho069_thermostat1"]
         model: "Thermostat (MIHO069) [18/12345]"
         manufacturer: "Energenie"
