@@ -841,6 +841,8 @@ function lookupCommand( cmd ){
 	switch( Number(cmd) ){
 		case 0:
 			return 'None';
+		case THERMOSTAT_MODE:
+			return 'Thermostat Mode';
 		case TARGET_TEMP:
 			return 'Set Temperature';
 		case EXERCISE_VALVE:
