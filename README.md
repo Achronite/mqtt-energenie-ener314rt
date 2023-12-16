@@ -123,7 +123,7 @@ Here is a table showing the Device Topic and if control, monitoring, [MQTT disco
 |MIHO026|MiHome Light Switch (Steel)|ook|Yes|No|No|Yes|
 |MIHO032|MiHome Motion sensor|12|No|Yes|Yes|Yes|
 |MIHO033|MiHome Open Sensor|13|No|Yes|Yes|Yes|
-|MIHO069|MiHome Heating Thermostat|18|Cached|Yes|No|No| 
+|MIHO069|MiHome Heating Thermostat|18|Cached|Yes|Yes|Yes| 
 |MIHO089|MiHome Click - Smart Button|?|No|Yes|No|No|
 
 ## MQTT Topics
@@ -332,7 +332,7 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 |VALVE_STATE|Current valve mode/state|state|0=Open<br>1=Closed<br>2=Auto|sensor|
 |VOLTAGE|Current battery voltage|state|float|sensor|
 |battery|Estimated battery percentage|state|0-100|sensor|
-i
+
 ### Logging
 
 From v0.5.0 the application can be configured with different logging levels by the key ```log_level``` in the configuration file.  The log level is read and set once during startup. The valid levels, using [npmlog](https://www.npmjs.com/package/npmlog), in increasing level are:
@@ -377,4 +377,4 @@ Future work is detailed on the [github issues page](https://github.com/Achronite
 https://github.com/Achronite/mqtt-energenie-ener314rt/issues
 
 
-@Achronite - October 2023
+@Achronite - December 2023

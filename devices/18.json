@@ -17,7 +17,8 @@
             "component": "sensor",
             "stat_t": "~@/state",
             "config": {
-                "icon": "mdi:thermostat"
+                "icon": "mdi:thermostat",
+                "value_template": "{% if value == '0' %} Off {% elif value == '1' %} Auto {% else %} On {% endif %}"
             }
         },
         {
@@ -52,7 +53,9 @@
             "id": "Boiler",
             "component": "binary_sensor",
             "stat_t": "~switch/state",
-            "dev_cla": "heat"
+            "config": {
+                "dev_cla": "heat"
+            }
         },
         {
             "id": "MOTION_DETECTOR",
