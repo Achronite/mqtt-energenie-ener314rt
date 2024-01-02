@@ -80,7 +80,7 @@ var client = MQTT.connect(CONFIG.mqtt_broker,mqtt_options);
 // when MQTT is connected...
 client.on('connect',function(){	
 	log.verbose('MQTT', "connected to broker %j", CONFIG.mqtt_broker);
-	log.verbose('MQTT', "config: %j",mqtt_options);
+	//log.verbose('MQTT', "config: %j", mqtt_options);			// Commented out for #66
 
 	// Subscribe to incoming commands
 	var options={
