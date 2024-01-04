@@ -64,6 +64,7 @@ It should contain the following entities configured for your environment. The ex
   "discovery_prefix": "homeassistant/",
   "ook_xmits": 10,
   "fsk_xmits": 5,
+  "cached_retries": 10,
   "log_level": "info"
 }
 ```
@@ -73,6 +74,7 @@ It should contain the following entities configured for your environment. The ex
 * If you have any energenie 'Control & Monitor' or 'Monitor' devices then set `"monitoring": true` otherwise remove or set false.
 * If you are using this module with Home Assistant include the `discovery_prefix` line as above.  The value shown above is the default MQTT discovery topic used by Home Assistant.
 * `ook_xmits` and `fsk_xmits` (optional) contain the number of times to transmit a radio message for `Control` (OOK) and `Control & Monitor` (FSK) devices.  Defaults to 20 otherwise
+* `cached_retries` (optional) contains the number of times to retry a cached command before stopping (applies to eTRV and thermostat)
 * `log_level` the application logging level, see [Logging](#logging) below
 
 7) Run the application manually first using the command: ``node app.js``.  When you know this runs OK a system service can then be set-up as shown in the [Systemd Service](#systemd-service) below.
@@ -319,7 +321,7 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 |Parameter|Description|Topics|Data|Discovery Type|
 |---|---|:---:|:---:|:---:|
 |Maintenance|For sending maintenance commands|state,command|None, Cancel Command, Request Diagnostics, Exercise Valve, Identify, Low Power Mode ON, Low Power Mode OFF, Valve Auto, Valve Open,Valve Closed|select|
-|command|Current cached command being set to eTRV|state,command|None,...|sensor|
+|command|Current cached command being sent to device|state,command|None,...|sensor|
 |retries|The number of remaining retries for 'command' to be sent to the device|state,*soon*|0-10|sensor|
 |DIAGNOSTICS|Numeric diagnostic code|state|Numeric||
 |ERRORS|true if an error condition has been detected|state||binary_sensor|
@@ -327,11 +329,38 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 |EXERCISE_VALVE|The result of the *EXERCISE_VALVE* command|state|success, fail|binary_sensor|
 |LOW_POWER_MODE|eTRV is in low power mode state>|state|ON, OFF|binary_sensor|
 |REPORTING_INTERVAL|Frequency the eTRV will work up and report (in seconds)|command|300-3600|Number|
-|TARGET_TEMP|Target temperature in celcius|command|5-40|Number|
+|TARGET_TEMP|Target temperature in celcius|state,command|5-40|Number|
 |TEMPERATURE|The current temperature in celcius|state|float|sensor|
 |VALVE_STATE|Current valve mode/state|state|0=Open<br>1=Closed<br>2=Auto|sensor|
 |VOLTAGE|Current battery voltage|state|float|sensor|
 |battery|Estimated battery percentage|state|0-100|sensor|
+|last_seen|The time the device last reported|state|epoch|sensor|
+
+## MiHome Thermostat support
+
+New in v0.7.0
+
+> WARNING: If you are controlling/setting the Thermostat using a MiHome gateway/app you should NOT issue commands via this module as the commands will clash/override each other (see auto-messaging below).
+
+### Thermostat topics
+
+| Parameter | Description | Topics | Data | Discovery type |
+|---|:---:|---|---|---|
+|command|Current cached command being sent to device|state,command|None,...|sensor|
+|retries|The number of remaining retries for 'command' to be sent to the device|state|0-10|sensor|
+|battery|Estimated battery percentage|state|0-100|sensor|
+|BATTERY_LEVEL|Current battery voltage|state|float|sensor|
+|REL_HUMIDITY|The current relative humidity as a percentage|state|float|sensor|
+|TEMPERATURE|The current temperature in celcius|state|float|sensor|
+|TARGET_TEMP|Target temperature in celcius|state,command|5-40|Number|
+|THERMOSTAT_MODE|Set operating mode for thermostat, where<br>0=Off, 1=Auto, 2=On|state,command|0,1,2|sensor|
+|MOTION_DETECTOR|Somehow relates to motion being detected|state|who knows!|sensor|
+|last_seen|The time the device last reported|state|epoch|sensor|
+|switch|The status of the 'boiler' switch|state|OFF, ON|sensor|
+
+
+### auto-messaging
+In order for the Thermostat to provide updates for it's telemetry data when used without an MiHome gateway, auto messaging has been enabled within this module.  To start this auto-messaging you will need to have a monitoring enabled (via the `config.json` file) and then subsequently send a `THERMOSTAT_MODE` command to the application.  The most recent `THERMOSTAT_MODE` value will be stored and periodically replayed (until a restart) to prompt the thermostat into providing it's telemetry data.
 
 ### Logging
 
@@ -377,4 +406,4 @@ Future work is detailed on the [github issues page](https://github.com/Achronite
 https://github.com/Achronite/mqtt-energenie-ener314rt/issues
 
 
-@Achronite - December 2023
+@Achronite - January 2024

@@ -166,17 +166,19 @@ process.on('message', msg => {
             if (msg.data === undefined || msg.data === null){
                 msg.data = 0;
             }
-            var res = ener314rt.openThingsCacheCmd(msg.deviceId, msg.otCommand, msg.data);
+            if (msg.retries === undefined || msg.retries === null){
+                msg.retries = 10;
+            }
+            var res = ener314rt.openThingsCacheCmd(msg.productId, msg.deviceId, msg.otCommand, msg.data, msg.retries);
             if (res == 0){
                 // Notify caching or cancel succesful
-                if (msg.otCommand > 0){
-                    msg.retries = 10;
-                } else {
+                if (msg.otCommand <= 0){
+                    // cancel
                     msg.retries = 0;
                 }
                 process.send(msg);
             }
-            log.verbose("energenie","cached deviceId=%d, cmd=%j, data=%j, res=%d", msg.deviceId, msg.otCommand, msg.data, res);
+            log.verbose("energenie","cached deviceId=%d, cmd=%j, data=%j, retries=%d, res=%d", msg.deviceId, msg.otCommand, msg.data, msg.retries, res);
             break;
         case 'discovery':
             // Update the MQTT discovery topics after requesting devicelist

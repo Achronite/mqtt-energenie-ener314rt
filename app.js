@@ -66,6 +66,10 @@ if (CONFIG.ook_xmits)
 	ook_xmits = CONFIG.ook_xmits;
 if (CONFIG.fsk_xmits)
 	fsk_xmits = CONFIG.fsk_xmits;
+// cached retries
+let cached_retries = 10;
+if (CONFIG.cached_retries)
+	cached_retries = CONFIG.cached_retries;
 
 // connect to MQTT
 log.info('MQTT', "connecting to broker %s", CONFIG.mqtt_broker);
@@ -352,7 +356,8 @@ client.on('message', function (topic, msg, packet) {
 					productId: Number(cmd_array[MQTTM_OT_PRODUCTID]),
 					deviceId: Number(cmd_array[MQTTM_OT_DEVICEID]),
 					otCommand: otCommand,
-					data: msg_data
+					data: msg_data,
+					retries: cached_retries
 				};
 			} else {
 				log.warn('cmd',"Invalid otCommand for eTRV: %j",otCommand);
@@ -412,7 +417,8 @@ client.on('message', function (topic, msg, packet) {
 					productId: Number(cmd_array[MQTTM_OT_PRODUCTID]),
 					deviceId: Number(cmd_array[MQTTM_OT_DEVICEID]),
 					otCommand: otCommand,
-					data: msg_data
+					data: msg_data,
+					retries: cached_retries
 				};
 			} else {
 				log.warn('cmd',"Invalid otCommand for Thermostat : %j",otCommand);

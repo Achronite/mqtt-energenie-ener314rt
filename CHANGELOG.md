@@ -5,11 +5,32 @@
 * Periodic eTRV commands [#10](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/10)
 * Update state of all OOK switches within a single device when switch 0 used [#4](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/4)
 * Enhance availability (or publish guidance) on OpenThings devices based on `last_seen`
-* MiHome Thermostat control, including MQTT discovery of Thermostat
-* Configurable xmits for eTRV - requires `energenie-ener314rt` module change
-* Configurable logging levels [#24](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/24)
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
+## [0.7.0] 2024-01
+
+### Added
+
+* Support added for MiHome Thermostat (MIHO069), including auto-messaging
+* MQTT Discovery: Added thermostat, including Climate Control entity
+* The number of retries is now configurable for cached commands (applies to eTRV and thermostat) by setting `cache_retries` in `config,json` (default remains at 10)
+
+### Fixed
+
+* Added options to mqtt service for increased resillience of restarting the service upon failure [#62](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/62)(@genestealer)
+* Removed verbose logging of MQTT password [#66](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/66)
+
+### Changed
+
+* Pretty printed all device JSON files
+* MQTT Discovery: OEM Part Number and Device ID added to HA device model field (@genestealer)
+* Bumped `energenie-ener314rt` to v0.7.0 (REQUIRED)
+* Submitting a cached command will now replace the exisiting cached command for the device
+
+
+See also: https://github.com/Achronite/energenie-ener314rt/releases/tag/v0.7.0  - Notably pi5 support and GPIO driver changes
+
+
 ## [0.6.0] 2023-11-13
 
 ### Added

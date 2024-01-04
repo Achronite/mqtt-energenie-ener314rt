@@ -10,5 +10,6 @@
     "discovery_prefix": "homeassistant/",
     "ook_xmits": 10,
     "fsk_xmits": 5,
+    "cache_retries": 10,
     "log_level": "info"
 }
