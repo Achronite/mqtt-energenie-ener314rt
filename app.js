@@ -660,6 +660,10 @@ forked.on("message", msg => {
 						}
 
 					default:
+						// captured OpenThings commands (e.g from MiHome gateway) are preceeded with '_', set retained on these so we can find them more easily in MQTT Explorer
+						if(key.startsWith("_")){
+							retain = true;
+						}
 						// assume an unknown key we need to set in topic tree
 				}
 
