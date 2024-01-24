@@ -12,6 +12,16 @@
           }
        },
        {
+         "id": "VOLTAGE_TS",
+         "component": "sensor",
+         "stat_t": "~@/state",
+         "config": {
+            "icon": "mdi:battery-clock",
+            "value_template": "{{ as_datetime(value) }}",
+            "dev_cla": "timestamp"
+         }
+      },
+       {
           "id": "EXERCISE_VALVE",
           "component": "binary_sensor",
           "stat_t": "~@/state",
