@@ -329,7 +329,7 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 |EXERCISE_VALVE|The result of the *EXERCISE_VALVE* command|state|success, fail|binary_sensor|
 |LOW_POWER_MODE|eTRV is in low power mode state>|state|ON, OFF|binary_sensor|
 |REPORTING_INTERVAL|Frequency the eTRV will work up and report (in seconds)|command|300-3600|Number|
-|TARGET_TEMP|Target temperature in celcius|state,command|5-40|Number|
+|TARGET_TEMP|Target temperature in celcius|state,command|5.0 to 40.0<br>0.5 increments|Number|
 |TEMPERATURE|The current temperature in celcius|state|float|sensor|
 |VALVE_STATE|Current valve mode/state|state|0=Open<br>1=Closed<br>2=Auto|sensor|
 |VOLTAGE|Current battery voltage|state|float|sensor|
@@ -338,29 +338,37 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 
 ## MiHome Thermostat support
 
-New in v0.7.0
+New in v0.7.x
 
 > WARNING: If you are controlling/setting the Thermostat using a MiHome gateway/app you should NOT issue commands via this module as the commands will clash/override each other (see auto-messaging below).
 
 ### Thermostat topics
 
 | Parameter | Description | Topics | Data | Discovery type |
-|---|:---:|---|---|---|
+|---|---|---|---|---|
 |command|Current cached command being sent to device|state,command|None,...|sensor|
 |retries|The number of remaining retries for 'command' to be sent to the device|state|0-10|sensor|
 |battery|Estimated battery percentage|state|0-100|sensor|
 |BATTERY_LEVEL|Current battery voltage|state|float|sensor|
 |REL_HUMIDITY|The current relative humidity as a percentage|state|float|sensor|
 |TEMPERATURE|The current temperature in celcius|state|float|sensor|
-|TARGET_TEMP|Target temperature in celcius|state,command|5-40|Number|
+|TARGET_TEMP|Target temperature in celcius|state,command|5.0 to 40.0<br>0.5 incrementss|Number|
 |THERMOSTAT_MODE|Set operating mode for thermostat, where<br>0=Off, 1=Auto, 2=On|state,command|0,1,2|sensor|
 |MOTION_DETECTOR|Somehow relates to motion being detected|state|who knows!|sensor|
+|RELAY_POLARITY|Set relay polarity, where<br>0=Normally Open, 1=Normally Closed|command|0,1|switch|
+|HUMID_OFFSET|Set relative humidity offset for callibration|command|-20..20|number|
+|TEMP_OFFSET|Set temperature offset for callibration|command|-20..20|number|
+|HYSTERISIS|aka **Temp Margin**, set the difference between the current temperature and target temperature before the thermostat triggers|command|0.5-10.0|number|
 |last_seen|The time the device last reported|state|epoch|sensor|
 |switch|The status of the 'boiler' switch|state|OFF, ON|sensor|
 
 
 ### auto-messaging
-In order for the Thermostat to provide updates for it's telemetry data when used without an MiHome gateway, auto messaging has been enabled within this module.  To start this auto-messaging you will need to have a monitoring enabled (via the `config.json` file) and then subsequently send a `THERMOSTAT_MODE` command to the application.  The most recent `THERMOSTAT_MODE` value will be stored and periodically replayed (until a restart) to prompt the thermostat into providing it's telemetry data.
+In order for the Thermostat to provide updates for it's telemetry data when used without an MiHome Hub/Gateway, auto messaging has been enabled within this module.  To start this auto-messaging you will need to have a monitoring enabled (via the `config.json` file) and then subsequently send a `THERMOSTAT_MODE` command to the application.  The *result* of the most recent `THERMOSTAT_MODE` value will be stored and periodically replayed (until a restart) to prompt the thermostat into providing it's telemetry data.
+
+As the **result** is used, pressing the buttons on the thermostat *should* still work and be reflected as the thermostat will ignore the same command values after a button has been pressed.
+
+> NOTE: If you are controlling/setting the Thermostat using a MiHome gateway/app you should NOT issue commands via this module as the commands could clash/override each other.
 
 ### Logging
 

@@ -41,6 +41,10 @@ const REPORTING_INTERVAL= 210;
 const TARGET_TEMP 		= 244;
 const VOLTAGE 			= 226;
 const SWITCH_STATE    	= 243;
+const HYSTERESIS        = 254;  // Thermostat
+const RELAY_POLARITY    = 171;  // Thermostat
+const TEMP_OFFSET  = 189;  // Thermostat
+const HUMID_OFFSET = 186;  // Thermostat
 
 // import dependencies
 const MQTT = require('mqtt');
@@ -289,8 +293,9 @@ client.on('message', function (topic, msg, packet) {
 							break;
 						case 'Request Voltage':
 							otCommand = VOLTAGE;
+							break;
 						default:
-							log.warn('cmd', "Unsupported Maintenance command: %j type:%j for eTRV", msg, typeof(msg));
+							log.warn('cmd', "Unsupported Maintenance command: %s type:%j for eTRV", msg, typeof(msg));
 					}  // msg
 					break;
 
@@ -387,18 +392,34 @@ client.on('message', function (topic, msg, packet) {
 
 			// Process (cached) command
 			switch (cmd_array[MQTTM_OT_CMD]) {
-				case 'TARGET_TEMP':				// TEST PASSED CACHED
+				case 'TARGET_TEMP':	
 					otCommand = TARGET_TEMP;
 					break;
-				case 'THERMOSTAT_MODE':			// TEST PASSED CACHED
+				case 'THERMOSTAT_MODE':	
 					otCommand = THERMOSTAT_MODE;
+					break;
+				case 'HYSTERESIS':				// aka TEMP_MARGIN
+					otCommand = HYSTERESIS;
+					break;
+				case 'RELAY_POLARITY':
+					otCommand = RELAY_POLARITY;
+					break;
+				case 'TEMP_OFFSET':
+					otCommand = TEMP_OFFSET;
+					break;
+				case 'HUMID_OFFSET':
+					otCommand = HUMID_OFFSET;
+					break;
+				case 'REPORTING_INTERVAL':		// DO NOT USE
+					otCommand = REPORTING_INTERVAL;
 					break;
 				case 'CANCEL':
 				case 1:
 					otCommand = CANCEL;
 				default:
 					// unsupported command (but allow it through)
-					log.warn('cmd', "Unsupported Cmd for Thermostat: %j %j",cmd_array[MQTTM_OT_CMD], msg);
+					otCommand = Number(cmd_array[MQTTM_OT_CMD]);
+					log.warn('cmd', "Unsupported Cmd for Thermostat: %j (%d) %j",cmd_array[MQTTM_OT_CMD], otCommand, msg);
 
 			} // switch 18: MQTTM_OT_CMD;
 
@@ -723,7 +744,7 @@ forked.on("message", msg => {
 					client.publish(state_topic,state);
 				}
 
-				// Store cached state for values that are NEVER returned by eTRV monitor messages (confirmed by energenie)
+				// Store cached state for values that are NEVER returned by monitor messages (confirmed by energenie)
 				if (msg.productId == 3 && msg.command == 'VALVE_STATE'){
 					state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/${msg.command}/state`;
 					state = String(msg.data);
@@ -867,7 +888,19 @@ function lookupCommand( cmd ){
 		case IDENTIFY:
 			return 'Identify';
 		case VOLTAGE:
-			return 'Voltage';
+			return 'Request Voltage';
+		case TEMP_OFFSET:
+			return 'Temp Offset';
+		case HUMID_OFFSET:
+			return 'Humidity Offset';
+		case RELAY_POLARITY:
+			return 'Relay Polarity';
+		case HYSTERESIS:
+			return 'Temp Margin';
+		case REPORTING_INTERVAL:
+			return 'Reporting Interval';
+		case SWITCH_STATE:
+			return 'Switch'; 
 	};
 	return cmd;
 }
