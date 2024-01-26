@@ -7,7 +7,7 @@
             "component": "sensor",
             "stat_t": "~@/state",
             "config": {
-                "icon": "mdi:battery",
+                "ic": "mdi:battery",
                 "unit_of_meas": "V",
                 "sug_dsp_prc": 2
             }
@@ -17,7 +17,7 @@
             "component": "sensor",
             "stat_t": "~@/state",
             "config": {
-                "icon": "mdi:thermostat",
+                "ic": "mdi:thermostat",
                 "val_tpl": "{% if value == '0' %} Off {% elif value == '1' %} Auto {% else %} On {% endif %}"
             }
         },
@@ -51,7 +51,7 @@
                 "max": 30,
                 "unit_of_meas": "°C",
                 "step": 0.5,
-                "icon": "mdi:thermometer-auto"
+                "ic": "mdi:thermometer-auto"
             }
         },
         {
@@ -66,8 +66,8 @@
                 "max": 10,
                 "unit_of_meas": "°C",
                 "step": 0.5,
-                "mode": "slider",
-                "icon": "mdi:thermometer-lines"
+                "init": 0.5,
+                "ic": "mdi:thermometer-lines"
             }
         },
         {
@@ -75,7 +75,7 @@
             "component": "binary_sensor",
             "stat_t": "~switch/state",
             "config": {
-                "icon": "mdi:water-boiler"
+                "ic": "mdi:water-boiler"
             }
         },
         {
@@ -93,7 +93,8 @@
                 "ent_cat": "config",
                 "min": -20,
                 "max": 20,
-                "icon": "mdi:water-plus"
+                "init": 10,
+                "ic": "mdi:water-plus"
             }
         },
         {
@@ -107,8 +108,8 @@
                 "min": -20.0,
                 "max": 20.0,
                 "step": 0.1,
-                "mode": "slider",
-                "icon": "mdi:thermometer-plus"
+                "init": 10,
+                "ic": "mdi:thermometer-plus"
             }
         },
         {
@@ -116,7 +117,7 @@
             "component": "sensor",
             "stat_t": "~@/state",
             "config": {
-                "icon": "mdi:cached"
+                "ic": "mdi:cached"
             }
         },
         {
@@ -124,7 +125,7 @@
             "component": "sensor",
             "stat_t": "~@/state",
             "config": {
-                "icon": "mdi:traffic-light"
+                "ic": "mdi:traffic-light"
             }
         },
         {
@@ -154,7 +155,7 @@
                 "temp_stat_t": "~TARGET_TEMP/state",
                 "curr_temp_t": "~TEMPERATURE/state",
                 "current_humidity_topic": "~REL_HUMIDITY/state",
-                "icon": "mdi:thermostat",
+                "ic": "mdi:thermostat",
                 "opt": "true",
                 "temp_step": "0.5",
                 "temp_unit": "C",
@@ -177,7 +178,9 @@
             "cmd_t": "~@/command",
             "config": {
                 "ent_cat": "config",
-                "dev_cla": "outlet"
+                "dev_cla": "outlet",
+                "init": false,
+                "ic": "mdi:electric-switch"
             }
         }
     ]

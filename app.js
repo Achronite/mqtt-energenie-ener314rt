@@ -375,21 +375,6 @@ client.on('message', function (topic, msg, packet) {
 			var msg_data = Number(msg);
 			log.verbose('cmd', "Thermostat msg_data : %s",msg);
 
-			// Convert booleans from HA default (ON/OFF)
-			/* NOT NEEDED: No booleans
-			switch(msg_data.toUpperCase()) {
-				case "ON":
-					msg_data = 1;
-					break;
-				case "OFF":
-					msg_data = 0;
-					break;
-				default:
-					// non-HA boolean, convert back to a number
-					msg_data = Number(msg);
-			}
-			*/
-
 			// Process (cached) command
 			switch (cmd_array[MQTTM_OT_CMD]) {
 				case 'TARGET_TEMP':	
@@ -403,6 +388,12 @@ client.on('message', function (topic, msg, packet) {
 					break;
 				case 'RELAY_POLARITY':
 					otCommand = RELAY_POLARITY;
+					// Convert booleans from HA default (ON/OFF)
+					if (msg == "ON" || msg == "on"){
+							msg_data = 1;
+					} else if (msg == "OFF"  || msg == "off" ) {
+							msg_data = 0;
+					}
 					break;
 				case 'TEMP_OFFSET':
 					otCommand = TEMP_OFFSET;
