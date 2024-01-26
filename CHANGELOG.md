@@ -7,13 +7,16 @@
 * Enhance availability (or publish guidance) on OpenThings devices based on `last_seen`
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
-## [0.7.0] 2024-01
+
+## [0.7.1] 2024-01
 
 ### Added
 
 * Support added for MiHome Thermostat (MIHO069), including auto-messaging
 * MQTT Discovery: Added thermostat, including Climate Control entity
 * The number of retries is now configurable for cached commands (applies to eTRV and thermostat) by setting `cache_retries` in `config,json` (default remains at 10)
+* MQTT Discovery: Added Battery Timestamp (mapped to MQTT VOLTAGE_TS) for eTRV
+* Setting target temperature now caters for 0.5 increments (was integer)
 
 ### Fixed
 
