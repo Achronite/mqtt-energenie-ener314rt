@@ -15,7 +15,8 @@ Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) 
 * Support added for MiHome Thermostat (MIHO069), including auto-messaging
 * MQTT Discovery: Added thermostat, including Climate Control entity
 * The number of retries is now configurable for cached commands (applies to eTRV and thermostat) by setting `cache_retries` in `config,json` (default remains at 10)
-* MQTT Discovery: Added Battery Timestamp (mapped to MQTT VOLTAGE_TS) for eTRV
+* MQTT Discovery: Added 'Battery Timestamp' (mapped to MQTT VOLTAGE_TS) and 'Diagnostics Ran' (mapped to DIAGNOSTICS_TS) for eTRV
+* MQTT Discovery: Added 'Identify' Button for eTRV
 * Setting target temperature now caters for 0.5 increments (was integer)
 
 ### Fixed
@@ -27,7 +28,7 @@ Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) 
 
 * Pretty printed all device JSON files
 * MQTT Discovery: OEM Part Number and Device ID added to HA device model field (@genestealer)
-* Bumped `energenie-ener314rt` to v0.7.0 (REQUIRED)
+* Bumped `energenie-ener314rt` to v0.7.1 (REQUIRED)
 * Submitting a cached command will now replace the exisiting cached command for the device
 
 
