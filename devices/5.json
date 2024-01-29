@@ -17,6 +17,7 @@
           "stat_t": "~@/state",
           "config": {
              "icon": "mdi:battery",
+             "dev_cla": "voltage",
              "unit_of_meas": "V"
           }
        },

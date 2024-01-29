@@ -9,6 +9,7 @@
             "config": {
                 "ic": "mdi:battery",
                 "unit_of_meas": "V",
+                "dev_cla": "voltage",
                 "sug_dsp_prc": 2
             }
         },
@@ -179,7 +180,7 @@
             "config": {
                 "ent_cat": "config",
                 "dev_cla": "outlet",
-                "init": false,
+                "init": "false",
                 "ic": "mdi:electric-switch"
             }
         }
