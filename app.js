@@ -594,6 +594,15 @@ forked.on("message", msg => {
 						break;
 
 					case 'LOW_POWER_MODE':
+					case 'RELAY_POLARITY':
+						// binary retained fields
+						if (msg[key] == 1 || msg[key] == '1') {
+							msg[key] = "ON";
+						} else {
+							msg[key] = "OFF";
+						}
+						retain = true;
+						break;
 					case 'ERRORS':
 						// other binary fields
 						if (msg[key] == 1 || msg[key] == '1') {
@@ -608,13 +617,11 @@ forked.on("message", msg => {
 						msg[key] = cmdTxt;
 						break;
 					case 'VALVE_STATE':
-					case 'LOW_POWER_MODE':
 					case 'REPORTING_INTERVAL':
 					case 'TARGET_TEMP':
 					case 'ERROR_TEXT':
 					case 'THERMOSTAT_MODE':
 					case 'HYSTERESIS':
-					case 'RELAY_POLARITY':
 					case 'TEMP_OFFSET':
 					case 'HUMID_OFFSET':
 						// These values need to be retained on MQTT as they are irregularly reported

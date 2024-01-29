@@ -88,6 +88,7 @@
             "id": "HUMIDITY_OFFSET",
             "component": "number",
             "cmd_t": "~HUMID_OFFSET/command",
+            "stat_t": "~@/state",
             "config": {
                 "dev_cla": "humidity",
                 "unit_of_meas": "%",
@@ -102,6 +103,7 @@
             "id": "TEMP_OFFSET",
             "component": "number",
             "cmd_t": "~@/command",
+            "stat_t": "~@/state",
             "config": {
                 "dev_cla": "temperature",
                 "unit_of_meas": "°C",
@@ -177,10 +179,9 @@
             "id": "RELAY_POLARITY",
             "component": "switch",
             "cmd_t": "~@/command",
+            "stat_t": "~@/state",
             "config": {
                 "ent_cat": "config",
-                "dev_cla": "outlet",
-                "init": "false",
                 "ic": "mdi:electric-switch"
             }
         }
