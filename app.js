@@ -613,6 +613,10 @@ forked.on("message", msg => {
 					case 'TARGET_TEMP':
 					case 'ERROR_TEXT':
 					case 'THERMOSTAT_MODE':
+					case 'HYSTERESIS':
+					case 'RELAY_POLARITY':
+					case 'TEMP_OFFSET':
+					case 'HUMID_OFFSET':
 						// These values need to be retained on MQTT as they are irregularly reported
 						retain = true;
 						break;

@@ -18,6 +18,7 @@ Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) 
 * MQTT Discovery: Added 'Battery Timestamp' (mapped to MQTT VOLTAGE_TS) and 'Diagnostics Ran' (mapped to DIAGNOSTICS_TS) for eTRV
 * MQTT Discovery: Added 'Identify' Button for eTRV
 * Setting target temperature now caters for 0.5 increments (was integer)
+* A different mechanism of reporting processed commands has been implemented for the thermostat. When (and only when) the thermostat procesess a command it outputs it's telemetry data.  This mechanism has been used to assume that the command just sent to the device (upon WAKEUP) has been processed succesfully; and it is the command has it's retained state set in MQTT [#61](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/61
 
 ### Fixed
 
@@ -107,6 +108,7 @@ The log level can now be configured in the `config.json` file using `log_level`.
 * Added estimated `battery` topics for eTRV and Whole house monitor [#17]
 * Renamed default `config.json` file to `config_sample.json` to prevent user config overwrites upon update of code
 * MQTT Discovery: Added `ALARM` reportng for PIR, it is believed a value of 66 = `Low battery alert` See [#28](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/28)
+
 
 ### Fixed
 

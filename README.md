@@ -282,8 +282,20 @@ mqtt:
 * All devices within the **same** zone can be switched **at the same time** using a switch number of '0'.
 * A default zone '0' can be used to use Energenie's default zone (0x6C6C6).
 
-## MiHome Radiator Valve (eTRV) Support
-MiHome Thermostatic Radiator valves (eTRV) are supported, but due to the way the eTRV works there may be a delay from when a command is sent to it being processed by the device. See **Command Caching** below.
+## MiHome Heating Support
+
+Both MiHome heating devices are now supported (as of v0.7.x).  Specifically the MIHO013 MiHome Radiator Valve (eTRV) and the MIHO069 MiHome Thermostat.
+
+These devices are battery operated, so energenie in order to save power, have implemented periods of sleep where the devices do not listen for commands.  This can lead to a delay from when a command is sent to it being processed by the device. See **Command Caching** below.
+
+### Command Caching
+Battery powered energenie devices, such as the eTRV or Thermostat do not constantly listen for commands.  For example, the eTRV reports its temperature at the *SET_REPORTING_INTERVAL* (default 5 minutes) after which the receiver is then activated to listen for commands. The receiver only remains active for 200ms or until a message is received.
+
+To cater for these hardware limitations a command will be held (cached) until a report is received by the monitor thread from the device; at this point the most recent cached message (only 1 is supported) will be sent to the device.  Messages will continue to be resent until we know they have been succesfully received or until the number of retries has reached 0.  When a command is known to have been processed (e.g DIAGNOSTICS) the 'command' and 'retries' topics are reset to 0.
+
+The reason that a command may be resent multiple times is due to reporting issues. The eTRV devices, unfortunately, do not send acknowledgement for every command type (indicated by a 'No' in the *Response Msg* column in the above table).  This includes the *TEMP_SET* command!  So these commands are always resent for the full number of retries.
+
+> **NOTE:** The performance of node may decrease when a command is cached due to dynamic polling. The frequency that the radio device is polled by the monitor thread automatically increases by a factor of 200 when a command is cached (it goes from checking every 5 seconds to every 25 milliseconds) this dramatically increases the chance of a message being correctly received sooner.
 
 ### eTRV Commands
 The MiHome Thermostatic Radiator valve (eTRV) can accept commands to perform operations, provide diagnostics or perform self tests.  The documented commands are provided in the table below.  For this MQTT implementation most of the commands have been simplified under a single 'Maintenance' topic.  If you are using MQTT Discovery in Home Assistant you should see a 'select' for this on your dashboard.
@@ -305,14 +317,6 @@ Where .data shows an entry in "", this is the string that should be sent as the 
 > \* Although this will not auto-report, a subsequent call to *REQUEST_DIAGNOTICS* will confirm the *LOW_POWER_MODE* setting
 
 > \^ Do not set *VALVE_STATE* 0='Valve Open' When used with Home Assistant in MQTT Discovery mode as it will interfere with the Climate Control Entity
-### Command Caching
-Battery powered energenie devices, such as the eTRV or Thermostat do not constantly listen for commands.  For example, the eTRV reports its temperature at the *SET_REPORTING_INTERVAL* (default 5 minutes) after which the receiver is then activated to listen for commands. The receiver only remains active for 200ms or until a message is received.
-
-To cater for these hardware limitations a command will be held until a report is received by the monitor thread from the device; at this point the most recent cached message (only 1 is supported) will be sent to the device.  Messages will continue to be resent until we know they have been succesfully received or until the number of retries has reached 0.  When a command is known to have been processed (e.g DIAGNOSTICS) the 'command' and 'retries' topics are reset to 0.
-
-The reason that a command may be resent multiple times is due to reporting issues. The eTRV devices, unfortunately, do not send acknowledgement for every command type (indicated by a 'No' in the *Response Msg* column in the above table).  This includes the *TEMP_SET* command!  So these commands are always resent for the full number of retries.
-
-> **NOTE:** The performance of node may decrease when a command is cached due to dynamic polling. The frequency that the radio device is polled by the monitor thread automatically increases by a factor of 200 when a command is cached (it goes from checking every 5 seconds to every 25 milliseconds) this dramatically increases the chance of a message being correctly received sooner.
 
 ### eTRV Topics
 
@@ -336,13 +340,11 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 |battery|Estimated battery percentage|state|0-100|sensor|
 |last_seen|The time the device last reported|state|epoch|sensor|
 
-## MiHome Thermostat support
-
-New in v0.7.x
-
-> WARNING: If you are controlling/setting the Thermostat using a MiHome gateway/app you should NOT issue commands via this module as the commands will clash/override each other (see auto-messaging below).
-
 ### Thermostat topics
+
+The MiHome Thermostat is supported in v0.7.x.
+
+A different mechanism of reporting processed commands has been implemented for the thermostat. When (and only when) the thermostat procesess a command it outputs it's telemetry data.  This mechanism has been exploited, for values that do not get reported back by the thermostat (RELAY_POLARITY,HUMID_OFFSET,TEMP_OFFSET,HYSTERISIS) to assume for the command that has just been sent to the device (upon WAKEUP) has now been processed succesfully; at this point the *retained* state of the command is set in MQTT copying the command values.
 
 | Parameter | Description | Topics | Data | Discovery type |
 |---|---|---|---|---|
@@ -352,25 +354,26 @@ New in v0.7.x
 |BATTERY_LEVEL|Current battery voltage|state|float|sensor|
 |REL_HUMIDITY|The current relative humidity as a percentage|state|float|sensor|
 |TEMPERATURE|The current temperature in celcius|state|float|sensor|
-|TARGET_TEMP|Target temperature in celcius|state,command|5.0 to 40.0<br>0.5 incrementss|Number|
+|TARGET_TEMP|Target temperature in celcius|state,command|5.0 to 40.0<br>0.5 increments|Number|
 |THERMOSTAT_MODE|Set operating mode for thermostat, where<br>0=Off, 1=Auto, 2=On|state,command|0,1,2|sensor|
 |MOTION_DETECTOR|Somehow relates to motion being detected|state|who knows!|sensor|
-|RELAY_POLARITY|Set relay polarity, where<br>0=Normally Open, 1=Normally Closed|command|0,1|switch|
-|HUMID_OFFSET|Set relative humidity offset for callibration|command|-20..20|number|
-|TEMP_OFFSET|Set temperature offset for callibration|command|-20..20|number|
-|HYSTERISIS|aka **Temp Margin**, set the difference between the current temperature and target temperature before the thermostat triggers|command|0.5-10.0|number|
+|RELAY_POLARITY|Set relay polarity, where<br>0=Normally Open, 1=Normally Closed|command,state|0,1|switch|
+|HUMID_OFFSET|Set relative humidity offset for calibration|command,state|-20..20|number|
+|TEMP_OFFSET|Set temperature offset for calibration|command,state|-20..20|number|
+|HYSTERISIS|aka **Temp Margin**, set the difference between the current temperature and target temperature before the thermostat triggers|command,state|0.5-10.0|number|
 |last_seen|The time the device last reported|state|epoch|sensor|
 |switch|The status of the 'boiler' switch|state|OFF, ON|sensor|
 
+> WARNING: If you are controlling/setting the Thermostat using a MiHome gateway/app you should NOT issue commands via this module as the commands will clash/override each other (see auto-messaging below).
 
-### auto-messaging
-In order for the Thermostat to provide updates for it's telemetry data when used without an MiHome Hub/Gateway, auto messaging has been enabled within this module.  To start this auto-messaging you will need to have a monitoring enabled (via the `config.json` file) and then subsequently send a `THERMOSTAT_MODE` command to the application.  The *result* of the most recent `THERMOSTAT_MODE` value will be stored and periodically replayed (until a restart) to prompt the thermostat into providing it's telemetry data.
+### Thermostat auto-messaging to obtain telemetry
+In order for the Thermostat to provide updates for it's telemetry data, auto messaging has been enabled within this module.  To start this auto-messaging you will need to have a monitoring enabled (via the `config.json` file) and then subsequently send a command that returns the `THERMOSTAT_MODE` to the application.  The *result* of the most recent `THERMOSTAT_MODE` value will be stored and periodically replayed (until a restart) to prompt the thermostat into providing it's telemetry data.
 
 As the **result** is used, pressing the buttons on the thermostat *should* still work and be reflected as the thermostat will ignore the same command values after a button has been pressed.
 
 > NOTE: If you are controlling/setting the Thermostat using a MiHome gateway/app you should NOT issue commands via this module as the commands could clash/override each other.
 
-### Logging
+## Logging
 
 From v0.5.0 the application can be configured with different logging levels by the key ```log_level``` in the configuration file.  The log level is read and set once during startup. The valid levels, using [npmlog](https://www.npmjs.com/package/npmlog), in increasing level are:
 * error   - Only logs fatal errors
