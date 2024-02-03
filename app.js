@@ -612,9 +612,12 @@ forked.on("message", msg => {
 						}
 						break;
 					case 'command':
-						let cmdTxt = lookupCommand(msg[key]);
-						log.verbose("monitor","lookupCommand(%s) returned %j",msg[key], cmdTxt);
-						msg[key] = cmdTxt;
+						// As we use MQTT, and the command state has already been set when cacheCmd was called, there isn't a need here to update it unless the command has succeeded
+						// and anyways it would be difficult to extract the data value for this to be shown here
+						if (msg[key] == 0 || msg[key] == '0')
+							msg[key] = "None";
+						else
+							topic_key = null;
 						break;
 					case 'VALVE_STATE':
 					case 'REPORTING_INTERVAL':
@@ -739,7 +742,7 @@ forked.on("message", msg => {
 				
 				if (typeof(msg.otCommand) != "undefined"){
 					state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/command/state`;
-					state = String(lookupCommand(msg.otCommand));
+					state = String(lookupCommand(msg.otCommand, msg.data));
 
 					// save cached command on MQTT
 					log.verbose('<', "%s: %s", state_topic, state);
@@ -869,42 +872,60 @@ function publishDiscovery( device, index ){
 	}
 }
 
-function lookupCommand( cmd ){
+/*
+** Internal Function that return the english parameter name (for display) of a given OpenThings parameter code (cmd)
+** If the parameter requires a data value (data) to be set this is appended to the name of the command giving the full string
+*/
+function lookupCommand( cmd, data ){
+	let command = null;
 	switch( Number(cmd) ){
 		case 0:
 			return 'None';
 		case THERMOSTAT_MODE:
-			return 'Thermostat Mode';
+			command = 'Thermostat Mode';
+			break;
 		case TARGET_TEMP:
-			return 'Set Temperature';
+			command =  'Set Temperature';
+			break;
 		case EXERCISE_VALVE:
 			return 'Exercise Valve';
 		case LOW_POWER_MODE:
-			return 'Low Power Mode';		
+			command = 'Low Power Mode';		
+			break;
 		case VALVE_STATE:
-			return 'Valve Mode';
+			command = 'Valve Mode';
+			break;
 		case DIAGNOSTICS:
 			return 'Diagnostics';
 		case REPORTING_INTERVAL:
-			return 'Interval';
+			command = 'Interval';
+			break;
 		case IDENTIFY:
 			return 'Identify';
 		case VOLTAGE:
 			return 'Request Voltage';
 		case TEMP_OFFSET:
-			return 'Temp Offset';
+			command = 'Temp Offset';
+			break;
 		case HUMID_OFFSET:
-			return 'Humidity Offset';
+			command = 'Humidity Offset';
+			break;
 		case RELAY_POLARITY:
-			return 'Relay Polarity';
+			command = 'Relay Polarity';
+			break;
 		case HYSTERESIS:
-			return 'Temp Margin';
-		case REPORTING_INTERVAL:
-			return 'Reporting Interval';
+			command = 'Temp Margin';
+			break;
 		case SWITCH_STATE:
-			return 'Switch'; 
+			command = 'Switch';
+			break;
+		default:
+			return cmd;
 	};
-	return cmd;
+	if (data != "undefined" && data != null)
+		return command.concat(" ", data);
+	else
+		return command;
 }
 
 // Use single function to handle multiple signals
