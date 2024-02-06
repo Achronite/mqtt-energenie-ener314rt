@@ -33,6 +33,7 @@ Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) 
 * Submitting a cached command will now replace the exisiting cached command for the device
 * Added data value to the reporting of `command` when it has been succesfully cached (also only update MQTT when this is set to 0=None) [#69](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/69),
     e.g. "Set Temperature" becomes "Set Temperature 18.5"
+* Bumped MQTT to 5.3.5 [#62](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/62)
 
 
 See also: https://github.com/Achronite/energenie-ener314rt/releases/tag/v0.7.0  - Notably pi5 support and GPIO driver changes

@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "energenie-ener314rt": "0.7.1",
-    "mqtt": "^5.0.2",
+    "mqtt": "^5.3.5",
     "npmlog": "^7.0.1"
   },
   "name": "mqtt-energenie-ener314rt",
