@@ -19,6 +19,8 @@ Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) 
 * MQTT Discovery: Added 'Identify' Button for eTRV
 * Setting target temperature now caters for 0.5 increments (previously integer)
 * A different mechanism of reporting processed commands has been implemented for the thermostat, that relies on the fact that when (and only when) the thermostat procesess a command it outputs it's telemetry data.  This mechanism has been used to assume that the command just sent to the device (upon WAKEUP) has been processed succesfully; This command has it's retained state set in MQTT [#61](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/61
+* MQTT Discovery: A new device `mqtt-energenie-ener314rt` has been added to represent the software and the ENER314-RT board, which includes a 'Discover' button, 'Connected State' and reports the number of discovered monitor (FSK) devices.  All Discoved 'monitor' devices are automatically linked to this new device as 'Connected devices'.  The README examples have also been updated to show how to link these to the board device using `via_device`.
+* Home Assistant: Added 'Discover' button for the board device; this will perform a 10 second auto-scan and will update the device list via MQTT Discovery for all devices found.
 
 ### Fixed
 

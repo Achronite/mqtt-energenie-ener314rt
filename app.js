@@ -55,6 +55,7 @@ var ener314rt = require('energenie-ener314rt');
 
 // import async processing for handling radio comms (pass in log level)
 const { fork } = require('child_process');
+const { hostname } = require('os');
 
 var discovery = false;
 var shutdown = false;
@@ -108,9 +109,19 @@ client.on('connect',function(){
 	log.http('MQTT', "setting availability topic %s to 'online'", availability_topic);
 	client.publish(availability_topic, 'online', { retain: true });
 
+	// set initialisation time
+	var d = new Date();
+	var seconds = Math.round(d.getTime() / 1000);
+	publishBoardState('initialised', seconds);
+	publishBoardState('discover', 0);			// reset to 0 discovered devices
+
 	// Enable Periodic MQTT discovery at 1 min, and then every 10 minutes
 	if (CONFIG.discovery_prefix) {
 		discovery = true;
+
+		// Publish the parent 'board' discovery once on startup
+		publishBoardDiscovery();
+
 		log.info('discovery', "discovery enabled at topic prefix '%s'", CONFIG.discovery_prefix);
 		// After 1 min update MQTT discovery topics
 		setTimeout(  UpdateMQTTDiscovery, (60 * 1000));
@@ -436,6 +447,16 @@ client.on('message', function (topic, msg, packet) {
 				log.warn('cmd',"Invalid otCommand for Thermostat : %j",otCommand);
 			}
 			break;
+		case 'board':
+			// NOTE: there is no productId for the board
+			switch (cmd_array[MQTTM_OT_CMD]) {
+				case 'discover':
+				case 'scan':
+					// Call discovery function - force a scan as button was pressed
+					ener_cmd = { cmd: "discovery", scan: true };
+					break;					
+			}
+			break;
 
 		default:
 			// Undefined device
@@ -721,6 +742,7 @@ forked.on("message", msg => {
 		case 'discovery':
 			// device discovery message publish discovery messages to Home Assistant
 			log.info('discovery', "found %i devices", msg.numDevices);
+			publishBoardState('discover', msg.numDevices);			
 			msg.devices.forEach(publishDiscovery);
 			break;
 
@@ -761,9 +783,6 @@ forked.on("message", msg => {
 				
 			};
 			break;
-		case 'init':
-		case 'reset':
-			break;
 	} // switch msg.cmd
 
 });
@@ -794,7 +813,7 @@ function UpdateMQTTDiscovery() {
 //
 // Configuration of what values to publish is externalised to a file for each device product 'devices/<productId>.json'
 //
-function publishDiscovery( device, index ){
+function publishDiscovery( device ){
 
 	log.info('discovery',"discovered: %j",device);
 
@@ -813,19 +832,6 @@ function publishDiscovery( device, index ){
 					var unique_id = `ener314rt-${object_id}`;
 					var entity_name = toTitleCase(parameter.id);
 					var device_name = `${device_defaults.mdl} ${device.deviceId}`;
-/*
-					if ((parameter.component == 'switch') ||
-					   (parameter.component == 'binary_sensor' && (parameter.id == 'MOTION_DETECTOR' || parameter.id == 'DOOR_SENSOR') )) {
-						// Shorten name for obvious parameters
-						name = group_name;
-					} else if (parameter.id == 'retries') {
-						// pretty command retries
-						name = `command retries`;
-					} else {
-						// Convert to prettier lowercase entity name without underscores
-						name = `${parameter.id.toLowerCase().replace(/_/g, ' ')}`
-					}
-*/
 					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${object_id}/config`;
 //          var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
 					var dmsg = Object.assign({
@@ -833,9 +839,9 @@ function publishDiscovery( device, index ){
 							name: `${device_name}`,
 							ids: [`ener314rt-${device.deviceId}`],
 							mdl: `${device_defaults.mdl} (${device_defaults.mdlpn}) [${device.deviceId}]`,
-							mf: `Energenie`,
-							sw: `mqtt-ener314rt ${APP_VERSION}`
-							
+							mf: 'Energenie',
+							sw: `mqtt-ener314rt ${APP_VERSION}`,
+							via_device: 'mqtt-energenie-ener314rt'
 						},
 						uniq_id: `${unique_id}`,
 						"~": `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`,
@@ -847,7 +853,7 @@ function publishDiscovery( device, index ){
 							url: `https://github.com/Achronite/mqtt-energenie-ener314rt`
 						}
 					},
-					parameter.config, );
+					parameter.config );
 
 					// replace @ in topics with the address where each of the data items are published (state) or read (command)
 					if (parameter.stat_t){
@@ -936,6 +942,7 @@ function handleSignal(signal) {
 	// publish offline to MQTT (abnormal disconnects also set this via MQTT LWT)
 	log.info('MQTT', "setting %s to 'offline'", availability_topic);
 	client.publish(availability_topic, 'offline', { retain: true });
+	publishBoardState('initialised', undefined);
 	log.info('app', "awaiting shutdown of energenie process...");
 
 	// terminate discovery loop, and therefore the process
@@ -966,4 +973,82 @@ function toTitleCase(str) {
         upper = false;
     }
     return newStr;
+}
+
+// This function publishes the config items for parent board @<discovery_prefix>/board/1/<object_id>/config
+// This is only called once on initialisation
+// Configuration of the values to publish is externalised to a file 'devices/board.json'
+//
+function publishBoardDiscovery(){
+
+	const deviceId = 'board';
+
+	log.info('discovery',"board discovered");
+
+	// Read discovery config
+	fs.readFile(`devices/board.json`, (err, data) => {
+		if (err) {
+			log.error('discovery', "devices/board.json missing");
+		} else {
+			device_defaults = JSON.parse(data);
+			device_defaults.parameters.forEach((parameter) => {
+				//
+				var object_id = `${deviceId}-${parameter.id}`;
+				var unique_id = `ener314rt-${object_id}`;				///
+				var entity_name = toTitleCase(parameter.id);
+				var device_name = `${device_defaults.mdl}`;
+				var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${object_id}/config`;
+				//          var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
+				var dmsg = Object.assign({
+					device: {
+						name: `${device_name}`,
+						ids: [`mqtt-energenie-ener314rt`],
+						mdl: `${device_defaults.mdlpn}`,
+						mf: 'Energenie',
+						sw: `${device_defaults.mdl} ${APP_VERSION}`,
+						hw: `${hostname}`
+					},
+					uniq_id: `${unique_id}`,
+					"~": `${CONFIG.topic_stub}${deviceId}/1/`,
+					name: `${entity_name}`,
+					o: {
+						name: `mqtt-energenie-ener314rt`,
+						sw: `${APP_VERSION}`,
+						url: `https://github.com/Achronite/mqtt-energenie-ener314rt`
+					}
+				},
+					parameter.config,);
+
+				// Add MQTT availability only to the 'Discover' button
+				if (parameter.id == 'discover') {
+					dmsg.avty_t = `${CONFIG.topic_stub}availability/state`;
+				}
+
+				// replace @ in topics with the address where each of the data items are published (state) or read (command)
+				if (parameter.stat_t) {
+					dmsg.stat_t = parameter.stat_t.replace("@", `${parameter.id}`);
+				}
+
+				if (parameter.cmd_t) {
+					dmsg.cmd_t = parameter.cmd_t.replace("@", `${parameter.id}`);
+				}
+
+				log.verbose('<', "discovery %s", discoveryTopic);
+				client.publish(discoveryTopic, JSON.stringify(dmsg), { retain: true });
+
+			})
+
+		}
+
+	});
+
+}
+
+// Update stats to MQTT for the overall program
+function publishBoardState(param,state) {
+	state_topic = `${CONFIG.topic_stub}board/1/${param}/state`;
+	
+	// send response back via MQTT
+	log.verbose('<', "%s: %s (board)", state_topic, state);
+	client.publish(state_topic, String(state));
 }

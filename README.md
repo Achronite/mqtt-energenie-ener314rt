@@ -154,6 +154,7 @@ The following table shows some examples of the topics used:
 |MIHO013|*(see eTRV topics below)*||||
 |MIHO032|energenie/12/*deviceNum*||\~/motion/state<br>\~/ALARM/state<br>\~/last_seen/state|ON,OFF<br>66=batt_low<br>epoch|
 |MIHO033|energenie/13/*deviceNum*||\~/contact/state<br>\~/last_seen/state|ON,OFF<br>epoch|
+software/board|energenie/board/1|~/discover/command|~/discover/state<br>~/initialised/state|Number<br>epoch|
 
 epoch = Unix timestamp
 
@@ -168,6 +169,10 @@ Enable the [MQTT Integration](https://www.home-assistant.io/integrations/mqtt/) 
 Most MiHome Monitor devices will auto-add and be available in Home Assistant via [MQTT discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery), consult the table above to see if your devices are supported.  If your Monitor device is not found you can force it to transmit a 'join' request by holding down the button on the device for 5 seconds. The default discovery topics for the devices follow the pattern `homeassistant/<component>/ener314rt/<deviceId>-<ParameterName>`, the value `homeassistant/` can be changed in the `config.json` file if your discovery topic is configured differently.
 
 The MQTT discovery configuration is updated one minute after the program starts for seen devices, and then every 10 minutes thereafter for performance reasons.
+
+The number of discovered FSK 'monitor' devices since the application was started is shown under Sensors->Discovered for the `mqtt-energenie-ener314rt` device.  If you restart this application, the number will restart at 0.
+
+You can also force the application to perform a discovery at any time by pressing the 'Discover' button within the Home Assistant device called `mqtt-energenie-ener314rt`; this will scan for devices for 10 seconds and then update the MQTT Discovery entries for all devices found since the last restart.
 
 >WARNING: Discovery currently bases the availability of OpenThings devices upon the overall availability of this application (MQTT topic: energenie/availability/state), it does not currently work to the device level (see #19 for latest)
 
@@ -186,8 +191,9 @@ mqtt:
         name: "energenie OOK"
         identifiers: ["ook"]
         model: "MIHO008"
-        manufacturer: "energenie"
+        manufacturer: "Energenie"
         software: "mqtt-ener314rt"
+        via_device: "mqtt-energenie-ener314rt"
 
   switch:
     - unique_id: ENER002_socket
@@ -200,8 +206,9 @@ mqtt:
         name: "energenie OOK"
         identifiers: ["ook"]
         model: "ENER002"
-        manufacturer: "energenie"
+        manufacturer: "Energenie"
         software: "mqtt-ener314rt"
+        via_device: "mqtt-energenie-ener314rt"
 
     - unique_id: ENER010_socket_2
       name: "Subwoofer"
@@ -213,8 +220,9 @@ mqtt:
         name: "energenie OOK"
         identifiers: ["ook-4gang"]
         model: "ENER010"
-        manufacturer: "energenie"
+        manufacturer: "Energenie"
         software: "mqtt-ener314rt"
+        via_device: "mqtt-energenie-ener314rt"
 
     - unique_id: MIHO010_Dimmer1
       name: "Kitchen Dimmer Switch"
@@ -233,9 +241,12 @@ mqtt:
         name: "energenie OOK"
         identifiers: ["ook"]
         model: "MIHO010"
-        manufacturer: "energenie"
+        manufacturer: "Energenie"
         software: "mqtt-ener314rt"
-
+        via_device: "mqtt-energenie-ener314rt"
+```
+And if you are not using MQTT Discovery:
+```
   sensor:
     - name: "MiHome Thermometer Temperature"
       state_topic: energenie/18/12345/TEMPERATURE/state
@@ -245,15 +256,17 @@ mqtt:
         name: "energenie FSK"
         identifiers: ["ener314rt-12345"]
         model: "Thermometer"
-        manufacturer: "energenie"
+        manufacturer: "Energenie"
         software: "mqtt-ener314rt"   
+        via_device: "mqtt-energenie-ener314rt"
 
 ```
 Adding the `device` section enables easier access to the underlying switches within Home Assistant automations etc.
 >TIP: If you do not know the existing `zone` and `switch number` for any of your 'Control Only' (Blue) devices you can 're-teach' the device (see below)
 
 ### Converting an epoch timestamp
-Timestamps are sent via MQTT as epoch timestamps. To convert these to datetime objects in HA do the following (example shown is the conversion of the eTRV VALVE_TS epoch in Home Assistant `configuration.yaml`):
+Timestamps are sent via MQTT as epoch timestamps. To convert these to datetime objects in HA do the following (example shown is the conversion of the eTRV VALVE_TS epoch in Home Assistant `configuration.yaml`).
+> NOTE: MQTT Discovery automatically does this for you.
 ```
 mqtt:
   sensor:
