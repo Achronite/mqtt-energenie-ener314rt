@@ -49,11 +49,6 @@ var ener314rt = require('energenie-ener314rt');
 process.on('message', msg => {
     log.verbose("energenie","cmd: %j", msg);
     switch (msg.cmd) {
-        case 'init':
-        case 'reset':
-            // Normally we initialise automatically anyway, this is a forced reset
-            process.send({ cmd: "initialised" })
-            break;
         case 'send':
             // Check xmit times (advanced), 26ms per payload transmission
             var xmits = Number(msg.repeat) || 20;
