@@ -10,6 +10,10 @@ Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) 
 
 ## [0.7.1] 2024-02
 
+This release requires the following updates that will need to be manually installed:
+* `node.js`: v18.2.0 or greater
+* `gpiod` & `libgpiod`: New dependencies that need to be installed  (e.g raspbian: `sudo apt-get gpiod libgpiod`)
+
 ### Added
 
 * Support added for MiHome Thermostat (MIHO069), including auto-messaging to obtain telemetry
@@ -29,13 +33,25 @@ Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) 
 
 ### Changed
 
+* **BREAKING DEPENDENCIES**: The version of mqtt.js has been updated, this newer version required node.js >= v18.2.0
+* **BREAKING DEPENDENCIES**: The version of `energenie-ener314rt` needed is v0.7.1.  This uses a newer GPIO library that is compatiable with the pi5. `gpiod` and `libgpiod` will need to be installed first
 * Pretty printed all device JSON files
 * MQTT Discovery: OEM Part Number and Device ID added to HA device model field (@genestealer)
-* Bumped `energenie-ener314rt` to v0.7.1 (REQUIRED)
 * Submitting a cached command will now replace the exisiting cached command for the device
 * Added data value to the reporting of `command` when it has been succesfully cached (also only update MQTT when this is set to 0=None) [#69](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/69),
     e.g. "Set Temperature" becomes "Set Temperature 18.5"
 * Bumped MQTT to 5.3.5 [#62](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/62)
+* MQTT Discovery: In line with HA best practices, the primary entities for each of the FSK devices (see table below) have had their names updated to 'None'/null, e.g: sensor.motion_sensor.XXX.motion -> sensor.motion_sensor.XXX
+
+|Device|Description|Primary Entity|
+|---|---|---|
+|MIHO004|MiHome Smart Monitor Plug (Pink)||
+|MIHO005|MiHome Smart Plug+ (Purple)|switch|
+|MIHO006|MiHome House Monitor||
+|MIHO013|MiHome Radiator Valve||
+|MIHO032|MiHome Motion sensor|motion|
+|MIHO033|MiHome Open Sensor|contact|
+|MIHO069|MiHome Heating Thermostat|| 
 
 
 See also: https://github.com/Achronite/energenie-ener314rt/releases/tag/v0.7.0  - Notably pi5 support and GPIO driver changes

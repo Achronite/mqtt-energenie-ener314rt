@@ -828,9 +828,15 @@ function publishDiscovery( device ){
 				device_defaults = JSON.parse(data);
 				device_defaults.parameters.forEach( (parameter) => {
 					//
+					// To align to HA standards, the main parameter should not be appended to the entity name
+					//
+					if (parameter.main){
+						var entity_name = null;
+					} else {
+						var entity_name = toTitleCase(parameter.id);
+					}
 					var object_id = `${device.deviceId}-${parameter.id}`;
 					var unique_id = `ener314rt-${object_id}`;
-					var entity_name = toTitleCase(parameter.id);
 					var device_name = `${device_defaults.mdl} ${device.deviceId}`;
 					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${object_id}/config`;
 //          var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
@@ -845,7 +851,7 @@ function publishDiscovery( device ){
 						},
 						uniq_id: `${unique_id}`,
 						"~": `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`,
-						name: `${entity_name}`,
+						name: entity_name,
 						avty_t: `${CONFIG.topic_stub}availability/state`,
 						o: {
 							name: `mqtt-energenie-ener314rt`,

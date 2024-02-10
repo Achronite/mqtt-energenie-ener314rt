@@ -15,6 +15,7 @@
           "id": "motion",
           "component": "binary_sensor",
           "stat_t": "~@/state",
+          "main": true,
           "config": {
              "dev_cla": "motion"
           }
