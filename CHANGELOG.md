@@ -41,17 +41,17 @@ This release requires the following updates that will need to be manually instal
 * Added data value to the reporting of `command` when it has been succesfully cached (also only update MQTT when this is set to 0=None) [#69](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/69),
     e.g. "Set Temperature" becomes "Set Temperature 18.5"
 * Bumped MQTT to 5.3.5 [#62](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/62)
-* MQTT Discovery: In line with HA best practices, the primary entities for each of the FSK devices (see table below) have had their names updated to 'None'/null, e.g: sensor.motion_sensor.XXX.motion -> sensor.motion_sensor.XXX
+* MQTT Discovery: In line with HA best practices, the primary entities for each of the FSK devices (see table below) have had their names updated to 'None'/null, e.g: sensor.motion_sensor.XXX.motion -> sensor.motion_sensor.XXX.  These entities are indicated by `"main":true` in the device json files.
 
-|Device|Description|Primary Entity|
+|Device|Description|Primary Entity name set to null|
 |---|---|---|
-|MIHO004|MiHome Smart Monitor Plug (Pink)||
+|MIHO004|MiHome Smart Monitor Plug (Pink)|real power|
 |MIHO005|MiHome Smart Plug+ (Purple)|switch|
-|MIHO006|MiHome House Monitor||
-|MIHO013|MiHome Radiator Valve||
+|MIHO006|MiHome House Monitor|apparent power|
+|MIHO013|MiHome Radiator Valve|climate control|
 |MIHO032|MiHome Motion sensor|motion|
 |MIHO033|MiHome Open Sensor|contact|
-|MIHO069|MiHome Heating Thermostat|| 
+|MIHO069|MiHome Heating Thermostat|climate control| 
 
 
 See also: https://github.com/Achronite/energenie-ener314rt/releases/tag/v0.7.0  - Notably pi5 support and GPIO driver changes

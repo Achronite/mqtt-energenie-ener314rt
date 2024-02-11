@@ -6,6 +6,7 @@
           "id": "REAL_POWER",
           "component": "sensor",
           "stat_t": "~@/state",
+          "main": true,
           "config": {
              "dev_cla": "power",
              "unit_of_meas": "W"

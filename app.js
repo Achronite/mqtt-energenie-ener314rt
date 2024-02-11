@@ -829,27 +829,27 @@ function publishDiscovery( device ){
 				device_defaults.parameters.forEach( (parameter) => {
 					//
 					// To align to HA standards, the main parameter should not be appended to the entity name
+					// To save on network/processin only the main entity will contain the details of the device that they belong to
 					//
 					if (parameter.main){
 						var entity_name = null;
-					} else {
-						var entity_name = toTitleCase(parameter.id);
-					}
-					var object_id = `${device.deviceId}-${parameter.id}`;
-					var unique_id = `ener314rt-${object_id}`;
-					var device_name = `${device_defaults.mdl} ${device.deviceId}`;
-					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${object_id}/config`;
-//          var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
-					var dmsg = Object.assign({
-						device: {
-							name: `${device_name}`,
+
+						var device_details = {
+							name: `${device_defaults.mdl} ${device.deviceId}`,
 							ids: [`ener314rt-${device.deviceId}`],
 							mdl: `${device_defaults.mdl} (${device_defaults.mdlpn}) [${device.deviceId}]`,
 							mf: 'Energenie',
 							sw: `mqtt-ener314rt ${APP_VERSION}`,
 							via_device: 'mqtt-energenie-ener314rt'
-						},
-						uniq_id: `${unique_id}`,
+						}
+					} else {
+						var entity_name = toTitleCase(parameter.id);
+						var device_details = {ids: [`ener314rt-${device.deviceId}`]};
+					}
+
+					var dmsg = Object.assign({
+						uniq_id: `ener314rt-${device.deviceId}-${parameter.id}`,
+						device: device_details,
 						"~": `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`,
 						name: entity_name,
 						avty_t: `${CONFIG.topic_stub}availability/state`,
@@ -869,6 +869,8 @@ function publishDiscovery( device ){
 					if (parameter.cmd_t){
 						dmsg.cmd_t = parameter.cmd_t.replace("@", `${parameter.id}`);
 					}
+
+					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${device.deviceId}-${parameter.id}/config`;
 
 					log.verbose('<', "discovery %s", discoveryTopic);
 					client.publish(discoveryTopic,JSON.stringify(dmsg),{retain: true});
@@ -1023,7 +1025,7 @@ function publishBoardDiscovery(){
 						url: `https://github.com/Achronite/mqtt-energenie-ener314rt`
 					}
 				},
-					parameter.config,);
+				parameter.config,);
 
 				// Add MQTT availability only to the 'Discover' button
 				if (parameter.id == 'discover') {

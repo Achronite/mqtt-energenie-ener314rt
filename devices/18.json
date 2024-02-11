@@ -3,6 +3,33 @@
     "mdlpn": "MIHO069",
     "parameters": [
         {
+            "id": "Climate_Control",
+            "component": "climate",
+            "main": true,
+            "config": {
+                "max_temp": 30,
+                "min_temp": 10,
+                "modes": [
+                    "heat",
+                    "off"
+                ],
+                "mode_cmd_t": "~THERMOSTAT_MODE/command",
+                "mode_stat_t": "~THERMOSTAT_MODE/state",
+                "mode_cmd_tpl": "{% if value == 'off' %} 0 {% else %} 1 {% endif %}",
+                "mode_stat_tpl": "{% if value == '0' %} off {% else %} heat {% endif %}",
+                "temp_cmd_t": "~TARGET_TEMP/command",
+                "temp_stat_t": "~TARGET_TEMP/state",
+                "curr_temp_t": "~TEMPERATURE/state",
+                "current_humidity_topic": "~REL_HUMIDITY/state",
+                "ic": "mdi:thermostat",
+                "opt": "true",
+                "temp_step": "0.5",
+                "temp_unit": "C",
+                "act_tpl": "{% if value == 'ON' %} heating {% else %} off {% endif %}",
+                "act_t": "~switch/state"
+            }
+        },
+        {
             "id": "BATTERY_LEVEL",
             "component": "sensor",
             "stat_t": "~@/state",
@@ -139,32 +166,6 @@
             "config": {
                 "val_tpl": "{{ as_datetime(value) }}",
                 "dev_cla": "timestamp"
-            }
-        },
-        {
-            "id": "Climate_Control",
-            "component": "climate",
-            "config": {
-                "max_temp": 30,
-                "min_temp": 10,
-                "modes": [
-                    "heat",
-                    "off"
-                ],
-                "mode_cmd_t": "~THERMOSTAT_MODE/command",
-                "mode_stat_t": "~THERMOSTAT_MODE/state",
-                "mode_cmd_tpl": "{% if value == 'off' %} 0 {% else %} 1 {% endif %}",
-                "mode_stat_tpl": "{% if value == '0' %} off {% else %} heat {% endif %}",
-                "temp_cmd_t": "~TARGET_TEMP/command",
-                "temp_stat_t": "~TARGET_TEMP/state",
-                "curr_temp_t": "~TEMPERATURE/state",
-                "current_humidity_topic": "~REL_HUMIDITY/state",
-                "ic": "mdi:thermostat",
-                "opt": "true",
-                "temp_step": "0.5",
-                "temp_unit": "C",
-                "act_tpl": "{% if value == 'ON' %} heating {% else %} off {% endif %}",
-                "act_t": "~switch/state"
             }
         },
         {

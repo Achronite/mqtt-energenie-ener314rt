@@ -6,6 +6,7 @@
           "id": "APPARENT_POWER",
           "component": "sensor",
           "stat_t": "~@/state",
+          "main": true,
           "config": {
              "dev_cla": "apparent_power",
              "unit_of_meas": "VA"
