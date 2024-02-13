@@ -54,7 +54,7 @@ This release requires the following updates that will need to be manually instal
 |MIHO069|MiHome Heating Thermostat|climate control| 
 
 
-See also: https://github.com/Achronite/energenie-ener314rt/releases/tag/v0.7.0  - Notably pi5 support and GPIO driver changes
+See also: https://github.com/Achronite/energenie-ener314rt/releases/tag/v0.7.1  - Notably pi5 support and GPIO driver changes
 
 
 ## [0.6.0] 2023-11-13
