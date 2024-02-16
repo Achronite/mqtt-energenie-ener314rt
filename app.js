@@ -664,7 +664,10 @@ forked.on("message", msg => {
 								batteries = 3;
 								break;
 							case 18:	// Thermostat
-								batteries = 2;	
+								batteries = 2;
+								break;
+							case 19:    // Click - 3V single battery ~ 2 AA batteries
+								batteries = 2;
 						}
 						if (batteries > 0){
 							// calculate battery % where applicable assuming alkaline batteries, calculations from internet ;)

@@ -133,7 +133,7 @@ Here is a table showing the Device Topic and if control, monitoring, [MQTT disco
 |MIHO032|MiHome Motion sensor|12|No|Yes|Yes|Yes|
 |MIHO033|MiHome Open Sensor|13|No|Yes|Yes|Yes|
 |MIHO069|MiHome Heating Thermostat|18|Cached|Yes|Yes|Yes| 
-|MIHO089|MiHome Click - Smart Button|?|No|Yes|No|No|
+|MIHO089|MiHome Click - Smart Button|19|No|Yes|Yes|Yes|
 
 ## MQTT Topics
 
@@ -154,6 +154,7 @@ The following table shows some examples of the topics used:
 |MIHO013|*(see eTRV topics below)*||||
 |MIHO032|energenie/12/*deviceNum*||\~/motion/state<br>\~/ALARM/state<br>\~/last_seen/state|ON,OFF<br>66=batt_low<br>epoch|
 |MIHO033|energenie/13/*deviceNum*||\~/contact/state<br>\~/last_seen/state|ON,OFF<br>epoch|
+|MIHO089|energenie/19/*deviceNum*||\~/BUTTON/state<br><br>\~/VOLTAGE/state<br>\~/last_seen/state|1=single,2=double,255=long<br>Float<br>epoch|
 software/board|energenie/board/1|~/discover/command|~/discover/state<br>~/initialised/state|Number<br>epoch|
 
 epoch = Unix timestamp

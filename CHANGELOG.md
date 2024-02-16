@@ -17,7 +17,9 @@ This release requires the following updates that will need to be manually instal
 ### Added
 
 * Support added for MiHome Thermostat (MIHO069), including auto-messaging to obtain telemetry
+* Support added for MiHome Click (MIHO089) [#79](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/79)
 * MQTT Discovery: Added thermostat, including Climate Control entity
+* MQTT Discovery: Added MiHome Click
 * The number of retries is now configurable for cached commands (applies to eTRV and thermostat) by setting `cached_retries` in `config,json` (default remains at 10)
 * MQTT Discovery: Added 'Battery Timestamp' (mapped to MQTT VOLTAGE_TS) and 'Diagnostics Ran' (mapped to DIAGNOSTICS_TS) for eTRV
 * MQTT Discovery: Added 'Identify' Button for eTRV
@@ -51,8 +53,8 @@ This release requires the following updates that will need to be manually instal
 |MIHO013|MiHome Radiator Valve|climate control|
 |MIHO032|MiHome Motion sensor|motion|
 |MIHO033|MiHome Open Sensor|contact|
-|MIHO069|MiHome Heating Thermostat|climate control| 
-
+|MIHO069|MiHome Heating Thermostat|climate control|
+|MIHO089|MiHome Click|voltage|
 
 See also: https://github.com/Achronite/energenie-ener314rt/releases/tag/v0.7.1  - Notably pi5 support and GPIO driver changes
 
