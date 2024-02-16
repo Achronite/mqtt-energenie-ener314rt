@@ -17,7 +17,7 @@
          "stat_t": "~@/state",
          "main": true,
          "config": {
-            "icon": "mdi:battery",
+            "ic": "mdi:battery",
             "dev_cla": "voltage",
             "unit_of_meas": "V"
          }
@@ -35,33 +35,33 @@
          "id": "single",
          "component": "device_automation",
          "config": {
-            "automation_type": "trigger",
+            "atype": "trigger",
             "type": "button_short_press",
-            "subtype": "button",
-            "topic": "~BUTTON/state",
-            "payload": 1
+            "stype": "button",
+            "t": "~BUTTON/state",
+            "pl": 1
          }
       },
       {
          "id": "double",
          "component": "device_automation",
          "config": {
-            "automation_type": "trigger",
+            "atype": "trigger",
             "type": "button_double_press",
-            "subtype": "button",
-            "topic": "~BUTTON/state",
-            "payload": 2
+            "stype": "button",
+            "t": "~BUTTON/state",
+            "pl": 2
          }
       },
       {
          "id": "long",
          "component": "device_automation",
          "config": {
-            "automation_type": "trigger",
+            "atype": "trigger",
             "type": "button_long_press",
-            "subtype": "button",
-            "topic": "~BUTTON/state",
-            "payload": 255
+            "stype": "button",
+            "t": "~BUTTON/state",
+            "pl": 255
          }
       }
    ]

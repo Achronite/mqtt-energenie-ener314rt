@@ -41,7 +41,7 @@
          "stat_t": "~VOLTAGE_TS/state",
          "config": {
             "icon": "mdi:battery-clock",
-            "value_template": "{{ as_datetime(value) }}",
+            "val_tpl": "{{ as_datetime(value) }}",
             "dev_cla": "timestamp"
          }
       },
@@ -51,7 +51,7 @@
          "stat_t": "~DIAGNOSTICS_TS/state",
          "config": {
             "icon": "mdi:wrench-clock",
-            "value_template": "{{ as_datetime(value) }}",
+            "val_tpl": "{{ as_datetime(value) }}",
             "dev_cla": "timestamp",
             "ent_cat": "diagnostic"
          }
@@ -125,7 +125,7 @@
          "component": "sensor",
          "stat_t": "~@/state",
          "config": {
-            "value_template": "{{ as_datetime(value) }}",
+            "val_tpl": "{{ as_datetime(value) }}",
             "dev_cla": "timestamp"
          }
       },

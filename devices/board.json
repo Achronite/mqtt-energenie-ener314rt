@@ -18,7 +18,7 @@
          "component": "sensor",
          "stat_t": "~discover/state",
          "config": {
-            "icon": "mdi:devices"
+            "ic": "mdi:devices"
          }
       },
       {

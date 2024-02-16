@@ -16,7 +16,7 @@
          "component": "sensor",
          "stat_t": "~@/state",
          "config": {
-            "value_template": "{{ as_datetime(value) }}",
+            "val_tpl": "{{ as_datetime(value) }}",
             "dev_cla": "timestamp"
          }
       },
@@ -25,7 +25,7 @@
          "component": "sensor",
          "stat_t": "~@/state",
          "config": {
-            "icon": "mdi:alarm-light"
+            "ic": "mdi:alarm-light"
          }
       }
    ]
