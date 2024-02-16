@@ -21,7 +21,7 @@ This release requires the following updates that will need to be manually instal
 * MQTT Discovery: Added thermostat, including Climate Control entity
 * MQTT Discovery: Added MiHome Click
 * The number of retries is now configurable for cached commands (applies to eTRV and thermostat) by setting `cached_retries` in `config,json` (default remains at 10)
-* MQTT Discovery: Added 'Battery Timestamp' (mapped to MQTT VOLTAGE_TS) and 'Diagnostics Ran' (mapped to DIAGNOSTICS_TS) for eTRV
+* MQTT Discovery: Added 'Battery Timestamp' (mapped to MQTT VOLTAGE_TS), 'Diagnostics Ran' (mapped to DIAGNOSTICS_TS) and 'Valve Exercised (mapped to VALVE_TS) for eTRV
 * MQTT Discovery: Added 'Identify' Button for eTRV
 * Setting target temperature now caters for 0.5 increments (previously integer)
 * A different mechanism of reporting processed commands has been implemented for the thermostat, that relies on the fact that when (and only when) the thermostat procesess a command it outputs it's telemetry data.  This mechanism has been used to assume that the command just sent to the device (upon WAKEUP) has been processed succesfully; This command has it's retained state set in MQTT [#61](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/61

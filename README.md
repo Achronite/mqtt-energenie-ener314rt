@@ -357,6 +357,7 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 |command|Current cached command being sent to device|state,command|None,...|sensor|
 |retries|The number of remaining retries for 'command' to be sent to the device|state,*soon*|0-10|sensor|
 |DIAGNOSTICS|Numeric diagnostic code|state|Numeric||
+|DIAGNOSTICS_TS|The time the diagnostics last reported|state|epoch|sensor|
 |ERRORS|true if an error condition has been detected|state||binary_sensor|
 |ERROR_TEXT|error information|state|text|sensor|
 |EXERCISE_VALVE|The result of the *EXERCISE_VALVE* command|state|success, fail|binary_sensor|
@@ -365,7 +366,9 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 |TARGET_TEMP|Target temperature in celcius|state,command|5.0 to 40.0<br>0.5 increments|Number|
 |TEMPERATURE|The current temperature in celcius|state|float|sensor|
 |VALVE_STATE|Current valve mode/state|state|0=Open<br>1=Closed<br>2=Auto|sensor|
+|VALVE_TS|The time the valve was last exercised|state|state|epoch||
 |VOLTAGE|Current battery voltage|state|float|sensor|
+|VOLTAGE_TS|The time the battery last updated|state|epoch|sensor|
 |battery|Estimated battery percentage|state|0-100|sensor|
 |last_seen|The time the device last reported|state|epoch|sensor|
 
