@@ -20,7 +20,7 @@
             "mode_stat_tpl": "{% if value == '1' %} off {% else %} heat {% endif %}",
             "temp_cmd_t": "~TARGET_TEMP/command",
             "temp_stat_t": "~TARGET_TEMP/state",
-            "icon": "mdi:radiator",
+            "ic": "mdi:radiator",
             "opt": "true",
             "temp_step": "0.5"
          }
@@ -30,7 +30,7 @@
          "component": "sensor",
          "stat_t": "~@/state",
          "config": {
-            "icon": "mdi:battery",
+            "ic": "mdi:battery",
             "dev_cla": "voltage",
             "unit_of_meas": "V"
          }
@@ -40,7 +40,7 @@
          "component": "sensor",
          "stat_t": "~VOLTAGE_TS/state",
          "config": {
-            "icon": "mdi:battery-clock",
+            "ic": "mdi:battery-clock",
             "val_tpl": "{{ as_datetime(value) }}",
             "dev_cla": "timestamp"
          }
@@ -50,7 +50,7 @@
          "component": "sensor",
          "stat_t": "~DIAGNOSTICS_TS/state",
          "config": {
-            "icon": "mdi:wrench-clock",
+            "ic": "mdi:wrench-clock",
             "val_tpl": "{{ as_datetime(value) }}",
             "dev_cla": "timestamp",
             "ent_cat": "diagnostic"
@@ -101,7 +101,7 @@
             "min": 300,
             "max": 3600,
             "opt": true,
-            "icon": "mdi:timelapse"
+            "ic": "mdi:timelapse"
          }
       },
       {
@@ -109,7 +109,7 @@
          "component": "sensor",
          "stat_t": "~@/state",
          "config": {
-            "icon": "mdi:cached"
+            "ic": "mdi:cached"
          }
       },
       {
@@ -117,7 +117,7 @@
          "component": "sensor",
          "stat_t": "~@/state",
          "config": {
-            "icon": "mdi:traffic-light"
+            "ic": "mdi:traffic-light"
          }
       },
       {
@@ -136,7 +136,7 @@
          "cmd_t": "~@/command",
          "config": {
             "ent_cat": "config",
-            "icon": "mdi:radiator",
+            "ic": "mdi:radiator",
             "opt": true,
             "options": [
                "None",
