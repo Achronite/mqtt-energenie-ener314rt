@@ -182,51 +182,59 @@ For other devices (particularly the 'Control Only' devices) you will **need to a
 ```
 mqtt:
   light:
-    - unique_id: MIHO008_light1
-      name: "Lounge Light Switch"
+    - unique_id: "Lounge_Light_Left"
+      name: null
       command_topic: energenie/ook/87/1/command
       optimistic: false
       state_topic: energenie/ook/87/1/state
       availability_topic: energenie/availability/state
       device:
-        name: "energenie OOK"
-        identifiers: ["ook"]
+        name: "energenie light"
+        identifiers: ["ook-light"]
         model: "MIHO008"
         manufacturer: "Energenie"
         software: "mqtt-ener314rt"
         via_device: "mqtt-energenie-ener314rt"
+    - unique_id: "Lounge_Light_Right"
+      name: null
+      command_topic: energenie/ook/87/2/command
+      optimistic: false
+      state_topic: energenie/ook/87/2/state
+      availability_topic: energenie/availability/state
+      device:
+        identifiers: ["ook-light"]
 
   switch:
-    - unique_id: ENER002_socket
-      name: "Coffee Maker"
+    - unique_id: "Coffee_Maker"
+      name: null
       command_topic: energenie/ook/89/1/command
       optimistic: false
       state_topic: energenie/ook/89/1/state
       availability_topic: energenie/availability/state
       device:
-        name: "energenie OOK"
-        identifiers: ["ook"]
+        name: "energenie OOK plug"
+        identifiers: ["ook-plug"]
         model: "ENER002"
         manufacturer: "Energenie"
         software: "mqtt-ener314rt"
         via_device: "mqtt-energenie-ener314rt"
 
-    - unique_id: ENER010_socket_2
-      name: "Subwoofer"
+    - unique_id: "Subwoofer"
+      name: null
       command_topic: energenie/ook/564/2/command
       optimistic: false
       state_topic: energenie/ook/564/2/state
       availability_topic: energenie/availability/state
       device:
-        name: "energenie OOK"
+        name: "energenie OOK 4-gang"
         identifiers: ["ook-4gang"]
         model: "ENER010"
         manufacturer: "Energenie"
         software: "mqtt-ener314rt"
         via_device: "mqtt-energenie-ener314rt"
 
-    - unique_id: MIHO010_Dimmer1
-      name: "Kitchen Dimmer Switch"
+    - unique_id: "Kitchen_Dimmer"
+      name: null
       command_topic: energenie/ook/669/dimmer/command
       state_topic: energenie/ook/669/dimmer/state
       state_value_template: "{{ 'OFF' if value == 'OFF' else 'ON' }}"
@@ -239,8 +247,8 @@ mqtt:
       optimistic: false
       availability_topic: energenie/availability/state
       device:
-        name: "energenie OOK"
-        identifiers: ["ook"]
+        name: "energenie OOK dimmer"
+        identifiers: ["ook-dimmer"]
         model: "MIHO010"
         manufacturer: "Energenie"
         software: "mqtt-ener314rt"
