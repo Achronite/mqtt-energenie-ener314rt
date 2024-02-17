@@ -8,9 +8,17 @@
 
 MQTT node.js application to control the Energenie line of products via the ENER314-RT add-on board for the Raspberry Pi.
 
-The primary reason this application has been built is to allow integration with [Home Assistant](https://www.home-assistant.io/) etc. via MQTT messaging.
+The primary reason this application has been built is to allow integration with [Home Assistant](https://www.home-assistant.io/) via MQTT messaging; but it should work with anything that can integrate via MQTT.
 
 https://energenie4u.co.uk/
+
+## IMPORTANT: UPGRADING FROM PREVIOUS RELEASE
+
+**v0.7.x requires additional software dependencies that must be manually installed first.**
+
+If you are upgrading from version 0.6.x or below, please ensure that you install node.js v18.2+, `gpiod` and `libgpiod` by following steps 2 and 3 in the Getting Started secion below.
+
+There are also some additional parameters that you may wish to add to your `config.json` file.
 
 
 ## Purpose
@@ -39,7 +47,7 @@ sudo apt install -y nodejs npm
 ```
 
 3) Install `gpiod` and `libgpiod` dependencies (as of v0.7.x) :
-For example (debian):
+For example (using Debian):
 ```
 sudo apt-get install gpiod libgpiod-dev
 ```
