@@ -87,7 +87,7 @@ It should contain the following entities configured for your environment. The ex
 * `mqtt_broker` should contain your MQTT broker address and protocol.
 * Modify the `mqtt_options` section with your [MQTT client options](https://github.com/mqttjs/MQTT.js#client), such as username, password, certificate etc.
 * If you have any energenie 'Control & Monitor' or 'Monitor' devices then set `"monitoring": true` otherwise remove or set false.
-* If you are using this module with Home Assistant include the `discovery_prefix` line as above.  The value shown above is the default MQTT discovery topic used by Home Assistant.
+* If you are using this module with Home Assistant AND you have monitoring enabled include the `discovery_prefix` line as above.  The value shown above is the default MQTT discovery topic used by Home Assistant.
 * `ook_xmits` and `fsk_xmits` (optional) contain the number of times to transmit a radio message for `Control` (OOK) and `Control & Monitor` (FSK) devices.  Defaults to 20 otherwise
 * `cached_retries` (optional) contains the number of times to retry a cached command before stopping (applies to eTRV and thermostat)
 * `log_level` the application logging level, see [Logging](#logging) below

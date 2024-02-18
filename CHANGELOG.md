@@ -32,6 +32,7 @@ This release requires the following updates that will need to be manually instal
 
 * Added options to mqtt service for increased resillience of restarting the service upon failure [#62](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/62)(@genestealer)
 * Removed verbose logging of MQTT password [#66](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/66)
+* Only enable discovery if monitoring is also enabled [#82](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/82)
 
 ### Changed
 
