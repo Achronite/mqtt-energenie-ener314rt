@@ -116,7 +116,7 @@ client.on('connect',function(){
 	publishBoardState('discover', 0);			// reset to 0 discovered devices
 
 	// Enable Periodic MQTT discovery at 1 min, and then every 10 minutes
-	if (CONFIG.discovery_prefix) {
+	if (CONFIG.monitoring && CONFIG.discovery_prefix) {
 		discovery = true;
 
 		// Publish the parent 'board' discovery once on startup
