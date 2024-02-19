@@ -10,7 +10,7 @@
           "main": true,
           "config": {
              "dev_cla": "outlet",
-             "icon": "mdi:power-socket-uk",
+             "ic": "mdi:power-socket-uk",
              "opt": false
           }
        },
