@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "energenie-ener314rt": "0.7.x",
+    "energenie-ener314rt": "^0.7.2",
     "mqtt": "^5.3.5",
     "npmlog": "^7.0.1"
   },
