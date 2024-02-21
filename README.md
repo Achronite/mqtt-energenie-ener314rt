@@ -38,13 +38,6 @@ The number of individual devices this module can control is over 4 million, so i
 1) Plug in your ENER314-RT-VER01 board from Energenie onto the 26 pin or 40 pin connector of your Raspberry Pi.
 
 2) Ensure that the Raspberry Pi is up to date, and has node.js v18.2+ and `npm` installed. See https://github.com/nodesource/distributions
-For example:
-```
-sudo apt update
-sudo apt upgrade -y
-curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -   // latest long term supported release
-sudo apt install -y nodejs npm
-```
 
 3) Install `gpiod` and `libgpiod` dependencies (as of v0.7.x) :
 For example (using Debian):
@@ -67,6 +60,7 @@ unzip master.zip
 npm install
 ```
 8) Copy/Rename the file `config_sample.json` to `config.json` in the same directory as the install (mqtt-energenie-ener314rt), and edit it to match your MQTT broker and user details.
+
 It should contain the following entities configured for your environment. The example shown here uses the default [Mosquitto MQTT broker](https://github.com/home-assistant/hassio-addons/tree/master/mosquitto) Add-on in a Home Assistant installation:
 ```
 {
@@ -95,6 +89,7 @@ It should contain the following entities configured for your environment. The ex
 * `log_level` the application logging level, see [Logging](#logging) below
 
 9) Run the application manually first using the command: ``node app.js``.  When you know this runs OK a system service can then be set-up as shown in the [Systemd Service](#systemd-service) below.
+
 
 ## Enabling The Hardware based SPI driver
 This application works best using the linux hardware based SPI driver (spidev).  The application attempts to open this driver on start-up, if it has not been enabled it falls back to using the software driver. The hardware SPI driver is enabled using `sudo raspi-config` choosing `Interface Options` and `SPI`. Do this whilst this software is not running.  The driver in use is reported within the log on startup.
