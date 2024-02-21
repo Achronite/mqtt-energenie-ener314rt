@@ -8,7 +8,7 @@
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
-## [0.7.1] 2024-02
+## [0.7.1] 2024-02-21
 
 This release requires the following updates that will need to be manually installed:
 * `node.js`: v18.2.0 or greater
