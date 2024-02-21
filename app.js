@@ -35,10 +35,16 @@ const EXERCISE_VALVE 	= 163;
 const LOW_POWER_MODE 	= 164;
 const VALVE_STATE 		= 165;
 const DIAGNOSTICS 		= 166;
+const THERMOSTAT_MODE   = 170;  // Thermostat
 const IDENTIFY			= 191;
+const REPORTING_INTERVAL= 210;
 const TARGET_TEMP 		= 244;
 const VOLTAGE 			= 226;
-const REPORTING_INTERVAL= 210;
+const SWITCH_STATE    	= 243;
+const HYSTERESIS        = 254;  // Thermostat
+const RELAY_POLARITY    = 171;  // Thermostat
+const TEMP_OFFSET  = 189;  // Thermostat
+const HUMID_OFFSET = 186;  // Thermostat
 
 // import dependencies
 const MQTT = require('mqtt');
@@ -49,6 +55,7 @@ var ener314rt = require('energenie-ener314rt');
 
 // import async processing for handling radio comms (pass in log level)
 const { fork } = require('child_process');
+const { hostname } = require('os');
 
 var discovery = false;
 var shutdown = false;
@@ -64,6 +71,10 @@ if (CONFIG.ook_xmits)
 	ook_xmits = CONFIG.ook_xmits;
 if (CONFIG.fsk_xmits)
 	fsk_xmits = CONFIG.fsk_xmits;
+// cached retries
+let cached_retries = 10;
+if (CONFIG.cached_retries)
+	cached_retries = CONFIG.cached_retries;
 
 // connect to MQTT
 log.info('MQTT', "connecting to broker %s", CONFIG.mqtt_broker);
@@ -78,7 +89,7 @@ var client = MQTT.connect(CONFIG.mqtt_broker,mqtt_options);
 // when MQTT is connected...
 client.on('connect',function(){	
 	log.verbose('MQTT', "connected to broker %j", CONFIG.mqtt_broker);
-	log.verbose('MQTT', "config: %j",mqtt_options);
+	//log.verbose('MQTT', "config: %j", mqtt_options);			// Commented out for #66
 
 	// Subscribe to incoming commands
 	var options={
@@ -98,9 +109,19 @@ client.on('connect',function(){
 	log.http('MQTT', "setting availability topic %s to 'online'", availability_topic);
 	client.publish(availability_topic, 'online', { retain: true });
 
+	// set initialisation time
+	var d = new Date();
+	var seconds = Math.round(d.getTime() / 1000);
+	publishBoardState('initialised', seconds);
+	publishBoardState('discover', 0);			// reset to 0 discovered devices
+
 	// Enable Periodic MQTT discovery at 1 min, and then every 10 minutes
-	if (CONFIG.discovery_prefix) {
+	if (CONFIG.monitoring && CONFIG.discovery_prefix) {
 		discovery = true;
+
+		// Publish the parent 'board' discovery once on startup
+		publishBoardDiscovery();
+
 		log.info('discovery', "discovery enabled at topic prefix '%s'", CONFIG.discovery_prefix);
 		// After 1 min update MQTT discovery topics
 		setTimeout(  UpdateMQTTDiscovery, (60 * 1000));
@@ -119,6 +140,8 @@ client.on('message', function (topic, msg, packet) {
 	// format is OOK: 'energenie/c/ook/zone/switchNum/command' or OT: 'energenie/c/2/deviceNum/command'
 	log.verbose('>',"%s: %s", topic, msg);
 	const cmd_array = topic.split("/");
+
+	let otCommand = 0;
 
 	switch (cmd_array[MQTTM_DEVICE]) {
 		case 'ook':
@@ -219,7 +242,6 @@ client.on('message', function (topic, msg, packet) {
 			break;
 		case '3':
 		case 3:
-			var otCommand = 0;
 			// MIHO013 - Smart Radiator Valve
 			//
 			// TODO: Check data values (msg) passed in is valid for the command
@@ -235,8 +257,8 @@ client.on('message', function (topic, msg, packet) {
 				TEMP_SET
 			*/
 
-			let stateTopic = null;
-			let msg_data = Number(msg);
+			var stateTopic = null;
+			var msg_data = Number(msg);
 
 			// Convert OpenThings Cmd String to Numeric
 			switch (cmd_array[MQTTM_OT_CMD]) {
@@ -282,8 +304,9 @@ client.on('message', function (topic, msg, packet) {
 							break;
 						case 'Request Voltage':
 							otCommand = VOLTAGE;
+							break;
 						default:
-							log.warn('cmd', "Unsupported Maintenance command: %j type:%j for eTRV", msg, typeof(msg));
+							log.warn('cmd', "Unsupported Maintenance command: %s type:%j for eTRV", msg, typeof(msg));
 					}  // msg
 					break;
 
@@ -349,10 +372,89 @@ client.on('message', function (topic, msg, packet) {
 					productId: Number(cmd_array[MQTTM_OT_PRODUCTID]),
 					deviceId: Number(cmd_array[MQTTM_OT_DEVICEID]),
 					otCommand: otCommand,
-					data: msg_data
+					data: msg_data,
+					retries: cached_retries
 				};
 			} else {
 				log.warn('cmd',"Invalid otCommand for eTRV: %j",otCommand);
+			}
+			break;
+
+		case '18':
+		case 18:
+			// MIHO069 - Smart Thermostat (alpha)
+			var msg_data = Number(msg);
+			log.verbose('cmd', "Thermostat msg_data : %s",msg);
+
+			// Process (cached) command
+			switch (cmd_array[MQTTM_OT_CMD]) {
+				case 'TARGET_TEMP':	
+					otCommand = TARGET_TEMP;
+					break;
+				case 'THERMOSTAT_MODE':	
+					otCommand = THERMOSTAT_MODE;
+					break;
+				case 'HYSTERESIS':				// aka TEMP_MARGIN
+					otCommand = HYSTERESIS;
+					break;
+				case 'RELAY_POLARITY':
+					otCommand = RELAY_POLARITY;
+					// Convert booleans from HA default (ON/OFF)
+					if (msg == "ON" || msg == "on"){
+							msg_data = 1;
+					} else if (msg == "OFF"  || msg == "off" ) {
+							msg_data = 0;
+					}
+					break;
+				case 'TEMP_OFFSET':
+					otCommand = TEMP_OFFSET;
+					break;
+				case 'HUMID_OFFSET':
+					otCommand = HUMID_OFFSET;
+					break;
+				case 'REPORTING_INTERVAL':		// DO NOT USE
+					otCommand = REPORTING_INTERVAL;
+					break;
+				case 'CANCEL':
+				case 1:
+					otCommand = CANCEL;
+				default:
+					// unsupported command (but allow it through)
+					otCommand = Number(cmd_array[MQTTM_OT_CMD]);
+					log.warn('cmd', "Unsupported Cmd for Thermostat: %j (%d) %j",cmd_array[MQTTM_OT_CMD], otCommand, msg);
+
+			} // switch 18: MQTTM_OT_CMD;
+
+			if (otCommand > 0) {
+				// We have a valid Thermostat command
+
+				// swap out CANCEL for 0
+				if (otCommand == CANCEL ){
+					otCommand = 0;
+				}
+
+				// Thermostat commands are cached
+				var ener_cmd = {
+					cmd: 'cacheCmd', mode: 'fsk', repeat: fsk_xmits,
+					command: cmd_array[MQTTM_OT_CMD],
+					productId: Number(cmd_array[MQTTM_OT_PRODUCTID]),
+					deviceId: Number(cmd_array[MQTTM_OT_DEVICEID]),
+					otCommand: otCommand,
+					data: msg_data,
+					retries: cached_retries
+				};
+			} else {
+				log.warn('cmd',"Invalid otCommand for Thermostat : %j",otCommand);
+			}
+			break;
+		case 'board':
+			// NOTE: there is no productId for the board
+			switch (cmd_array[MQTTM_OT_CMD]) {
+				case 'discover':
+				case 'scan':
+					// Call discovery function - force a scan as button was pressed
+					ener_cmd = { cmd: "discovery", scan: true };
+					break;					
 			}
 			break;
 
@@ -475,6 +577,7 @@ forked.on("message", msg => {
 					case 'deviceId':
 					case 'mfrId':
 					case 'cmd':
+					case 'WAKEUP':
 						// do not send via MQTT
 						topic_key = null;
 						break;
@@ -493,11 +596,13 @@ forked.on("message", msg => {
 
 						break;
 					case 'MOTION_DETECTOR':
-						topic_key = 'motion';
+						// TO DO - This passes back the weird values sent back by the thermostat; these need interpreting properly
 						if (msg[key] == 1 || msg[key] == '1') {
 							msg[key] = "ON";
-						} else {
+							topic_key = 'motion';
+						} else if (msg[key] == 0 || msg[key] == '0') {
 							msg[key] = "OFF";
+							topic_key = 'motion';
 						}
 						break;
 					case 'DOOR_SENSOR':
@@ -510,6 +615,15 @@ forked.on("message", msg => {
 						break;
 
 					case 'LOW_POWER_MODE':
+					case 'RELAY_POLARITY':
+						// binary retained fields
+						if (msg[key] == 1 || msg[key] == '1') {
+							msg[key] = "ON";
+						} else {
+							msg[key] = "OFF";
+						}
+						retain = true;
+						break;
 					case 'ERRORS':
 						// other binary fields
 						if (msg[key] == 1 || msg[key] == '1') {
@@ -519,15 +633,21 @@ forked.on("message", msg => {
 						}
 						break;
 					case 'command':
-						let cmdTxt = lookupCommand(msg[key]);
-						log.verbose("monitor","lookupCommand(%s) returned %j",msg[key], cmdTxt);
-						msg[key] = cmdTxt;
+						// As we use MQTT, and the command state has already been set when cacheCmd was called, there isn't a need here to update it unless the command has succeeded
+						// and anyways it would be difficult to extract the data value for this to be shown here
+						if (msg[key] == 0 || msg[key] == '0')
+							msg[key] = "None";
+						else
+							topic_key = null;
 						break;
 					case 'VALVE_STATE':
-					case 'LOW_POWER_MODE':
 					case 'REPORTING_INTERVAL':
 					case 'TARGET_TEMP':
 					case 'ERROR_TEXT':
+					case 'THERMOSTAT_MODE':
+					case 'HYSTERESIS':
+					case 'TEMP_OFFSET':
+					case 'HUMID_OFFSET':
 						// These values need to be retained on MQTT as they are irregularly reported
 						retain = true;
 						break;
@@ -543,8 +663,11 @@ forked.on("message", msg => {
 							case 5:		// Energy Monitor
 								batteries = 3;
 								break;
-							case 18:	// Future support for Thermostat
-								batteries = 2;	
+							case 18:	// Thermostat
+								batteries = 2;
+								break;
+							case 19:    // Click - 3V single battery ~ 2 AA batteries
+								batteries = 2;
 						}
 						if (batteries > 0){
 							// calculate battery % where applicable assuming alkaline batteries, calculations from internet ;)
@@ -587,6 +710,10 @@ forked.on("message", msg => {
 						}
 
 					default:
+						// captured OpenThings commands (e.g from MiHome gateway) are preceeded with '_', set retained on these so we can find them more easily in MQTT Explorer
+						if(key.startsWith("_")){
+							retain = true;
+						}
 						// assume an unknown key we need to set in topic tree
 				}
 
@@ -604,8 +731,8 @@ forked.on("message", msg => {
 						client.publish(state_topic,state);
 					}
 
-					// Update Maintenance if retries=0
-					if (topic_key == "retries" && state == '0'){
+					// Update Maintenance if retries=0 for trv
+					if (msg.productId == '3' && topic_key == "retries" && state == '0'){
 						// retries are now empty, also change the Maintenance Select back to None
 						state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/Maintenance/state`;
 						log.verbose('<', "%s: None", state_topic);
@@ -618,6 +745,7 @@ forked.on("message", msg => {
 		case 'discovery':
 			// device discovery message publish discovery messages to Home Assistant
 			log.info('discovery', "found %i devices", msg.numDevices);
+			publishBoardState('discover', msg.numDevices);			
 			msg.devices.forEach(publishDiscovery);
 			break;
 
@@ -639,14 +767,14 @@ forked.on("message", msg => {
 				
 				if (typeof(msg.otCommand) != "undefined"){
 					state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/command/state`;
-					state = String(lookupCommand(msg.otCommand));
+					state = String(lookupCommand(msg.otCommand, msg.data));
 
 					// save cached command on MQTT
 					log.verbose('<', "%s: %s", state_topic, state);
 					client.publish(state_topic,state);
 				}
 
-				// Store cached state for values that are NEVER returned by eTRV monitor messages (confirmed by energenie)
+				// Store cached state for values that are NEVER returned by monitor messages (confirmed by energenie)
 				if (msg.productId == 3 && msg.command == 'VALVE_STATE'){
 					state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/${msg.command}/state`;
 					state = String(msg.data);
@@ -657,9 +785,6 @@ forked.on("message", msg => {
 				}
 				
 			};
-			break;
-		case 'init':
-		case 'reset':
 			break;
 	} // switch msg.cmd
 
@@ -691,7 +816,7 @@ function UpdateMQTTDiscovery() {
 //
 // Configuration of what values to publish is externalised to a file for each device product 'devices/<productId>.json'
 //
-function publishDiscovery( device, index ){
+function publishDiscovery( device ){
 
 	log.info('discovery',"discovered: %j",device);
 
@@ -706,36 +831,30 @@ function publishDiscovery( device, index ){
 				device_defaults = JSON.parse(data);
 				device_defaults.parameters.forEach( (parameter) => {
 					//
-					var object_id = `${device.deviceId}-${parameter.id}`;
-					var unique_id = `ener314rt-${object_id}`;
-					var entity_name = toTitleCase(parameter.id);
-					var device_name = `${device_defaults.mdl} ${device.deviceId}`;
-/*
-					if ((parameter.component == 'switch') ||
-					   (parameter.component == 'binary_sensor' && (parameter.id == 'MOTION_DETECTOR' || parameter.id == 'DOOR_SENSOR') )) {
-						// Shorten name for obvious parameters
-						name = group_name;
-					} else if (parameter.id == 'retries') {
-						// pretty command retries
-						name = `command retries`;
-					} else {
-						// Convert to prettier lowercase entity name without underscores
-						name = `${parameter.id.toLowerCase().replace(/_/g, ' ')}`
-					}
-*/
-					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${object_id}/config`;
-//          var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
-					var dmsg = Object.assign({
-						device: {
-							name: `${device_name}`,
+					// To align to HA standards, the main parameter should not be appended to the entity name
+					// To save on network/processin only the main entity will contain the details of the device that they belong to
+					//
+					if (parameter.main){
+						var entity_name = null;
+
+						var device_details = {
+							name: `${device_defaults.mdl} ${device.deviceId}`,
 							ids: [`ener314rt-${device.deviceId}`],
-							mdl: `${device_defaults.mdl}`,
-							mf: `Energenie`,
-							sw: `mqtt-ener314rt ${APP_VERSION}`
-						},
-						uniq_id: `${unique_id}`,
+							mdl: `${device_defaults.mdl} (${device_defaults.mdlpn}) [${device.deviceId}]`,
+							mf: 'Energenie',
+							sw: `mqtt-ener314rt ${APP_VERSION}`,
+							via_device: 'mqtt-energenie-ener314rt'
+						}
+					} else {
+						var entity_name = toTitleCase(parameter.id);
+						var device_details = {ids: [`ener314rt-${device.deviceId}`]};
+					}
+
+					var dmsg = Object.assign({
+						uniq_id: `ener314rt-${device.deviceId}-${parameter.id}`,
+						device: device_details,
 						"~": `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`,
-						name: `${entity_name}`,
+						name: entity_name,
 						avty_t: `${CONFIG.topic_stub}availability/state`,
 						o: {
 							name: `mqtt-energenie-ener314rt`,
@@ -743,7 +862,7 @@ function publishDiscovery( device, index ){
 							url: `https://github.com/Achronite/mqtt-energenie-ener314rt`
 						}
 					},
-					parameter.config, );
+					parameter.config );
 
 					// replace @ in topics with the address where each of the data items are published (state) or read (command)
 					if (parameter.stat_t){
@@ -753,6 +872,8 @@ function publishDiscovery( device, index ){
 					if (parameter.cmd_t){
 						dmsg.cmd_t = parameter.cmd_t.replace("@", `${parameter.id}`);
 					}
+
+					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${device.deviceId}-${parameter.id}/config`;
 
 					log.verbose('<', "discovery %s", discoveryTopic);
 					client.publish(discoveryTopic,JSON.stringify(dmsg),{retain: true});
@@ -768,28 +889,60 @@ function publishDiscovery( device, index ){
 	}
 }
 
-function lookupCommand( cmd ){
+/*
+** Internal Function that return the english parameter name (for display) of a given OpenThings parameter code (cmd)
+** If the parameter requires a data value (data) to be set this is appended to the name of the command giving the full string
+*/
+function lookupCommand( cmd, data ){
+	let command = null;
 	switch( Number(cmd) ){
 		case 0:
 			return 'None';
+		case THERMOSTAT_MODE:
+			command = 'Thermostat Mode';
+			break;
 		case TARGET_TEMP:
-			return 'Set Temperature';
+			command =  'Set Temperature';
+			break;
 		case EXERCISE_VALVE:
 			return 'Exercise Valve';
 		case LOW_POWER_MODE:
-			return 'Low Power Mode';		
+			command = 'Low Power Mode';		
+			break;
 		case VALVE_STATE:
-			return 'Valve Mode';
+			command = 'Valve Mode';
+			break;
 		case DIAGNOSTICS:
 			return 'Diagnostics';
 		case REPORTING_INTERVAL:
-			return 'Interval';
+			command = 'Interval';
+			break;
 		case IDENTIFY:
 			return 'Identify';
 		case VOLTAGE:
-			return 'Voltage';
+			return 'Request Voltage';
+		case TEMP_OFFSET:
+			command = 'Temp Offset';
+			break;
+		case HUMID_OFFSET:
+			command = 'Humidity Offset';
+			break;
+		case RELAY_POLARITY:
+			command = 'Relay Polarity';
+			break;
+		case HYSTERESIS:
+			command = 'Temp Margin';
+			break;
+		case SWITCH_STATE:
+			command = 'Switch';
+			break;
+		default:
+			return cmd;
 	};
-	return cmd;
+	if (data != "undefined" && data != null)
+		return command.concat(" ", data);
+	else
+		return command;
 }
 
 // Use single function to handle multiple signals
@@ -800,6 +953,7 @@ function handleSignal(signal) {
 	// publish offline to MQTT (abnormal disconnects also set this via MQTT LWT)
 	log.info('MQTT', "setting %s to 'offline'", availability_topic);
 	client.publish(availability_topic, 'offline', { retain: true });
+	publishBoardState('initialised', undefined);
 	log.info('app', "awaiting shutdown of energenie process...");
 
 	// terminate discovery loop, and therefore the process
@@ -830,4 +984,82 @@ function toTitleCase(str) {
         upper = false;
     }
     return newStr;
+}
+
+// This function publishes the config items for parent board @<discovery_prefix>/board/1/<object_id>/config
+// This is only called once on initialisation
+// Configuration of the values to publish is externalised to a file 'devices/board.json'
+//
+function publishBoardDiscovery(){
+
+	const deviceId = 'board';
+
+	log.info('discovery',"board discovered");
+
+	// Read discovery config
+	fs.readFile(`devices/board.json`, (err, data) => {
+		if (err) {
+			log.error('discovery', "devices/board.json missing");
+		} else {
+			device_defaults = JSON.parse(data);
+			device_defaults.parameters.forEach((parameter) => {
+				//
+				var object_id = `${deviceId}-${parameter.id}`;
+				var unique_id = `ener314rt-${object_id}`;				///
+				var entity_name = toTitleCase(parameter.id);
+				var device_name = `${device_defaults.mdl}`;
+				var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${object_id}/config`;
+				//          var dmsg = Object.assign({ uniq_id: `${unique_id}`, "~": `${CONFIG.topic_stub}`, name: `${name}`, mf: 'energenie', sw: 'mqtt-ener314rt' },
+				var dmsg = Object.assign({
+					device: {
+						name: `${device_name}`,
+						ids: [`mqtt-energenie-ener314rt`],
+						mdl: `${device_defaults.mdlpn}`,
+						mf: 'Energenie',
+						sw: `${device_defaults.mdl} ${APP_VERSION}`,
+						hw: `${hostname}`
+					},
+					uniq_id: `${unique_id}`,
+					"~": `${CONFIG.topic_stub}${deviceId}/1/`,
+					name: `${entity_name}`,
+					o: {
+						name: `mqtt-energenie-ener314rt`,
+						sw: `${APP_VERSION}`,
+						url: `https://github.com/Achronite/mqtt-energenie-ener314rt`
+					}
+				},
+				parameter.config,);
+
+				// Add MQTT availability only to the 'Discover' button
+				if (parameter.id == 'discover') {
+					dmsg.avty_t = `${CONFIG.topic_stub}availability/state`;
+				}
+
+				// replace @ in topics with the address where each of the data items are published (state) or read (command)
+				if (parameter.stat_t) {
+					dmsg.stat_t = parameter.stat_t.replace("@", `${parameter.id}`);
+				}
+
+				if (parameter.cmd_t) {
+					dmsg.cmd_t = parameter.cmd_t.replace("@", `${parameter.id}`);
+				}
+
+				log.verbose('<', "discovery %s", discoveryTopic);
+				client.publish(discoveryTopic, JSON.stringify(dmsg), { retain: true });
+
+			})
+
+		}
+
+	});
+
+}
+
+// Update stats to MQTT for the overall program
+function publishBoardState(param,state) {
+	state_topic = `${CONFIG.topic_stub}board/1/${param}/state`;
+	
+	// send response back via MQTT
+	log.verbose('<', "%s: %s (board)", state_topic, state);
+	client.publish(state_topic, String(state));
 }

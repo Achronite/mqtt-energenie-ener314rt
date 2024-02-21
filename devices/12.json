@@ -1,7 +1,32 @@
-{"mdl":"Motion Sensor",
-    "parameters":[
-        {"id": "last_seen", "component":"sensor",        "stat_t":"~@/state","config": {"value_template": "{{ as_datetime(value) }}", "dev_cla": "timestamp"}},
-        {"id": "motion",    "component":"binary_sensor", "stat_t":"~@/state","config": {"dev_cla":"motion"}},
-        {"id": "ALARM",     "component":"sensor",        "stat_t":"~@/state","config": {"icon":"mdi:alarm-light"}}
-    ]
+{
+   "mdl": "Motion Sensor",
+   "mdlpn": "MIHO032",
+   "parameters": [
+      {
+         "id": "motion",
+         "component": "binary_sensor",
+         "stat_t": "~@/state",
+         "main": true,
+         "config": {
+            "dev_cla": "motion"
+         }
+      },
+      {
+         "id": "last_seen",
+         "component": "sensor",
+         "stat_t": "~@/state",
+         "config": {
+            "val_tpl": "{{ as_datetime(value) }}",
+            "dev_cla": "timestamp"
+         }
+      },
+      {
+         "id": "ALARM",
+         "component": "sensor",
+         "stat_t": "~@/state",
+         "config": {
+            "ic": "mdi:alarm-light"
+         }
+      }
+   ]
 }

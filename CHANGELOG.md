@@ -5,11 +5,61 @@
 * Periodic eTRV commands [#10](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/10)
 * Update state of all OOK switches within a single device when switch 0 used [#4](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/4)
 * Enhance availability (or publish guidance) on OpenThings devices based on `last_seen`
-* MiHome Thermostat control, including MQTT discovery of Thermostat
-* Configurable xmits for eTRV - requires `energenie-ener314rt` module change
-* Configurable logging levels [#24](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/24)
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
+
+## [0.7.1] 2024-02-21
+
+This release requires the following updates that will need to be manually installed:
+* `node.js`: v18.2.0 or greater
+* `gpiod` & `libgpiod`: New dependencies that need to be installed  (e.g raspbian: `sudo apt-get gpiod libgpiod`)
+
+### Added
+
+* Support added for MiHome Thermostat (MIHO069), including auto-messaging to obtain telemetry
+* Support added for MiHome Click (MIHO089) [#79](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/79)
+* MQTT Discovery: Added thermostat, including Climate Control entity
+* MQTT Discovery: Added MiHome Click
+* The number of retries is now configurable for cached commands (applies to eTRV and thermostat) by setting `cached_retries` in `config,json` (default remains at 10)
+* MQTT Discovery: Added 'Battery Timestamp' (mapped to MQTT VOLTAGE_TS), 'Diagnostics Ran' (mapped to DIAGNOSTICS_TS) and 'Valve Exercised (mapped to VALVE_TS) for eTRV
+* MQTT Discovery: Added 'Identify' Button for eTRV
+* Setting target temperature now caters for 0.5 increments (previously integer)
+* A different mechanism of reporting processed commands has been implemented for the thermostat, that relies on the fact that when (and only when) the thermostat procesess a command it outputs it's telemetry data.  This mechanism has been used to assume that the command just sent to the device (upon WAKEUP) has been processed succesfully; This command has it's retained state set in MQTT [#61](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/61
+* MQTT Discovery: A new device `mqtt-energenie-ener314rt` has been added to represent the software and the ENER314-RT board, which includes a 'Discover' button, 'Connected State' and reports the number of discovered monitor (FSK) devices.  All Discoved 'monitor' devices are automatically linked to this new device as 'Connected devices'.  The README examples have also been updated to show how to link these to the board device using `via_device`.
+* Home Assistant: Added 'Discover' button for the board device; this will perform a 10 second auto-scan and will update the device list via MQTT Discovery for all devices found.
+
+### Fixed
+
+* Added options to mqtt service for increased resillience of restarting the service upon failure [#62](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/62)(@genestealer)
+* Removed verbose logging of MQTT password [#66](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/66)
+* Only enable discovery if monitoring is also enabled [#82](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/82)
+
+### Changed
+
+* **BREAKING DEPENDENCIES**: The version of mqtt.js has been updated, this newer version required node.js >= v18.2.0
+* **BREAKING DEPENDENCIES**: The version of `energenie-ener314rt` needed is v0.7.1.  This uses a newer GPIO library that is compatiable with the pi5. `gpiod` and `libgpiod` will need to be installed first
+* Pretty printed all device JSON files
+* MQTT Discovery: OEM Part Number and Device ID added to HA device model field (@genestealer)
+* Submitting a cached command will now replace the exisiting cached command for the device
+* Added data value to the reporting of `command` when it has been succesfully cached (also only update MQTT when this is set to 0=None) [#69](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/69),
+    e.g. "Set Temperature" becomes "Set Temperature 18.5"
+* Bumped MQTT to 5.3.5 [#62](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/62)
+* MQTT Discovery: In line with HA best practices, the primary entities for each of the FSK devices (see table below) have had their names updated to 'None'/null, e.g: sensor.motion_sensor.XXX.motion -> sensor.motion_sensor.XXX.  These entities are indicated by `"main":true` in the device json files.
+
+|Device|Description|Primary Entity name set to null|
+|---|---|---|
+|MIHO004|MiHome Smart Monitor Plug (Pink)|real power|
+|MIHO005|MiHome Smart Plug+ (Purple)|switch|
+|MIHO006|MiHome House Monitor|apparent power|
+|MIHO013|MiHome Radiator Valve|climate control|
+|MIHO032|MiHome Motion sensor|motion|
+|MIHO033|MiHome Open Sensor|contact|
+|MIHO069|MiHome Heating Thermostat|climate control|
+|MIHO089|MiHome Click|voltage|
+
+See also: https://github.com/Achronite/energenie-ener314rt/releases/tag/v0.7.1  - Notably pi5 support and GPIO driver changes
+
+
 ## [0.6.0] 2023-11-13
 
 ### Added
@@ -82,6 +132,7 @@ The log level can now be configured in the `config.json` file using `log_level`.
 * Added estimated `battery` topics for eTRV and Whole house monitor [#17]
 * Renamed default `config.json` file to `config_sample.json` to prevent user config overwrites upon update of code
 * MQTT Discovery: Added `ALARM` reportng for PIR, it is believed a value of 66 = `Low battery alert` See [#28](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/28)
+
 
 ### Fixed
 

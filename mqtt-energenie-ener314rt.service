@@ -10,6 +10,8 @@ User=pi
 WorkingDirectory=/home/pi/mqtt-energenie-ener314rt
 ExecStart=/usr/bin/node app.js
 Restart=on-failure
+StartLimitBurst=3
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target

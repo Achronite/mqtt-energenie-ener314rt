@@ -1,0 +1,43 @@
+{
+   "mdl": "mqtt-energenie-ener314rt",
+   "mdlpn": "ENER314-RT",
+   "parameters": [
+      {
+         "id": "Connection_State",
+         "component": "binary_sensor",
+         "stat_t": "energenie/availability/state",
+         "config": {
+            "dev_cla":"connectivity",
+            "pl_on": "online",
+            "pl_off": "offline",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "Discovered",
+         "component": "sensor",
+         "stat_t": "~discover/state",
+         "config": {
+            "ic": "mdi:devices"
+         }
+      },
+      {
+         "id": "initialised",
+         "component": "sensor",
+         "stat_t": "~@/state",
+         "config": {
+            "value_template": "{{ as_datetime(value) }}",
+            "dev_cla": "timestamp",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "discover",
+         "component": "button",
+         "cmd_t": "~@/command",
+         "config": {
+            "pl_prs": "discovery"
+         }
+      }
+   ]
+}

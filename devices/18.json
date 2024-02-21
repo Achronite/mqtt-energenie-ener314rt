@@ -1,0 +1,191 @@
+{
+    "mdl": "Thermostat",
+    "mdlpn": "MIHO069",
+    "parameters": [
+        {
+            "id": "Climate_Control",
+            "component": "climate",
+            "main": true,
+            "config": {
+                "max_temp": 30,
+                "min_temp": 10,
+                "modes": [
+                    "heat",
+                    "off"
+                ],
+                "mode_cmd_t": "~THERMOSTAT_MODE/command",
+                "mode_stat_t": "~THERMOSTAT_MODE/state",
+                "mode_cmd_tpl": "{% if value == 'off' %} 0 {% else %} 1 {% endif %}",
+                "mode_stat_tpl": "{% if value == '0' %} off {% else %} heat {% endif %}",
+                "temp_cmd_t": "~TARGET_TEMP/command",
+                "temp_stat_t": "~TARGET_TEMP/state",
+                "curr_temp_t": "~TEMPERATURE/state",
+                "current_humidity_topic": "~REL_HUMIDITY/state",
+                "ic": "mdi:thermostat",
+                "opt": "true",
+                "temp_step": "0.5",
+                "temp_unit": "C",
+                "act_tpl": "{% if value == 'ON' %} heating {% else %} off {% endif %}",
+                "act_t": "~switch/state"
+            }
+        },
+        {
+            "id": "BATTERY_LEVEL",
+            "component": "sensor",
+            "stat_t": "~@/state",
+            "config": {
+                "ic": "mdi:battery",
+                "unit_of_meas": "V",
+                "dev_cla": "voltage",
+                "sug_dsp_prc": 2
+            }
+        },
+        {
+            "id": "THERMOSTAT_MODE",
+            "component": "sensor",
+            "stat_t": "~@/state",
+            "config": {
+                "ic": "mdi:thermostat",
+                "val_tpl": "{% if value == '0' %} Off {% elif value == '1' %} Auto {% else %} On {% endif %}"
+            }
+        },
+        {
+            "id": "REL_HUMIDITY",
+            "component": "sensor",
+            "stat_t": "~@/state",
+            "config": {
+                "dev_cla": "humidity",
+                "unit_of_meas": "%"
+            }
+        },
+        {
+            "id": "TEMPERATURE",
+            "component": "sensor",
+            "stat_t": "~@/state",
+            "config": {
+                "dev_cla": "temperature",
+                "unit_of_meas": "°C",
+                "sug_dsp_prc": 2
+            }
+        },
+        {
+            "id": "TARGET_TEMP",
+            "component": "number",
+            "stat_t": "~@/state",
+            "cmd_t": "~@/command",
+            "config": {
+                "dev_cla": "temperature",
+                "min": 12,
+                "max": 30,
+                "unit_of_meas": "°C",
+                "step": 0.5,
+                "ic": "mdi:thermometer-auto"
+            }
+        },
+        {
+            "id": "Temp_Margin",
+            "component": "number",
+            "stat_t": "~HYSTERESIS/state",
+            "cmd_t": "~HYSTERESIS/command",
+            "config": {
+                "dev_cla": "temperature",
+                "ent_cat": "config",
+                "min": 0.5,
+                "max": 10,
+                "unit_of_meas": "°C",
+                "step": 0.5,
+                "init": 0.5,
+                "ic": "mdi:thermometer-lines"
+            }
+        },
+        {
+            "id": "Boiler",
+            "component": "binary_sensor",
+            "stat_t": "~switch/state",
+            "config": {
+                "ic": "mdi:water-boiler"
+            }
+        },
+        {
+            "id": "MOTION_DETECTOR",
+            "component": "sensor",
+            "stat_t": "~@/state"
+        },
+        {
+            "id": "HUMIDITY_OFFSET",
+            "component": "number",
+            "cmd_t": "~HUMID_OFFSET/command",
+            "stat_t": "~@/state",
+            "config": {
+                "dev_cla": "humidity",
+                "unit_of_meas": "%",
+                "ent_cat": "config",
+                "min": -20,
+                "max": 20,
+                "init": 10,
+                "ic": "mdi:water-plus"
+            }
+        },
+        {
+            "id": "TEMP_OFFSET",
+            "component": "number",
+            "cmd_t": "~@/command",
+            "stat_t": "~@/state",
+            "config": {
+                "dev_cla": "temperature",
+                "unit_of_meas": "°C",
+                "ent_cat": "config",
+                "min": -20.0,
+                "max": 20.0,
+                "step": 0.1,
+                "init": 10,
+                "mode": "slider",
+                "ic": "mdi:thermometer-plus"
+            }
+        },
+        {
+            "id": "retries",
+            "component": "sensor",
+            "stat_t": "~@/state",
+            "config": {
+                "ic": "mdi:cached"
+            }
+        },
+        {
+            "id": "command",
+            "component": "sensor",
+            "stat_t": "~@/state",
+            "config": {
+                "ic": "mdi:traffic-light"
+            }
+        },
+        {
+            "id": "last_seen",
+            "component": "sensor",
+            "stat_t": "~@/state",
+            "config": {
+                "val_tpl": "{{ as_datetime(value) }}",
+                "dev_cla": "timestamp"
+            }
+        },
+        {
+            "id": "battery",
+            "component": "sensor",
+            "stat_t": "~@/state",
+            "config": {
+                "dev_cla": "battery",
+                "unit_of_meas": "%"
+            }  
+        },
+        {
+            "id": "RELAY_POLARITY",
+            "component": "switch",
+            "cmd_t": "~@/command",
+            "stat_t": "~@/state",
+            "config": {
+                "ent_cat": "config",
+                "ic": "mdi:electric-switch"
+            }
+        }
+    ]
+}

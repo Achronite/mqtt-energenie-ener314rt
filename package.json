@@ -1,19 +1,19 @@
 {
   "dependencies": {
-    "energenie-ener314rt": "0.6.x",
-    "mqtt": "^5.0.2",
+    "energenie-ener314rt": "~0.7.2",
+    "mqtt": "^5.3.5",
     "npmlog": "^7.0.1"
   },
   "name": "mqtt-energenie-ener314rt",
   "description": "MQTT node.js application to control the Energenie line of products via the ENER314-RT add-on board for the Raspberry Pi.",
-  "version": "0.6.0",
+  "version": "0.7.1",
   "main": "app.js",
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "engines": {
-    "node": ">=15.0.0"
+    "node": ">=18.2.0"
   },
   "repository": {
     "type": "git",
