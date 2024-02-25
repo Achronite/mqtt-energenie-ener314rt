@@ -854,7 +854,8 @@ function publishDiscovery( device ){
 						uniq_id: `ener314rt-${device.deviceId}-${parameter.id}`,
 						device: device_details,
 						"~": `${CONFIG.topic_stub}${device.productId}/${device.deviceId}/`,
-						name: entity_name,
+						// Remove name property if entity_name is null
+						...(entity_name !== null ? { name: entity_name } : {}),
 						avty_t: `${CONFIG.topic_stub}availability/state`,
 						o: {
 							name: `mqtt-energenie-ener314rt`,
