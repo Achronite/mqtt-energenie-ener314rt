@@ -831,12 +831,9 @@ function publishDiscovery( device ){
 				device_defaults = JSON.parse(data);
 				device_defaults.parameters.forEach( (parameter) => {
 					//
-					// To align to HA standards, the main parameter should not be appended to the entity name
-					// To save on network/processin only the main entity will contain the details of the device that they belong to
+					// To save on network/processing only the main entity will contain the details of the device that they belong to
 					//
 					if (parameter.main){
-						var entity_name = null;
-
 						var device_details = {
 							name: `${device_defaults.mdl} ${device.deviceId}`,
 							ids: [`ener314rt-${device.deviceId}`],
@@ -845,6 +842,14 @@ function publishDiscovery( device ){
 							sw: `mqtt-ener314rt ${APP_VERSION}`,
 							via_device: 'mqtt-energenie-ener314rt'
 						}
+						// To align to HA standards, the main parameter should not be appended to the entity name
+						// Except when the main component is type sensor, where we must preserve it
+						if ( parameter.component == "sensor"){
+							var entity_name = toTitleCase(parameter.id);
+						} else {
+							var entity_name = null;
+						}
+
 					} else {
 						var entity_name = toTitleCase(parameter.id);
 						var device_details = {ids: [`ener314rt-${device.deviceId}`]};
