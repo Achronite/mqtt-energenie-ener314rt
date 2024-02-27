@@ -46,6 +46,19 @@ const RELAY_POLARITY    = 171;  // Thermostat
 const TEMP_OFFSET  = 189;  // Thermostat
 const HUMID_OFFSET = 186;  // Thermostat
 
+// OpenThings Device constants
+const MIHO004 = 1;
+const MIHO005 = 2;
+const MIHO006 = 5;
+const MIHO013 = 3;
+const MIHO032 = 12;
+const MIHO033 = 13;
+const MIHO069 = 18;
+const MIHO089 = 19;
+
+// retry state object
+const rstate = {};
+
 // import dependencies
 const MQTT = require('mqtt');
 var fs = require('fs');
@@ -224,7 +237,7 @@ client.on('message', function (topic, msg, packet) {
 			}
 			break;
 		case '2':
-		case 2:
+		case MIHO005:
 			// MIHO005 - Adaptor+
 
 			//validate on/off request, default to OFF
@@ -234,11 +247,23 @@ client.on('message', function (topic, msg, packet) {
 			else if (msg == "ON" || msg == "on" || msg == 1 || msg == '1')
 				switchState = true;
 			var ener_cmd = {
-				cmd: 'send', mode: 'fsk', repeat: fsk_xmits, command: 'switch',
+				cmd: 'send', mode: 'fsk', repeat: fsk_xmits, command: 'switch', 
 				productId: cmd_array[MQTTM_OT_PRODUCTID],
 				deviceId: cmd_array[MQTTM_OT_DEVICEID],
 				switchState: switchState
 			};
+
+			//
+			// Store target switch state to ensure it switches if retry function enabled
+			//
+			if (CONFIG.retry) {
+				// use eval to set a specific variable to store the requested state (rstate) based upon the deviceId
+				// this will be checked on the next periodic report from the device to ensure it has processed the switch command
+				let dynamicName = `_${ener_cmd.deviceId}`;
+				rstate[dynamicName] = switchState;
+				log.verbose("energenie", "openThingsSwitch() retry enabled %s=%d",dynamicName,rstate[dynamicName]);
+			}
+
 			break;
 		case '3':
 		case 3:
@@ -564,11 +589,8 @@ forked.on("message", msg => {
 			// OpenThings monitor message
 
 			let keys = Object.keys(msg);
-			var productId = null;
-			var deviceId = null;
 
 			// Iterate through the object returned
-
 			keys.forEach((key) => {
 				let topic_key = key;
 				let retain = false;;
@@ -732,11 +754,34 @@ forked.on("message", msg => {
 					}
 
 					// Update Maintenance if retries=0 for trv
-					if (msg.productId == '3' && topic_key == "retries" && state == '0'){
+					if (msg.productId == MIHO013 && topic_key == "retries" && state == '0'){
 						// retries are now empty, also change the Maintenance Select back to None
 						state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/Maintenance/state`;
 						log.verbose('<', "%s: None", state_topic);
 						client.publish(state_topic,"None");
+					}
+
+					// Check returned state for MIHO005 to see if switched correctly
+					if ( msg.productId == MIHO005 ) {
+						let dynamicName = `_${msg.deviceId}`;
+						if (dynamicName in rstate) {
+							log.verbose('monitor','checking switch command for %s',msg.deviceId);
+							// we have previously sent a command, did the device switch?
+							if (msg.SWITCH_STATE == rstate[dynamicName]){
+								// switch was ok, remove the dynamic key to prevent re-checking
+								delete rstate[dynamicName];
+							} else {
+								// retry switch command
+								var ener_cmd = {
+									cmd: 'send', mode: 'fsk', repeat: fsk_xmits, command: 'switch', 
+									productId: msg.productId,
+									deviceId: msg.deviceId,
+									switchState: rstate[dynamicName]
+								};
+								log.http("command", "RETRY %j", ener_cmd);
+								forked.send(ener_cmd);
+							}
+						}
 					}
 				};
 			})
@@ -775,7 +820,7 @@ forked.on("message", msg => {
 				}
 
 				// Store cached state for values that are NEVER returned by monitor messages (confirmed by energenie)
-				if (msg.productId == 3 && msg.command == 'VALVE_STATE'){
+				if (msg.productId == MIHO013 && msg.command == 'VALVE_STATE'){
 					state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/${msg.command}/state`;
 					state = String(msg.data);
 

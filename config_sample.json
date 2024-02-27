@@ -11,5 +11,6 @@
     "ook_xmits": 10,
     "fsk_xmits": 5,
     "cached_retries": 10,
-    "log_level": "info"
+    "log_level": "info",
+    "retry":true
 }

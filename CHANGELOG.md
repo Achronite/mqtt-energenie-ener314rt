@@ -7,6 +7,20 @@
 * Enhance availability (or publish guidance) on OpenThings devices based on `last_seen`
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
+## [0.7.2] 2024-03
+
+### Added
+
+* Auto-retry added for MIHO005, enabled by adding `retry: true` into `config.json`.  This functions checks that the resulting monitor message matches the (just) sent command; if it is different it retries the command (indefinitely)
+
+
+### Fixed
+
+* 
+
+### Changed
+
+*
 
 ## [0.7.1] 2024-02-21
 
