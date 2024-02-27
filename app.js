@@ -261,7 +261,7 @@ client.on('message', function (topic, msg, packet) {
 				// this will be checked on the next periodic report from the device to ensure it has processed the switch command
 				let dynamicName = `_${ener_cmd.deviceId}`;
 				rstate[dynamicName] = switchState;
-				log.verbose("energenie", "openThingsSwitch() retry enabled %s=%d",dynamicName,rstate[dynamicName]);
+				log.verbose("energenie", "openThingsSwitch() retry enabled %s=%s",dynamicName,rstate[dynamicName]);
 			}
 
 			break;
@@ -612,8 +612,10 @@ forked.on("message", msg => {
 						topic_key = 'switch';
 						if (msg[key] == 1 || msg[key] == '1') {
 							msg[key] = "ON";
+							switchState = true;
 						} else {
 							msg[key] = "OFF";
+							switchState = false;
 						}
 
 						break;
@@ -762,12 +764,12 @@ forked.on("message", msg => {
 					}
 
 					// Check returned state for MIHO005 to see if switched correctly
-					if ( msg.productId == MIHO005 ) {
+					if ( msg.productId == MIHO005 && topic_key == 'switch') {
 						let dynamicName = `_${msg.deviceId}`;
 						if (dynamicName in rstate) {
 							log.verbose('monitor','checking switch command for %s',msg.deviceId);
 							// we have previously sent a command, did the device switch?
-							if (msg.SWITCH_STATE == rstate[dynamicName]){
+							if (switchState == rstate[dynamicName]){
 								// switch was ok, remove the dynamic key to prevent re-checking
 								delete rstate[dynamicName];
 							} else {
