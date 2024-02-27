@@ -29,7 +29,7 @@ const MIHO013 = 3;
 const MIHO032 = 12;
 const MIHO033 = 13;
 const MIHO069 = 18;
-//const MIHO089|MiHome Click - Smart Button|?|No|Yes||
+const MIHO089 = 19;
 
 log.info("energenie", "child process started");
 
@@ -97,11 +97,12 @@ process.on('message', msg => {
                     }
                     switch (productId){
                         case MIHO005:   //Adapter+
-                            // switch only device, call specifc function for this
+                            // switch only device, call specific function for this
                             // Invoke C function to do the send
                             if (initialised){
                                 var res = ener314rt.openThingsSwitch(productId, deviceId, switchState, xmits);
                                 log.verbose("energenie", "openThingsSwitch(%d,%d,%j,%d) returned %j",productId, deviceId, switchState, xmits, res);// monitoring loop should respond for us
+  
                             } else {
                                 log.verbose('emulator',"simulate calling openThingsSwitch(%d,%d,%j,%d)",productId, deviceId, switchState, xmits);
                                 // for emulation mode we need to respond, otherwise monitoring loop will do it for us
