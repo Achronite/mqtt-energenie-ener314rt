@@ -7,6 +7,7 @@
 * Enhance availability (or publish guidance) on OpenThings devices based on `last_seen`
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
+
 ## [0.7.2] 2024-03
 
 ### Added
@@ -16,7 +17,7 @@ Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) 
 
 ### Fixed
 
-* 
+*  MQTT Discovery: The 'main' entity for monitor only devices have been switched back to use entity names (rather than the device name) [#85](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/85) 
 
 ### Changed
 
