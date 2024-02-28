@@ -12,7 +12,7 @@ Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) 
 
 ### Added
 
-* Auto-retry added for MIHO005, enabled by adding `retry: true` into `config.json`.  This functions checks that the resulting monitor message matches the (just) sent command; if it is different it retries the command (indefinitely)
+* Auto-retry switch command added for MIHO005, **enabled** by default, disabled by adding `retry: false` into `config.json`.  This functions checks that the resulting monitor message matches the (just) sent command; if it is different it retries the command (indefinitely)
 
 
 ### Fixed
@@ -72,7 +72,7 @@ This release requires the following updates that will need to be manually instal
 |MIHO069|MiHome Heating Thermostat|climate control|
 |MIHO089|MiHome Click|voltage|
 
-See also: https://github.com/Achronite/energenie-ener314rt/releases/tag/v0.7.1  - Notably pi5 support and GPIO driver changes
+See also: https://github.com/Achronite/energenie-ener314rt/releases/tag/v0.7.2  - Notably pi5 support and GPIO driver changes
 
 
 ## [0.6.0] 2023-11-13

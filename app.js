@@ -89,6 +89,11 @@ let cached_retries = 10;
 if (CONFIG.cached_retries)
 	cached_retries = CONFIG.cached_retries;
 
+// enable MIHO005 retry_switch by default
+let retry_switch = true;
+if (CONFIG.retry == false)
+	retry_switch = false;
+
 // connect to MQTT
 log.info('MQTT', "connecting to broker %s", CONFIG.mqtt_broker);
 
@@ -256,12 +261,12 @@ client.on('message', function (topic, msg, packet) {
 			//
 			// Store target switch state to ensure it switches if retry function enabled
 			//
-			if (CONFIG.retry) {
+			if (retry_switch) {
 				// use eval to set a specific variable to store the requested state (rstate) based upon the deviceId
 				// this will be checked on the next periodic report from the device to ensure it has processed the switch command
 				let dynamicName = `_${ener_cmd.deviceId}`;
 				rstate[dynamicName] = switchState;
-				log.verbose("energenie", "openThingsSwitch() retry enabled %s=%s",dynamicName,rstate[dynamicName]);
+				log.verbose("cmd", "openThingsSwitch() retry enabled %s=%s",dynamicName,rstate[dynamicName]);
 			}
 
 			break;
@@ -764,7 +769,7 @@ forked.on("message", msg => {
 					}
 
 					// Check returned state for MIHO005 to see if switched correctly
-					if ( msg.productId == MIHO005 && topic_key == 'switch') {
+					if ( retry_switch && msg.productId == MIHO005 && topic_key == 'switch') {
 						let dynamicName = `_${msg.deviceId}`;
 						if (dynamicName in rstate) {
 							log.verbose('monitor','checking switch command for %s',msg.deviceId);

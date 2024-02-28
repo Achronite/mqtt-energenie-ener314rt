@@ -88,7 +88,7 @@ It should contain the following entities configured for your environment. The ex
 * `ook_xmits` and `fsk_xmits` (optional) contain the number of times to transmit a radio message for `Control` (OOK) and `Control & Monitor` (FSK) devices.  Defaults to 20 otherwise
 * `cached_retries` (optional) contains the number of times to retry a cached command before stopping (applies to eTRV and thermostat)
 * `log_level` the application logging level, see [Logging](#logging) below
-* `retry` auto-retry capability for MIHO005.  If set this checks that the resulting monitor message switch state from the Smart Plug+ matches the (just) sent switch command state; if it is different it retries the command again (indefinitely) until the state matches
+* `retry` auto-retry capability for MIHO005 (optional, enabled by default).  Checks that the resulting monitor message switch state from the Smart Plug+ matches the (just) sent switch command state; if it is different it retries the command again (indefinitely) until the state matches.  Set this to `false` to disable the auto-retry switch command for the MIHO005 (Smart Plug+).
 
 9) Run the application manually first using the command: ``node app.js``.  When you know this runs OK a system service can then be set-up as shown in the [Systemd Service](#systemd-service) below.
 
