@@ -1,33 +1,33 @@
-# mqtt-eneregenie-ener314rt Change Log
+# mqtt-energenie-ener314rt Change Log
 
 ## [Unreleased]
 
-* Periodic eTRV commands [#10](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/10)
 * Update state of all OOK switches within a single device when switch 0 used [#4](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/4)
 * Enhance availability (or publish guidance) on OpenThings devices based on `last_seen`
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
-## [0.7.2] 2024-03
+## [0.7.2] 2024-02-29
+
+The v0.7.x releases require the following updates that will need to be manually installed:
+* `node.js`: v18.2.0 or greater
+* `gpiod` & `libgpiod`: New dependencies that need to be installed  (e.g raspbian: `sudo apt-get gpiod libgpiod-dev`)
 
 ### Added
 
-* Auto-retry switch command added for MIHO005, **enabled** by default, disabled by adding `retry: false` into `config.json`.  This functions checks that the resulting monitor message matches the (just) sent command; if it is different it retries the command (indefinitely)
+* [#81](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/81) Auto-retry switch command added for MIHO005, **enabled** by default, disabled by adding `retry: false` into `config.json`.  This functions checks that the resulting monitor message matches the (just) sent command; if it is different it retries the command (indefinitely) 
 
 
 ### Fixed
 
-*  MQTT Discovery: The 'main' entity for monitor only devices have been switched back to use entity names (rather than the device name) [#85](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/85) 
+*  MQTT Discovery: [#85](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/85) The 'main' entity for monitor only devices have been switched back to use entity names (rather than the device name)
 
-### Changed
-
-*
 
 ## [0.7.1] 2024-02-21
 
 This release requires the following updates that will need to be manually installed:
 * `node.js`: v18.2.0 or greater
-* `gpiod` & `libgpiod`: New dependencies that need to be installed  (e.g raspbian: `sudo apt-get gpiod libgpiod`)
+* `gpiod` & `libgpiod`: New dependencies that need to be installed  (e.g raspbian: `sudo apt-get gpiod libgpiod-dev`)
 
 ### Added
 
