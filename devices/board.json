@@ -38,6 +38,12 @@
          "config": {
             "pl_prs": "discovery"
          }
+      },
+      {
+         "id": "version",
+         "component": "update",
+         "stat_t": "~@/state",
+         "config": {}
       }
    ]
 }

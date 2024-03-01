@@ -3,7 +3,7 @@
 // Copyright Achronite 2023
 //
 
-const APP_VERSION = (require('./package.json')).version;
+const APP_VERSION = 'v' + (require('./package.json')).version;
 
 // Add one console.log entry to show we are alive, the rest are configurable by npmlog
 console.log(`mqtt-energenie-ener314rt version ${APP_VERSION}: starting`);
@@ -133,12 +133,17 @@ client.on('connect',function(){
 	publishBoardState('initialised', seconds);
 	publishBoardState('discover', 0);			// reset to 0 discovered devices
 
+	publishLatestRelease();
+
 	// Enable Periodic MQTT discovery at 1 min, and then every 10 minutes
 	if (CONFIG.monitoring && CONFIG.discovery_prefix) {
 		discovery = true;
 
 		// Publish the parent 'board' discovery once on startup
 		publishBoardDiscovery();
+
+		// and then every day at 3:26am
+		runAtSpecificTimeOfDay(16,40,() => { publishBoardDiscovery() });
 
 		log.info('discovery', "discovery enabled at topic prefix '%s'", CONFIG.discovery_prefix);
 		// After 1 min update MQTT discovery topics
@@ -149,6 +154,8 @@ client.on('connect',function(){
 	} else {
 		log.warn('discovery', "discovery disabled");
 	}
+
+
 
 })
 
@@ -1119,4 +1126,45 @@ function publishBoardState(param,state) {
 	// send response back via MQTT
 	log.verbose('<', "%s: %s (board)", state_topic, state);
 	client.publish(state_topic, String(state));
+}
+
+// Get latest release data from github (uses native node.js functionality) and publish to update object for board
+function publishLatestRelease() {
+	fetch('https://api.github.com/repos/Achronite/mqtt-energenie-ener314rt/releases/latest')
+		.then((response) => response.json())
+		.then((data) => {
+			const github_details = {
+				"installed_version": APP_VERSION,
+				"latest_version": data.tag_name,
+				"title": "mqtt-energenie-ener314rt",
+				"release_summary": data.body,
+				"release_url": data.html_url,
+			}
+
+			// Publish it to MQTT version
+			state_topic = `${CONFIG.topic_stub}board/1/version/state`;
+			log.verbose('<', "%s: %j (board)", state_topic, github_details.latest_version);
+			client.publish(state_topic, JSON.stringify(github_details), {retain: true});
+		})
+		.catch(error => log.warn('version','error getting latest release data from github:',error)
+	); 
+
+}
+
+// run a function at the same time every day (credit @farhad-taran)
+function runAtSpecificTimeOfDay(hour, minutes, func)
+{
+  const twentyFourHours = 86400000;
+  const now = new Date();
+  let eta_ms = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minutes, 0, 0).getTime() - now;
+  if (eta_ms < 0)
+  {
+    eta_ms += twentyFourHours;
+  }
+  setTimeout(function() {
+    //run once
+    func();
+    // run every 24 hours from now on
+    setInterval(func, twentyFourHours);
+  }, eta_ms);
 }
