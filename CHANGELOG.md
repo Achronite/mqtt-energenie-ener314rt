@@ -16,7 +16,7 @@ The v0.7.x releases require the following updates that will need to be manually 
 ### Added
 
 * [#81](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/81) Auto-retry switch command added for MIHO005, **enabled** by default, disabled by adding `retry: false` into `config.json`.  This functions checks that the resulting monitor message matches the (just) sent command; if it is different it retries the command (indefinitely) 
-* [#80](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/80) Update state of application (from github) and MQTT Discovery 'board/1/version' added to show if a software update is available for this application `mqtt-energenie-ener314rt`
+* [#80](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/80) Update state of application (from github) and MQTT Discovery 'board/1/version' added to show if a software update is available for this application `mqtt-energenie-ener314rt`.  This runs once on startup and then checks at 3:26AM every day.
 
 
 ### Fixed

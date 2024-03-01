@@ -143,7 +143,7 @@ client.on('connect',function(){
 		publishBoardDiscovery();
 
 		// and then every day at 3:26am
-		runAtSpecificTimeOfDay(16,40,() => { publishBoardDiscovery() });
+		runAtSpecificTimeOfDay(3,26,() => { publishBoardDiscovery() });
 
 		log.info('discovery', "discovery enabled at topic prefix '%s'", CONFIG.discovery_prefix);
 		// After 1 min update MQTT discovery topics
