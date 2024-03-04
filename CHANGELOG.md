@@ -7,16 +7,16 @@
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
-## [0.7.2] 2024-03-01
+## [0.7.2] 2024-03-04
 
-The v0.7.x releases require the following updates that will need to be manually installed:
+The v0.7.x releases require the following updates that will need to be manually installed if upgrading from v0.6.x or below:
 * `gpiod` & `libgpiod`: New dependencies that need to be installed  (e.g raspbian: `sudo apt-get gpiod libgpiod-dev`)
 * `node.js`: v18.2.0 or greater
 
 ### Added
 
 * [#81](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/81) Auto-retry switch command added for MIHO005, **enabled** by default, disabled by adding `retry: false` into `config.json`.  This functions checks that the resulting monitor message matches the (just) sent command; if it is different it retries the command (indefinitely) 
-* [#80](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/80) Update state of application (from github) and MQTT Discovery 'board/1/version' added to show if a software update is available for this application `mqtt-energenie-ener314rt`.  This runs once on startup and then checks at 3:26AM every day.
+* [#80](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/80) Update state of application (from github) to MQTT '<topic_stub>/board/1/version' with MQTT Discovery added to show if a software update is available for this application within HA under parent entity `mqtt-energenie-ener314rt` `Version`.  This runs once on startup and then checks at 3:26AM every day.
 
 
 ### Fixed
