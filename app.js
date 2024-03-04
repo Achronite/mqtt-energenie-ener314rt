@@ -3,7 +3,7 @@
 // Copyright Achronite 2023
 //
 
-const APP_VERSION = (require('./package.json')).version;
+const APP_VERSION = 'v' + (require('./package.json')).version;
 
 // Add one console.log entry to show we are alive, the rest are configurable by npmlog
 console.log(`mqtt-energenie-ener314rt version ${APP_VERSION}: starting`);
@@ -46,6 +46,19 @@ const RELAY_POLARITY    = 171;  // Thermostat
 const TEMP_OFFSET  = 189;  // Thermostat
 const HUMID_OFFSET = 186;  // Thermostat
 
+// OpenThings Device constants
+const MIHO004 = 1;
+const MIHO005 = 2;
+const MIHO006 = 5;
+const MIHO013 = 3;
+const MIHO032 = 12;
+const MIHO033 = 13;
+const MIHO069 = 18;
+const MIHO089 = 19;
+
+// retry state object
+const rstate = {};
+
 // import dependencies
 const MQTT = require('mqtt');
 var fs = require('fs');
@@ -75,6 +88,11 @@ if (CONFIG.fsk_xmits)
 let cached_retries = 10;
 if (CONFIG.cached_retries)
 	cached_retries = CONFIG.cached_retries;
+
+// enable MIHO005 retry_switch by default
+let retry_switch = true;
+if (CONFIG.retry == false)
+	retry_switch = false;
 
 // connect to MQTT
 log.info('MQTT', "connecting to broker %s", CONFIG.mqtt_broker);
@@ -115,12 +133,17 @@ client.on('connect',function(){
 	publishBoardState('initialised', seconds);
 	publishBoardState('discover', 0);			// reset to 0 discovered devices
 
+	publishLatestRelease();
+
 	// Enable Periodic MQTT discovery at 1 min, and then every 10 minutes
 	if (CONFIG.monitoring && CONFIG.discovery_prefix) {
 		discovery = true;
 
 		// Publish the parent 'board' discovery once on startup
 		publishBoardDiscovery();
+
+		// and then every day at 3:26am
+		runAtSpecificTimeOfDay(3,26,() => { publishBoardDiscovery() });
 
 		log.info('discovery', "discovery enabled at topic prefix '%s'", CONFIG.discovery_prefix);
 		// After 1 min update MQTT discovery topics
@@ -131,6 +154,8 @@ client.on('connect',function(){
 	} else {
 		log.warn('discovery', "discovery disabled");
 	}
+
+
 
 })
 
@@ -224,7 +249,7 @@ client.on('message', function (topic, msg, packet) {
 			}
 			break;
 		case '2':
-		case 2:
+		case MIHO005:
 			// MIHO005 - Adaptor+
 
 			//validate on/off request, default to OFF
@@ -234,11 +259,23 @@ client.on('message', function (topic, msg, packet) {
 			else if (msg == "ON" || msg == "on" || msg == 1 || msg == '1')
 				switchState = true;
 			var ener_cmd = {
-				cmd: 'send', mode: 'fsk', repeat: fsk_xmits, command: 'switch',
+				cmd: 'send', mode: 'fsk', repeat: fsk_xmits, command: 'switch', 
 				productId: cmd_array[MQTTM_OT_PRODUCTID],
 				deviceId: cmd_array[MQTTM_OT_DEVICEID],
 				switchState: switchState
 			};
+
+			//
+			// Store target switch state to ensure it switches if retry function enabled
+			//
+			if (retry_switch) {
+				// use eval to set a specific variable to store the requested state (rstate) based upon the deviceId
+				// this will be checked on the next periodic report from the device to ensure it has processed the switch command
+				let dynamicName = `_${ener_cmd.deviceId}`;
+				rstate[dynamicName] = switchState;
+				log.verbose("cmd", "openThingsSwitch() retry enabled %s=%s",dynamicName,rstate[dynamicName]);
+			}
+
 			break;
 		case '3':
 		case 3:
@@ -564,11 +601,8 @@ forked.on("message", msg => {
 			// OpenThings monitor message
 
 			let keys = Object.keys(msg);
-			var productId = null;
-			var deviceId = null;
 
 			// Iterate through the object returned
-
 			keys.forEach((key) => {
 				let topic_key = key;
 				let retain = false;;
@@ -590,8 +624,10 @@ forked.on("message", msg => {
 						topic_key = 'switch';
 						if (msg[key] == 1 || msg[key] == '1') {
 							msg[key] = "ON";
+							switchState = true;
 						} else {
 							msg[key] = "OFF";
+							switchState = false;
 						}
 
 						break;
@@ -732,11 +768,34 @@ forked.on("message", msg => {
 					}
 
 					// Update Maintenance if retries=0 for trv
-					if (msg.productId == '3' && topic_key == "retries" && state == '0'){
+					if (msg.productId == MIHO013 && topic_key == "retries" && state == '0'){
 						// retries are now empty, also change the Maintenance Select back to None
 						state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/Maintenance/state`;
 						log.verbose('<', "%s: None", state_topic);
 						client.publish(state_topic,"None");
+					}
+
+					// Check returned state for MIHO005 to see if switched correctly
+					if ( retry_switch && msg.productId == MIHO005 && topic_key == 'switch') {
+						let dynamicName = `_${msg.deviceId}`;
+						if (dynamicName in rstate) {
+							log.verbose('monitor','checking switch command for %s',msg.deviceId);
+							// we have previously sent a command, did the device switch?
+							if (switchState == rstate[dynamicName]){
+								// switch was ok, remove the dynamic key to prevent re-checking
+								delete rstate[dynamicName];
+							} else {
+								// retry switch command
+								var ener_cmd = {
+									cmd: 'send', mode: 'fsk', repeat: fsk_xmits, command: 'switch', 
+									productId: msg.productId,
+									deviceId: msg.deviceId,
+									switchState: rstate[dynamicName]
+								};
+								log.http("command", "RETRY %j", ener_cmd);
+								forked.send(ener_cmd);
+							}
+						}
 					}
 				};
 			})
@@ -775,7 +834,7 @@ forked.on("message", msg => {
 				}
 
 				// Store cached state for values that are NEVER returned by monitor messages (confirmed by energenie)
-				if (msg.productId == 3 && msg.command == 'VALVE_STATE'){
+				if (msg.productId == MIHO013 && msg.command == 'VALVE_STATE'){
 					state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/${msg.command}/state`;
 					state = String(msg.data);
 
@@ -831,12 +890,9 @@ function publishDiscovery( device ){
 				device_defaults = JSON.parse(data);
 				device_defaults.parameters.forEach( (parameter) => {
 					//
-					// To align to HA standards, the main parameter should not be appended to the entity name
-					// To save on network/processin only the main entity will contain the details of the device that they belong to
+					// To save on network/processing only the main entity will contain the details of the device that they belong to
 					//
 					if (parameter.main){
-						var entity_name = null;
-
 						var device_details = {
 							name: `${device_defaults.mdl} ${device.deviceId}`,
 							ids: [`ener314rt-${device.deviceId}`],
@@ -845,6 +901,14 @@ function publishDiscovery( device ){
 							sw: `mqtt-ener314rt ${APP_VERSION}`,
 							via_device: 'mqtt-energenie-ener314rt'
 						}
+						// To align to HA standards, the main parameter should not be appended to the entity name
+						// Except when the main component is type sensor, where we must preserve it
+						if ( parameter.component == "sensor"){
+							var entity_name = toTitleCase(parameter.id);
+						} else {
+							var entity_name = null;
+						}
+
 					} else {
 						var entity_name = toTitleCase(parameter.id);
 						var device_details = {ids: [`ener314rt-${device.deviceId}`]};
@@ -1062,4 +1126,45 @@ function publishBoardState(param,state) {
 	// send response back via MQTT
 	log.verbose('<', "%s: %s (board)", state_topic, state);
 	client.publish(state_topic, String(state));
+}
+
+// Get latest release data from github (uses native node.js functionality) and publish to update object for board
+function publishLatestRelease() {
+	fetch('https://api.github.com/repos/Achronite/mqtt-energenie-ener314rt/releases/latest')
+		.then((response) => response.json())
+		.then((data) => {
+			const github_details = {
+				"installed_version": APP_VERSION,
+				"latest_version": data.tag_name,
+				"title": "mqtt-energenie-ener314rt",
+				"release_summary": data.body,
+				"release_url": data.html_url,
+			}
+
+			// Publish it to MQTT version
+			state_topic = `${CONFIG.topic_stub}board/1/version/state`;
+			log.verbose('<', "%s: %j (board)", state_topic, github_details.latest_version);
+			client.publish(state_topic, JSON.stringify(github_details), {retain: true});
+		})
+		.catch(error => log.warn('version','error getting latest release data from github:',error)
+	); 
+
+}
+
+// run a function at the same time every day (credit @farhad-taran)
+function runAtSpecificTimeOfDay(hour, minutes, func)
+{
+  const twentyFourHours = 86400000;
+  const now = new Date();
+  let eta_ms = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minutes, 0, 0).getTime() - now;
+  if (eta_ms < 0)
+  {
+    eta_ms += twentyFourHours;
+  }
+  setTimeout(function() {
+    //run once
+    func();
+    // run every 24 hours from now on
+    setInterval(func, twentyFourHours);
+  }, eta_ms);
 }
