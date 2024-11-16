@@ -48,13 +48,19 @@ sudo apt-get install gpiod libgpiod-dev
 4) Download this application e.g:
 ```
 wget https://github.com/Achronite/mqtt-energenie-ener314rt/archive/refs/heads/master.zip
+```
+```
 unzip master.zip
 ```
 
-5) Rename folder `mv mqtt-energenie-ener314rt-master mqtt-energenie-ener314rt`
-
-6) `cd mqtt-energenie-ener314rt`
-
+5) Rename folder:
+```
+mv mqtt-energenie-ener314rt-master mqtt-energenie-ener314rt
+```
+6) Open folder:
+```
+cd mqtt-energenie-ener314rt`
+```
 7) Install node's dependencies:
 ```
 npm install
