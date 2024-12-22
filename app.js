@@ -683,10 +683,6 @@ forked.on("message", msg => {
 					case 'THERMOSTAT_MODE':
 					case 'HYSTERESIS':
 					case 'TEMP_OFFSET':
-					// Improved logic for TEMPERATURE case handling in app.js
-					// Improved logic for TEMPERATURE case handling in app.js
-					// Improved logic for TEMPERATURE case handling in app.js
-
 					case 'TEMPERATURE': {
 						// Log the incoming TEMPERATURE message for debugging and traceability
 						log.info('TEMPERATURE monitor message received: %j', msg);
@@ -770,10 +766,6 @@ forked.on("message", msg => {
 
 						break;
 					}
-
-
-
-
 					case 'HUMID_OFFSET':
 						// These values need to be retained on MQTT as they are irregularly reported
 						retain = true;
