@@ -27,15 +27,7 @@
          }
       },
       {
-         "id": "Valve_Action",
-         "component": "sensor",
-         "stat_t": "~HVAC_ACTION/state",
-         "config": {
-            "ent_cat": "diagnostic"
-         }
-      },
-      {
-         "id": "Heat_Demanded",
+         "id": "HEAT_DEMANDED",
          "component": "binary_sensor",
          "stat_t": "~HVAC_ACTION/state",
          "config": {
@@ -44,17 +36,18 @@
          }
       },
       {
-         "id": "Temperature_Delta",
+         "id": "TEMPERATURE_DELTA",
          "component": "sensor",
          "stat_t": "~DELTA_TEMP/state",
          "config": {
+            "ic": "mdi:compare-horizontal",
             "dev_cla": "temperature",
             "stat_cla": "MEASUREMENT",
             "unit_of_meas": "°C"
          }
       },
       {
-         "id": "Room_Temperature",
+         "id": "ROOM_TEMPERATURE",
          "component": "sensor",
          "stat_t": "~TEMPERATURE/state",
          "config": {
@@ -65,7 +58,7 @@
          }
       },
       {
-         "id": "Temperature_Set_Point",
+         "id": "TEMPERATURE_SET_POINT",
          "component": "sensor",
          "stat_t": "~TARGET_TEMP/state",
          "config": {
@@ -93,7 +86,8 @@
          "config": {
             "ic": "mdi:battery-clock",
             "val_tpl": "{{ as_datetime(value) }}",
-            "dev_cla": "timestamp"
+            "dev_cla": "timestamp",
+            "ent_cat": "diagnostic"
          }
       },
       {
@@ -172,7 +166,8 @@
          "component": "sensor",
          "stat_t": "~@/state",
          "config": {
-            "ic": "mdi:cached"
+            "ic": "mdi:cached",
+            "ent_cat": "diagnostic"
          }
       },
       {
@@ -180,7 +175,8 @@
          "component": "sensor",
          "stat_t": "~@/state",
          "config": {
-            "ic": "mdi:traffic-light"
+            "ic": "mdi:traffic-light",
+            "ent_cat": "diagnostic"
          }
       },
       {
