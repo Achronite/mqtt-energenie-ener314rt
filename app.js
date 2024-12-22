@@ -683,6 +683,81 @@ forked.on("message", msg => {
 					case 'THERMOSTAT_MODE':
 					case 'HYSTERESIS':
 					case 'TEMP_OFFSET':
+					case 'TEMPERATURE': {
+						// Log the incoming TEMPERATURE message for debugging and traceability
+						log.info('TEMPERATURE monitor message received: %j', msg);
+
+						// Check if the device is of productId 3 (eTRV) type before proceeding
+						if (msg.productId !== 3) {
+							log.info('Skipping TEMPERATURE processing for non-eTRV device with productId: %s', msg.productId);
+							break;
+						}
+
+						// Construct the MQTT topic to retrieve the TARGET_TEMP for this device
+						const targetTempTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/TARGET_TEMP/state`;
+						log.info(`Requesting TARGET_TEMP from MQTT: ${targetTempTopic}`);
+
+						// Only process the TEMPERATURE message from the device
+						// We do not act on the MQTT set temperature messages, as the eTRV will only start to open when it reports in.
+						client.subscribe(targetTempTopic, { qos: 1 }, (err) => {
+							if (err) {
+								// Log an error if the subscription fails
+								log.error(`Error subscribing to TARGET_TEMP topic: ${err}`);
+								return;
+							}
+
+							// Listen for messages from the subscribed TARGET_TEMP topic
+							client.on('message', (topic, targetMsg) => {
+								if (topic === targetTempTopic) {
+									// Parse the target and current temperatures
+									const targetTemp = parseFloat(targetMsg);
+									const currentTemp = parseFloat(msg.TEMPERATURE);
+
+									// Validate the parsed temperatures to ensure they are numbers
+									if (isNaN(targetTemp) || isNaN(currentTemp)) {
+										log.warn(`Received invalid temperature data: targetTemp=${targetTemp}, currentTemp=${currentTemp}`);
+										client.unsubscribe(targetTempTopic);
+										return;
+									}
+
+									// Log the retrieved temperatures for debugging
+									log.info(`targetTemp: ${targetTemp}, currentTemp: ${currentTemp}`);
+
+									// Determine the HVAC action based on the comparison of current and target temperatures
+									const hvacAction = currentTemp <= targetTemp ? 'heating' : 'idle';
+
+									// Calculate the temperature difference (delta) and format it to two decimal places
+									const deltaTemp = (currentTemp - targetTemp).toFixed(2);
+
+									// Log the calculated HVAC action and delta temperature for debugging
+									log.info(`Calculated hvacAction: ${hvacAction}, deltaTemp: ${deltaTemp}`);
+
+									// Define the MQTT topics for publishing HVAC action and delta temperature
+									const hvacTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/HVAC_ACTION/state`;
+									const deltaTempTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/DELTA_TEMP/state`;
+
+									try {
+										// Publish the HVAC action to the corresponding MQTT topic
+										client.publish(hvacTopic, hvacAction, { retain: true });
+
+										// Publish the delta temperature to the corresponding MQTT topic
+										client.publish(deltaTempTopic, deltaTemp.toString(), { retain: true });
+
+										// Log the successful publication of both topics
+										log.info('Published HVAC_ACTION and delta_temp successfully.');
+									} catch (publishErr) {
+										// Log any errors encountered during the publication process
+										log.error(`Error publishing to MQTT: ${publishErr}`);
+									}
+
+									// Unsubscribe from the TARGET_TEMP topic to prevent redundant message processing
+									client.unsubscribe(targetTempTopic);
+								}
+							});
+						});
+
+						break;
+					}
 					case 'HUMID_OFFSET':
 						// These values need to be retained on MQTT as they are irregularly reported
 						retain = true;
