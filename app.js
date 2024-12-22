@@ -683,6 +683,10 @@ forked.on("message", msg => {
 					case 'THERMOSTAT_MODE':
 					case 'HYSTERESIS':
 					case 'TEMP_OFFSET':
+					// Improved logic for TEMPERATURE case handling in app.js
+					// Improved logic for TEMPERATURE case handling in app.js
+					// Improved logic for TEMPERATURE case handling in app.js
+
 					case 'TEMPERATURE': {
 						// Log the incoming TEMPERATURE message for debugging and traceability
 						log.info('TEMPERATURE monitor message received: %j', msg);
@@ -709,6 +713,14 @@ forked.on("message", msg => {
 							// Listen for messages from the subscribed TARGET_TEMP topic
 							client.on('message', (topic, targetMsg) => {
 								if (topic === targetTempTopic) {
+									// Check if targetMsg exists and is valid
+									if (!targetMsg) {
+										log.warn(`No value received in TARGET_TEMP topic: ${targetMsg}`);
+										client.unsubscribe(targetTempTopic);
+										return;
+									}
+
+
 									// Parse the target and current temperatures
 									const targetTemp = parseFloat(targetMsg);
 									const currentTemp = parseFloat(msg.TEMPERATURE);
@@ -739,7 +751,7 @@ forked.on("message", msg => {
 									try {
 										// Publish the HVAC action to the corresponding MQTT topic
 										client.publish(hvacTopic, hvacAction, { retain: true });
-
+										
 										// Publish the delta temperature to the corresponding MQTT topic
 										client.publish(deltaTempTopic, deltaTemp.toString(), { retain: true });
 
@@ -758,6 +770,10 @@ forked.on("message", msg => {
 
 						break;
 					}
+
+
+
+
 					case 'HUMID_OFFSET':
 						// These values need to be retained on MQTT as they are irregularly reported
 						retain = true;
