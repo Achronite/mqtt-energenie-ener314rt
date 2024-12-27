@@ -683,6 +683,84 @@ forked.on("message", msg => {
 					case 'THERMOSTAT_MODE':
 					case 'HYSTERESIS':
 					case 'TEMP_OFFSET':
+
+					case 'TEMPERATURE': {
+						// Validate message productId before proceeding to check its an eTRV
+						if (msg.productId == 3) {
+							log.info('eTRV TEMPERATURE monitor received: %j', msg);
+							const targetTempTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/TARGET_TEMP/state`;
+
+							// Parse current temperature from eTRV and validate
+							const currentTemp = parseFloat(msg.TEMPERATURE);
+							if (isNaN(currentTemp)) {
+								log.warn(`eTRV TEMPERATURE Invalid current temperature data: currentTemp=${currentTemp}`);
+							} else {
+								// Set a timeout to handle cases where no response is received from MQTT, happens if no TARGET_TEMP has yet been set
+								let timeoutHandle = setTimeout(() => {
+									log.warn(`Timeout: No response received for TARGET_TEMP on topic: ${targetTempTopic}`);
+									// Unsubscribe from topic in timeout scenario
+									client.unsubscribe(targetTempTopic);
+									client.removeListener('message', onTargetTempMessage); // Ensure listener is removed on timeout
+								}, 5000);
+
+								// Subscribe to the TARGET_TEMP MQTT topic
+								log.info(`eTRV TEMPERATURE monitor requesting:`, `TARGET_TEMP from MQTT: ${targetTempTopic}`);
+								client.subscribe(targetTempTopic, { qos: 1 }, (err) => {
+									if (err) {
+										log.error(`Error subscribing to TARGET_TEMP topic: ${err}`);
+										clearTimeout(timeoutHandle);
+									} else {
+										log.info(`eTRV TEMPERATURE Subscribed to topic:`,`${targetTempTopic}`);
+
+										// Listen for messages on the subscribed topic
+										client.on('message', function onTargetTempMessage(topic, targetMsg) {
+											if (topic === targetTempTopic) {
+												// Clear the timeout as we received a message
+												clearTimeout(timeoutHandle);
+
+												if (!targetMsg) {
+													log.warn(`eTRV TEMPERATURE No value received in TARGET_TEMP topic:`,`${targetMsg}`);
+												} else {
+													log.info(`eTRV TEMPERATURE Received`,`TARGET_TEMP from MQTT: ${targetTempTopic}`);
+
+													// Parse target temperature and validate
+													const targetTemp = parseFloat(targetMsg);
+													if (isNaN(targetTemp)) {
+														log.warn(`eTRV TEMPERATURE Invalid target temperature data: targetTemp=${targetTemp}`);
+													} else {
+														log.info(`eTRV TEMPERATURE Data:`,`TARGET_TEMP: ${targetTemp}, currentTemp: ${currentTemp}`);
+
+														// Determine HVAC action based on temperature comparison
+														const hvacAction = currentTemp <= targetTemp ? 'ON' : 'OFF';
+														const deltaTemp = (currentTemp - targetTemp).toFixed(2);
+
+														log.info(`eTRV TEMPERATURE Calculated:`,`hvacAction:`,`${hvacAction}, deltaTemp: ${deltaTemp}`);
+
+														// Define topics for publishing HVAC_ACTION and delta_temp
+														const hvacTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/HVAC_ACTION/state`;
+														const deltaTempTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/DELTA_TEMP/state`;
+
+														// Publish the calculated values
+														try {
+															client.publish(hvacTopic, hvacAction, { qos: 1, retain: false });
+															client.publish(deltaTempTopic, deltaTemp.toString(), { qos: 1, retain: false });
+															log.info(`eTRV TEMPERATURE Published:`,`HVAC_ACTION and delta_temp successfully.`);
+														} catch (publishErr) {
+															log.error(`eTRV TEMPERATURE Error publishing to MQTT: ${publishErr}`);
+														}
+													}
+												}
+												// Unsubscribe from the topic and clean up the listener
+												client.unsubscribe(targetTempTopic);
+												client.removeListener('message', onTargetTempMessage);
+											}
+										});
+									}
+								});
+							}
+						}
+					}
+
 					case 'HUMID_OFFSET':
 						// These values need to be retained on MQTT as they are irregularly reported
 						retain = true;

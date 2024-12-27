@@ -11,8 +11,7 @@
             "max_temp": 40,
             "min_temp": 5,
             "modes": [
-               "heat",
-               "off"
+               "heat"
             ],
             "mode_cmd_t": "~VALVE_STATE/command",
             "mode_stat_t": "~VALVE_STATE/state",
@@ -22,7 +21,58 @@
             "temp_stat_t": "~TARGET_TEMP/state",
             "ic": "mdi:radiator",
             "opt": "true",
-            "temp_step": "0.5"
+            "temp_step": "0.5",
+            "act_tpl": "{% if value == 'ON' %} heating {% else %} idle {% endif %}",
+            "act_t": "~HVAC_ACTION/state"
+         }
+      },
+      {
+         "id": "HEAT_DEMANDED",
+         "component": "binary_sensor",
+         "stat_t": "~HVAC_ACTION/state",
+         "config": {
+            "dev_cla": "running"
+         }
+      },
+      {
+         "id": "HEAT_DEMAND",
+         "component": "sensor",
+         "stat_t": "~HVAC_ACTION/state",
+         "config": {
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "TEMPERATURE_DELTA",
+         "component": "sensor",
+         "stat_t": "~DELTA_TEMP/state",
+         "config": {
+            "ic": "mdi:compare-horizontal",
+            "dev_cla": "temperature",
+            "stat_cla": "MEASUREMENT",
+            "unit_of_meas": "°C"
+         }
+      },
+      {
+         "id": "ROOM_TEMPERATURE",
+         "component": "sensor",
+         "stat_t": "~TEMPERATURE/state",
+         "config": {
+            "ic": "mdi:thermometer",
+            "dev_cla": "temperature",
+            "stat_cla": "MEASUREMENT",
+            "unit_of_meas": "°C"
+         }
+      },
+      {
+         "id": "TEMPERATURE_SET_POINT",
+         "component": "sensor",
+         "stat_t": "~TARGET_TEMP/state",
+         "config": {
+            "ic": "mdi:target",
+            "dev_cla": "temperature",
+            "stat_cla": "MEASUREMENT",
+            "unit_of_meas": "°C"
          }
       },
       {
@@ -32,6 +82,7 @@
          "config": {
             "ic": "mdi:battery",
             "dev_cla": "voltage",
+            "stat_cla": "MEASUREMENT",
             "unit_of_meas": "V"
          }
       },
@@ -42,7 +93,8 @@
          "config": {
             "ic": "mdi:battery-clock",
             "val_tpl": "{{ as_datetime(value) }}",
-            "dev_cla": "timestamp"
+            "dev_cla": "timestamp",
+            "ent_cat": "diagnostic"
          }
       },
       {
@@ -71,7 +123,6 @@
          "id": "EXERCISE_VALVE",
          "component": "binary_sensor",
          "stat_t": "~@/state",
-         "cmd_t": "~@/command",
          "config": {
             "dev_cla": "moving",
             "pl_on": "success",
@@ -83,7 +134,6 @@
          "id": "LOW_POWER_MODE",
          "component": "binary_sensor",
          "stat_t": "~@/state",
-         "cmd_t": "~@/command",
          "config": {}
       },
       {
@@ -121,7 +171,8 @@
          "component": "sensor",
          "stat_t": "~@/state",
          "config": {
-            "ic": "mdi:cached"
+            "ic": "mdi:cached",
+            "ent_cat": "diagnostic"
          }
       },
       {
@@ -129,7 +180,8 @@
          "component": "sensor",
          "stat_t": "~@/state",
          "config": {
-            "ic": "mdi:traffic-light"
+            "ic": "mdi:traffic-light",
+            "ent_cat": "diagnostic"
          }
       },
       {
