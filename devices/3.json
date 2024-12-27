@@ -22,8 +22,22 @@
             "ic": "mdi:radiator",
             "opt": "true",
             "temp_step": "0.5",
+            "temp_unit": "C",
             "act_tpl": "{% if value == 'ON' %} heating {% else %} idle {% endif %}",
-            "act_t": "~HVAC_ACTION/state"
+            "pr_mode_cmd_t": "~Maintenance/command",
+            "pr_mode_stat_t": "~Maintenance/state",
+            "pr_modes": [
+               "Cancel Command",
+               "Request Diagnostics",
+               "Request Voltage",
+               "Exercise Valve",
+               "Identify",
+               "Low Power Mode ON",
+               "Low Power Mode OFF",
+               "Valve Auto",
+               "Valve Open",
+               "Valve Closed"
+            ]
          }
       },
       {
@@ -191,30 +205,6 @@
          "config": {
             "val_tpl": "{{ as_datetime(value) }}",
             "dev_cla": "timestamp"
-         }
-      },
-      {
-         "id": "Maintenance",
-         "component": "select",
-         "stat_t": "~@/state",
-         "cmd_t": "~@/command",
-         "config": {
-            "ent_cat": "config",
-            "ic": "mdi:radiator",
-            "opt": true,
-            "options": [
-               "None",
-               "Cancel Command",
-               "Request Diagnostics",
-               "Request Voltage",
-               "Exercise Valve",
-               "Identify",
-               "Low Power Mode ON",
-               "Low Power Mode OFF",
-               "Valve Auto",
-               "Valve Open",
-               "Valve Closed"
-            ]
          }
       },
       {
