@@ -37,7 +37,7 @@ const VALVE_STATE 		= 165;
 const DIAGNOSTICS 		= 166;
 const THERMOSTAT_MODE   = 170;  // Thermostat
 const IDENTIFY			= 191;
-const REPORTING_INTERVAL= 210;
+const REPORT_PERIOD= 210;
 const TARGET_TEMP 		= 244;
 const VOLTAGE 			= 226;
 const SWITCH_STATE    	= 243;
@@ -289,7 +289,7 @@ client.on('message', function (topic, msg, packet) {
 				165 SET_VALVE_STATE 	Set valve state 0=Open, 1=Closed, 2=Auto
 				166 DIAGNOSTICS 		(DIAGNOSTICS)
 				191 IDENTIFY
-				210 REPORTING_INTERVAL	300-3600 seconds
+				210 REPORT_PERIOD	300-3600 seconds
 				226 REQUEST_VOLTAGE 	Report current voltage of the batteries (VOLTAGE)
 				TEMP_SET
 			*/
@@ -373,8 +373,8 @@ client.on('message', function (topic, msg, packet) {
 					log.verbose('<', "%s: null (retained)", stateTopic);
 					client.publish(stateTopic, undefined, { retain: true });
 					break;
-				case 'REPORTING_INTERVAL':
-					otCommand = REPORTING_INTERVAL;
+				case 'REPORT_PERIOD':
+					otCommand = REPORT_PERIOD;
 					break;
 				default:
 					// unsupported command
@@ -449,8 +449,8 @@ client.on('message', function (topic, msg, packet) {
 				case 'HUMID_OFFSET':
 					otCommand = HUMID_OFFSET;
 					break;
-				case 'REPORTING_INTERVAL':		// DO NOT USE
-					otCommand = REPORTING_INTERVAL;
+				case 'REPORT_PERIOD':		// DO NOT USE
+					otCommand = REPORT_PERIOD;
 					break;
 				case 'CANCEL':
 				case 1:
@@ -677,13 +677,12 @@ forked.on("message", msg => {
 							topic_key = null;
 						break;
 					case 'VALVE_STATE':
-					case 'REPORTING_INTERVAL':
+					case 'REPORT_PERIOD':
 					case 'TARGET_TEMP':
 					case 'ERROR_TEXT':
 					case 'THERMOSTAT_MODE':
 					case 'HYSTERESIS':
 					case 'TEMP_OFFSET':
-
 					case 'TEMPERATURE': {
 						// Validate message productId before proceeding to check its an eTRV
 						if (msg.productId == 3) {
@@ -705,7 +704,7 @@ forked.on("message", msg => {
 
 								// Subscribe to the TARGET_TEMP MQTT topic
 								log.info(`eTRV TEMPERATURE monitor requesting:`, `TARGET_TEMP from MQTT: ${targetTempTopic}`);
-								client.subscribe(targetTempTopic, { qos: 1 }, (err) => {
+								client.subscribe(targetTempTopic, { qos: 0 }, (err) => {
 									if (err) {
 										log.error(`Error subscribing to TARGET_TEMP topic: ${err}`);
 										clearTimeout(timeoutHandle);
@@ -742,8 +741,8 @@ forked.on("message", msg => {
 
 														// Publish the calculated values
 														try {
-															client.publish(hvacTopic, hvacAction, { qos: 1, retain: false });
-															client.publish(deltaTempTopic, deltaTemp.toString(), { qos: 1, retain: false });
+															client.publish(hvacTopic, hvacAction, { qos: 0, retain: false });
+															client.publish(deltaTempTopic, deltaTemp.toString(), { qos: 0, retain: false });
 															log.info(`eTRV TEMPERATURE Published:`,`HVAC_ACTION and delta_temp successfully.`);
 														} catch (publishErr) {
 															log.error(`eTRV TEMPERATURE Error publishing to MQTT: ${publishErr}`);
@@ -760,7 +759,6 @@ forked.on("message", msg => {
 							}
 						}
 					}
-
 					case 'HUMID_OFFSET':
 						// These values need to be retained on MQTT as they are irregularly reported
 						retain = true;
@@ -1056,7 +1054,7 @@ function lookupCommand( cmd, data ){
 			break;
 		case DIAGNOSTICS:
 			return 'Diagnostics';
-		case REPORTING_INTERVAL:
+		case REPORT_PERIOD:
 			command = 'Interval';
 			break;
 		case IDENTIFY:

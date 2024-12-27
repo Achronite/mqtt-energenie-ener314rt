@@ -168,7 +168,7 @@
          }
       },
       {
-         "id": "REPORTING_INTERVAL",
+         "id": "REPORT_PERIOD",
          "component": "number",
          "cmd_t": "~@/command",
          "config": {

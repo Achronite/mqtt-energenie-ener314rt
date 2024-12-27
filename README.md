@@ -325,7 +325,7 @@ Both MiHome heating devices are now supported (as of v0.7.x).  Specifically the 
 These devices are battery operated, so energenie in order to save power, have implemented periods of sleep where the devices do not listen for commands.  This can lead to a delay from when a command is sent to it being processed by the device. See **Command Caching** below.
 
 ### Command Caching
-Battery powered energenie devices, such as the eTRV or Thermostat do not constantly listen for commands.  For example, the eTRV reports its temperature at the *SET_REPORTING_INTERVAL* (default 5 minutes) after which the receiver is then activated to listen for commands. The receiver only remains active for 200ms or until a message is received.
+Battery powered energenie devices, such as the eTRV or Thermostat do not constantly listen for commands.  For example, the eTRV reports its temperature at the *SET_REPORT_PERIOD* (default 5 minutes) after which the receiver is then activated to listen for commands. The receiver only remains active for 200ms or until a message is received.
 
 To cater for these hardware limitations a command will be held (cached) until a report is received by the monitor thread from the device; at this point the most recent cached message (only 1 is supported) will be sent to the device.  Messages will continue to be resent until we know they have been succesfully received or until the number of retries has reached 0.  When a command is known to have been processed (e.g DIAGNOSTICS) the 'command' and 'retries' topics are reset to 0.
 
@@ -346,7 +346,7 @@ Where .data shows an entry in "", this is the string that should be sent as the 
 |Valve state^|Maintenance<br>VALVE_STATE|165|Set valve state|"Valve Auto"<br>"Valve Open"<br>"Valve Closed"<br> OR 0=Open<br>1=Closed<br>2=Auto (default)|No|
 |Diagnostics|Maintenance<br>DIAGNOSTICS|166|Request diagnostic data from device, if all is OK it will return 0. Otherwise see additional monitored values for status messages|"Request Diagnostics"|DIAGNOSTICS|
 |Identify|Maintenance<br>IDENTIFY|191|Identify the device by making the green light flash on the selected eTRV for 60 seconds|"Identify"|No|
-|Reporting Interval|Maintenance REPORTING_INTERVAL|210|Update reporting interval to requested value|300-3600 seconds|No|
+|Reporting Interval|Maintenance REPORT_PERIOD|210|Update reporting interval to requested value|300-3600 seconds|No|
 |Voltage|Maintenance<br>VOLTAGE|226|Report current voltage of the batteries||VOLTAGE|
 |Target temperature|TARGET_TEMP|244|Send new target temperature for eTRV.<br>NOTE: The VALVE_STATE must be set to 'Auto' for this to work.|5-40<br>(Integer)|No|
 
@@ -369,7 +369,7 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 |ERROR_TEXT|error information|state|text|sensor|
 |EXERCISE_VALVE|The result of the *EXERCISE_VALVE* command|state|success, fail|binary_sensor|
 |LOW_POWER_MODE|eTRV is in low power mode state>|state|ON, OFF|binary_sensor|
-|REPORTING_INTERVAL|Frequency the eTRV will work up and report (in seconds)|command|300-3600|Number|
+|REPORT_PERIOD|Frequency the eTRV will work up and report (in seconds)|command|300-3600|Number|
 |TARGET_TEMP|Target temperature in celcius|state,command|5.0 to 40.0<br>0.5 increments|Number|
 |TEMPERATURE|The current temperature in celcius|state|float|sensor|
 |VALVE_STATE|Current valve mode/state|state|0=Open<br>1=Closed<br>2=Auto|sensor|
