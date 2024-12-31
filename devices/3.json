@@ -11,18 +11,21 @@
             "max_temp": 40,
             "min_temp": 5,
             "modes": [
+               "auto",
                "heat",
                "off"
             ],
             "mode_cmd_t": "~VALVE_STATE/command",
             "mode_stat_t": "~VALVE_STATE/state",
-            "mode_cmd_tpl": "{% if value == 'off' %} 1 {% else %} 2 {% endif %}",
-            "mode_stat_tpl": "{% if value == '1' %} off {% else %} heat {% endif %}",
+            "mode_cmd_tpl": "{% if value == 'off' %} 1 {% elif value == 'auto' %} 2 {% else %} 0 {% endif %}",
+            "mode_stat_tpl": "{% if value == '1' %} off {% elif value == '2' %} auto {% else %} heat {% endif %}",
             "temp_cmd_t": "~TARGET_TEMP/command",
             "temp_stat_t": "~TARGET_TEMP/state",
             "ic": "mdi:radiator",
             "opt": "true",
-            "temp_step": "0.5"
+            "temp_step": "0.5",
+            "act_tpl": "{% if value == 'Off' %} off {% else %} heating {% endif %}",
+            "act_t": "heating/state"
          }
       },
       {
