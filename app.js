@@ -299,9 +299,9 @@ client.on('message', function (topic, msg, packet) {
 
 			// Convert OpenThings Cmd String to Numeric
 			switch (cmd_array[MQTTM_OT_CMD]) {
-				case 'Maintenance':
+				case 'MAINTENANCE':
 					// Special select processing from Home Assistant built for the eTRV
-					// The idea here is to translate the maintenance commands into OpenThings Commands
+					// The idea here is to translate the MAINTENANCE commands into OpenThings Commands
 					msg_data = 0;
 					switch (String(msg)) {
 						case 'None':
@@ -343,7 +343,7 @@ client.on('message', function (topic, msg, packet) {
 							otCommand = VOLTAGE;
 							break;
 						default:
-							log.warn('cmd', "Unsupported Maintenance command: %s type:%j for eTRV", msg, typeof(msg));
+							log.warn('cmd', "Unsupported MAINTENANCE command: %s type:%j for eTRV", msg, typeof(msg));
 					}  // msg
 					break;
 
@@ -843,10 +843,10 @@ forked.on("message", msg => {
 						client.publish(state_topic,state);
 					}
 
-					// Update Maintenance if retries=0 for trv
+					// Update MAINTENANCE if retries=0 for trv
 					if (msg.productId == MIHO013 && topic_key == "retries" && state == '0'){
-						// retries are now empty, also change the Maintenance Select back to None
-						state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/Maintenance/state`;
+						// retries are now empty, also change the MAINTENANCE Select back to None
+						state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/MAINTENANCE/state`;
 						log.verbose('<', "%s: None", state_topic);
 						client.publish(state_topic,"None");
 					}
