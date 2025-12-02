@@ -85,7 +85,7 @@ See also: https://github.com/Achronite/energenie-ener314rt/releases/tag/v0.7.2  
 
 ### Fixed
 
-* Type error on Maintenance LOW_POWER_MODE causing crash [#49](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/49)
+* Type error on MAINTENANCE LOW_POWER_MODE causing crash [#49](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/49)
 ### Changed
 
 * MQTT Discovery: Entity names are now in Title Case (instead of all lower case)
@@ -96,7 +96,7 @@ See also: https://github.com/Achronite/energenie-ener314rt/releases/tag/v0.7.2  
   * 'always on' (0) has been removed, as there isn't an equivalent in HA
 * MQTT Discovery: Origin added to device discovery message (@genestealer)
 * MQTT Discovery: Device Class for Smart Plug switch set to outlet (@genestealer)
-* MQTT Discovery: eTRV `REPORTING_INTERVAL` and `Maintenance` Entity categories set to config (@genestealer)
+* MQTT Discovery: eTRV `REPORTING_INTERVAL` and `MAINTENANCE` Entity categories set to config (@genestealer)
 * MQTT Discovery: eTRV temperature step added and set to 0.5 (@genestealer)
 * MQTT Discovery: Battery % now shows as dynamic icon in Home Assistant for eTRV (@genestealer) and Home Energy Monitor (@Achronite)
 * MQTT Discovery: `FREQUENCY` and `VOLTAGE` added as HA 'disabled entities' for Monitor Plug, and Smart Plug+
@@ -160,7 +160,7 @@ The log level can now be configured in the `config.json` file using `log_level`.
 
 ### Added
 * Grouped a devices parameters for HA MQTT discovery [#15](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/15)
-* Request Voltage added to Maintenance commands for eTRV
+* Request Voltage added to MAINTENANCE commands for eTRV
 * Added 'last_seen' topic as epoch for all OpenThings devices at device level [#18](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/18)
 * Guidance added to README for formatting epoch timestamps in Home Assistant
 * Added overall availability of application, including basing all discovery devices on this overall availability topic [#19](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/15)
@@ -171,7 +171,7 @@ The log level can now be configured in the `config.json` file using `log_level`.
 * Replaced underscores with spaces for MQTT discovery entity names
 * Reduced MQTT discovery message lengths by expanding '~' to include the device type and id
 * Set retain flag on irregular reported values on MQTT for 'VALVE_STATE', 'LOW_POWER_MODE', 'REPORTING_INTERVAL', 'TARGET_TEMP' & 'ERROR_TEXT'
-* Simplified state/command values for VALVE_STATE to be 0,1,2 (Maintenance cmds unchanged)
+* Simplified state/command values for VALVE_STATE to be 0,1,2 (MAINTENANCE cmds unchanged)
 
 ### Fixed
 * Issue in MQTT discovery that prevented battery voltage being shown for eTRV and House Energy monitor
@@ -188,7 +188,7 @@ The log level can now be configured in the `config.json` file using `log_level`.
 * Home Assistant MQTT Discovery added for MiHome devices:
   - Monitor Plug
   - Smart Plug+
-  - Radiator Valve (includes simplified commands using 'Maintenance' dropdown)
+  - Radiator Valve (includes simplified commands using 'MAINTENANCE' dropdown)
   - Whole House Monitor
   - Door (Contact) Sensor
   - PIR

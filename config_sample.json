@@ -8,9 +8,9 @@
     },
     "monitoring": true,
     "discovery_prefix": "homeassistant/",
-    "ook_xmits": 10,
-    "fsk_xmits": 5,
+    "ook_xmits": 20,
+    "fsk_xmits": 20,
     "cached_retries": 10,
     "log_level": "info",
-    "retry": true
+    "retry":true
 }
