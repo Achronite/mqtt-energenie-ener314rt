@@ -11,6 +11,7 @@
             "max_temp": 40,
             "min_temp": 5,
             "modes": [
+               "off",
                "heat"
             ],
             "mode_cmd_t": "~VALVE_STATE/command",
@@ -20,24 +21,8 @@
             "temp_cmd_t": "~TARGET_TEMP/command",
             "temp_stat_t": "~TARGET_TEMP/state",
             "ic": "mdi:radiator",
-            "opt": "true",
             "temp_step": "0.5",
-            "temp_unit": "C",
-            "act_t": "~HVAC_ACTION/state",
-            "pr_mode_cmd_t": "~MAINTENANCE/command",
-            "pr_mode_stat_t": "~MAINTENANCE/state",
-            "pr_modes": [
-               "Cancel Command",
-               "Request Diagnostics",
-               "Request Voltage",
-               "Exercise Valve",
-               "Identify",
-               "Low Power Mode ON",
-               "Low Power Mode OFF",
-               "Valve Auto",
-               "Valve Open",
-               "Valve Closed"
-            ]
+            "temp_unit": "C"
          }
       },
       {
@@ -46,7 +31,8 @@
          "stat_t": "~HVAC_ACTION/state",
          "config": {
             "dev_cla": "running",
-            "val_tpl": "{% if value == 'heating' %} ON {% else %} OFF {% endif %}"
+            "val_tpl": "{% if value == 'heating' %} ON {% else %} OFF {% endif %}",
+            "ent_cat": "diagnostic"
          }
       },
       {
@@ -65,7 +51,8 @@
             "ic": "mdi:compare-horizontal",
             "dev_cla": "temperature",
             "stat_cla": "measurement",
-            "unit_of_meas": "°C"
+            "unit_of_meas": "°C",
+            "ent_cat": "diagnostic"
          }
       },
       {
@@ -76,7 +63,8 @@
             "ic": "mdi:thermometer",
             "dev_cla": "temperature",
             "stat_cla": "measurement",
-            "unit_of_meas": "°C"
+            "unit_of_meas": "°C",
+            "ent_cat": "diagnostic"
          }
       },
       {
@@ -87,7 +75,8 @@
             "ic": "mdi:target",
             "dev_cla": "temperature",
             "stat_cla": "measurement",
-            "unit_of_meas": "°C"
+            "unit_of_meas": "°C",
+            "ent_cat": "diagnostic"
          }
       },
       {
@@ -98,7 +87,8 @@
             "ic": "mdi:battery",
             "dev_cla": "voltage",
             "stat_cla": "measurement",
-            "unit_of_meas": "V"
+            "unit_of_meas": "V",
+            "ent_cat": "diagnostic"
          }
       },
       {
@@ -135,7 +125,7 @@
          }
       },
       {
-         "id": "EXERCISE_VALVE",
+         "id": "EXERCISE_VALVE_STATE",
          "component": "binary_sensor",
          "stat_t": "~@/state",
          "config": {
@@ -149,7 +139,9 @@
          "id": "LOW_POWER_MODE",
          "component": "binary_sensor",
          "stat_t": "~@/state",
-         "config": {}
+         "config": {
+            "ent_cat": "diagnostic"
+         }
       },
       {
          "id": "ERRORS",
@@ -205,7 +197,8 @@
          "stat_t": "~@/state",
          "config": {
             "val_tpl": "{{ as_datetime(value) }}",
-            "dev_cla": "timestamp"
+            "dev_cla": "timestamp",
+            "ent_cat": "diagnostic"
          }
       },
       {
@@ -214,7 +207,8 @@
          "stat_t": "~@/state",
          "config": {
             "dev_cla": "battery",
-            "unit_of_meas": "%"
+            "unit_of_meas": "%",
+            "ent_cat": "diagnostic"
          }
       },
       {
@@ -223,7 +217,98 @@
          "cmd_t": "~MAINTENANCE/command",
          "config": {
             "dev_cla": "identify",
-            "pl_prs": "Identify"
+            "pl_prs": "Identify",
+            "ent_cat": "config"
+         }
+      },
+      {
+         "id": "REQUEST_DIAGNOSTICS",
+         "component": "button",
+         "cmd_t": "~MAINTENANCE/command",
+         "config": {
+            "ic": "mdi:stethoscope",
+            "pl_prs": "Request Diagnostics",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "REQUEST_VOLTAGE",
+         "component": "button",
+         "cmd_t": "~MAINTENANCE/command",
+         "config": {
+            "ic": "mdi:battery-check",
+            "pl_prs": "Request Voltage",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "EXERCISE_VALVE",
+         "component": "button",
+         "cmd_t": "~MAINTENANCE/command",
+         "config": {
+            "ic": "mdi:valve",
+            "pl_prs": "Exercise Valve",
+            "ent_cat": "config"
+         }
+      },
+      {
+         "id": "LOW_POWER_MODE_ON",
+         "component": "button",
+         "cmd_t": "~MAINTENANCE/command",
+         "config": {
+            "ic": "mdi:power-sleep",
+            "pl_prs": "Low Power Mode ON",
+            "ent_cat": "config"
+         }
+      },
+      {
+         "id": "LOW_POWER_MODE_OFF",
+         "component": "button",
+         "cmd_t": "~MAINTENANCE/command",
+         "config": {
+            "ic": "mdi:power",
+            "pl_prs": "Low Power Mode OFF",
+            "ent_cat": "config"
+         }
+      },
+      {
+         "id": "VALVE_AUTO",
+         "component": "button",
+         "cmd_t": "~MAINTENANCE/command",
+         "config": {
+            "ic": "mdi:valve",
+            "pl_prs": "Valve Auto",
+            "ent_cat": "config"
+         }
+      },
+      {
+         "id": "VALVE_OPEN",
+         "component": "button",
+         "cmd_t": "~MAINTENANCE/command",
+         "config": {
+            "ic": "mdi:valve-open",
+            "pl_prs": "Valve Open",
+            "ent_cat": "config"
+         }
+      },
+      {
+         "id": "VALVE_CLOSED",
+         "component": "button",
+         "cmd_t": "~MAINTENANCE/command",
+         "config": {
+            "ic": "mdi:valve-closed",
+            "pl_prs": "Valve Closed",
+            "ent_cat": "config"
+         }
+      },
+      {
+         "id": "CANCEL_COMMAND",
+         "component": "button",
+         "cmd_t": "~MAINTENANCE/command",
+         "config": {
+            "ic": "mdi:cancel",
+            "pl_prs": "Cancel Command",
+            "ent_cat": "config"
          }
       }
    ]

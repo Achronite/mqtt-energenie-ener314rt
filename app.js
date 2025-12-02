@@ -30,20 +30,20 @@ const MQTTM_OT_DEVICEID = 2;
 const MQTTM_OT_CMD = 3;
 
 // OpenThings Commands
-const CANCEL			= 1;    // replace with 0 before sending
-const EXERCISE_VALVE 	= 163;
-const LOW_POWER_MODE 	= 164;
-const VALVE_STATE 		= 165;
-const DIAGNOSTICS 		= 166;
-const THERMOSTAT_MODE   = 170;  // Thermostat
-const IDENTIFY			= 191;
-const REPORT_PERIOD     = 210;
-const TARGET_TEMP 		= 244;
-const VOLTAGE 			= 226;
-const SWITCH_STATE    	= 243;
-const HYSTERESIS        = 254;  // Thermostat
-const RELAY_POLARITY    = 171;  // Thermostat
-const TEMP_OFFSET  = 189;  // Thermostat
+const CANCEL = 1;    // replace with 0 before sending
+const EXERCISE_VALVE = 163;
+const LOW_POWER_MODE = 164;
+const VALVE_STATE = 165;
+const DIAGNOSTICS = 166;
+const THERMOSTAT_MODE = 170;  // Thermostat
+const IDENTIFY = 191;
+const REPORT_PERIOD = 210;
+const TARGET_TEMP = 244;
+const VOLTAGE = 226;
+const SWITCH_STATE = 243;
+const HYSTERESIS = 254;  // Thermostat
+const RELAY_POLARITY = 171;  // Thermostat
+const TEMP_OFFSET = 189;  // Thermostat
 const HUMID_OFFSET = 186;  // Thermostat
 
 // OpenThings Device constants
@@ -74,7 +74,7 @@ var discovery = false;
 var shutdown = false;
 
 // setup signal error handling
-process.on('SIGINT', handleSignal );
+process.on('SIGINT', handleSignal);
 //process.on('SIGKILL', handleSignal );
 
 // read xmit defaults from config file
@@ -100,23 +100,24 @@ log.info('MQTT', "connecting to broker %s", CONFIG.mqtt_broker);
 // Add last will & testament message to set offline on disconnect
 const availability_topic = `${CONFIG.topic_stub}availability/state`
 var mqtt_options = CONFIG.mqtt_options;
-mqtt_options.will = { topic: availability_topic,  payload: 'offline', retain: true };
+mqtt_options.will = { topic: availability_topic, payload: 'offline', retain: true };
 
-var client = MQTT.connect(CONFIG.mqtt_broker,mqtt_options);
+var client = MQTT.connect(CONFIG.mqtt_broker, mqtt_options);
 
 // when MQTT is connected...
-client.on('connect',function(){	
+client.on('connect', function () {
 	log.verbose('MQTT', "connected to broker %j", CONFIG.mqtt_broker);
 	//log.verbose('MQTT', "config: %j", mqtt_options);			// Commented out for #66
 
 	// Subscribe to incoming commands
-	var options={
-		retain:true,
-		qos:0};
-	
-	var cmd_topic= MQTT_SUBTOPIC;
-	client.subscribe(cmd_topic,options, function( err ) {
-		if (!err){
+	var options = {
+		retain: true,
+		qos: 0
+	};
+
+	var cmd_topic = MQTT_SUBTOPIC;
+	client.subscribe(cmd_topic, options, function (err) {
+		if (!err) {
 			log.info('MQTT', "subscribed to %s", cmd_topic);
 		} else {
 			log.error('MQTT', "unable to subscribe to '%s'", cmd_topic);
@@ -143,14 +144,14 @@ client.on('connect',function(){
 		publishBoardDiscovery();
 
 		// and then every day at 3:26am
-		runAtSpecificTimeOfDay(3,26,() => { publishBoardDiscovery() });
+		runAtSpecificTimeOfDay(3, 26, () => { publishBoardDiscovery() });
 
 		log.info('discovery', "discovery enabled at topic prefix '%s'", CONFIG.discovery_prefix);
 		// After 1 min update MQTT discovery topics
-		setTimeout(  UpdateMQTTDiscovery, (60 * 1000));
-	
+		setTimeout(UpdateMQTTDiscovery, (60 * 1000));
+
 		// Every 10 minutes update MQTT discovery topics
-		doDiscovery = setInterval(  UpdateMQTTDiscovery, (600 * 1000));
+		doDiscovery = setInterval(UpdateMQTTDiscovery, (600 * 1000));
 	} else {
 		log.warn('discovery', "discovery disabled");
 	}
@@ -159,11 +160,128 @@ client.on('connect',function(){
 
 })
 
+//
+// eTRV Command Queue System
+// Priority levels: temperature (highest), mode (medium), diagnostic (lowest)
+// Only keep latest command per priority level
+//
+const etrv_command_queues = {};  // deviceId -> { temperature: cmd, mode: cmd, diagnostic: cmd, processing: boolean }
+
+function getCommandPriority(command, otCommand) {
+	// Temperature commands: highest priority
+	if (command === 'TARGET_TEMP' || otCommand === TARGET_TEMP) {
+		return 'temperature';
+	}
+	// Mode commands: medium priority
+	if (command === 'VALVE_STATE' || otCommand === VALVE_STATE ||
+		command === 'LOW_POWER_MODE' || otCommand === LOW_POWER_MODE) {
+		return 'mode';
+	}
+	// All other commands (diagnostics, identify, etc): lowest priority
+	return 'diagnostic';
+}
+
+function queueETRVCommand(deviceId, ener_cmd) {
+	if (!etrv_command_queues[deviceId]) {
+		etrv_command_queues[deviceId] = {
+			temperature: null,
+			mode: null,
+			diagnostic: null,
+			processing: false
+		};
+	}
+
+	const priority = getCommandPriority(ener_cmd.command, ener_cmd.otCommand);
+
+	// Replace existing command at this priority level
+	etrv_command_queues[deviceId][priority] = ener_cmd;
+
+	log.verbose('queue', "eTRV %d: queued %s command (priority: %s)", deviceId, ener_cmd.command, priority);
+
+	// Try to process queue
+	processETRVQueue(deviceId);
+}
+
+function processETRVQueue(deviceId) {
+	const queue = etrv_command_queues[deviceId];
+	if (!queue || queue.processing) {
+		return;  // Already processing or no queue
+	}
+
+	// Get next command in priority order
+	let next_cmd = null;
+	let priority_name = null;
+
+	if (queue.temperature) {
+		next_cmd = queue.temperature;
+		priority_name = 'temperature';
+	} else if (queue.mode) {
+		next_cmd = queue.mode;
+		priority_name = 'mode';
+	} else if (queue.diagnostic) {
+		next_cmd = queue.diagnostic;
+		priority_name = 'diagnostic';
+	}
+
+	if (next_cmd) {
+		queue.processing = true;
+		queue[priority_name] = null;  // Remove from queue
+
+		log.verbose('queue', "eTRV %d: processing %s command from queue", deviceId, next_cmd.command);
+
+		// Send command to energenie process
+		forked.send(next_cmd);
+
+		// Mark as not processing after a delay (allow for monitor confirmation)
+		// eTRV typically responds within 5-10 seconds
+		setTimeout(() => {
+			queue.processing = false;
+			processETRVQueue(deviceId);  // Try next command
+		}, 10000);  // 10 second delay
+	}
+}
+
+//
+// eTRV Battery Voltage Polling
+// Request battery voltage from all known eTRVs periodically
+//
+const known_etrvs = new Set();  // Track discovered eTRV deviceIds
+
+function addKnownETRV(deviceId) {
+	if (!known_etrvs.has(deviceId)) {
+		known_etrvs.add(deviceId);
+		log.verbose('battery', "Added eTRV %d to battery polling list", deviceId);
+	}
+}
+
+function requestETRVBatteryVoltages() {
+	if (known_etrvs.size > 0) {
+		log.verbose('battery', "Requesting voltage from %d eTRVs", known_etrvs.size);
+		known_etrvs.forEach(deviceId => {
+			const voltage_cmd = {
+				cmd: 'cacheCmd',
+				mode: 'fsk',
+				repeat: fsk_xmits,
+				command: 'VOLTAGE',
+				productId: 3,  // MIHO013
+				deviceId: deviceId,
+				otCommand: VOLTAGE,
+				data: 0,
+				retries: cached_retries
+			};
+			queueETRVCommand(deviceId, voltage_cmd);
+		});
+	}
+}
+
+// Poll battery voltage every 24 hours (86400000 ms)
+const batteryPollInterval = setInterval(requestETRVBatteryVoltages, 86400000);
+
 //handle incoming MQTT messages
 client.on('message', function (topic, msg, packet) {
 	// format command for passing to energenie process
 	// format is OOK: 'energenie/c/ook/zone/switchNum/command' or OT: 'energenie/c/2/deviceNum/command'
-	log.verbose('>',"%s: %s", topic, msg);
+	log.verbose('>', "%s: %s", topic, msg);
 	const cmd_array = topic.split("/");
 
 	let otCommand = 0;
@@ -173,21 +291,21 @@ client.on('message', function (topic, msg, packet) {
 		case 'OOK':
 		case 'o':
 			// All ook 1-way devices
-			
+
 			// Is this request for a dimmer switch?
-			if (cmd_array[MQTTM_OOK_SWITCH] == "dimmer"){
-                /*
-                 translate the brightness level into a switch number with on/off value, where the dimmer switch expects the following inputs
+			if (cmd_array[MQTTM_OOK_SWITCH] == "dimmer") {
+				/*
+				 translate the brightness level into a switch number with on/off value, where the dimmer switch expects the following inputs
 				  'OFF': Channel 1 off: Turn off
 				   'ON': Channel 1 on: Switch on at the previous light level set  (not used by Home Assistant)
-                    '2': Channel 2 on: Set dimmer to 20% (turn on at 20% if off)
-                    '3': Channel 3 on: Set dimmer to 30% (turn on at 30% if off)
-                    '4': Channel 4 on: Set dimmer to 40% (turn on at 40% if off)
-                    '5': Channel 1 off: Set dimmer to 50% (turn on at 50% if off)
-                    '6': Channel 2 off: Set dimmer to 60% (turn on at 60% if off)
-                    '8': Channel 3 off: Set dimmer to 80% (turn on at 80% if off)
-                   '10': Channel 4 off: Set dimmer to 100% (turn on at 100% if off)
-                */
+					'2': Channel 2 on: Set dimmer to 20% (turn on at 20% if off)
+					'3': Channel 3 on: Set dimmer to 30% (turn on at 30% if off)
+					'4': Channel 4 on: Set dimmer to 40% (turn on at 40% if off)
+					'5': Channel 1 off: Set dimmer to 50% (turn on at 50% if off)
+					'6': Channel 2 off: Set dimmer to 60% (turn on at 60% if off)
+					'8': Channel 3 off: Set dimmer to 80% (turn on at 80% if off)
+				   '10': Channel 4 off: Set dimmer to 100% (turn on at 100% if off)
+				*/
 
 				// default dimmer OFF
 				var switchNum = 1;
@@ -218,7 +336,7 @@ client.on('message', function (topic, msg, packet) {
 						switchState = true;
 						break;
 					case '5':
-					case '6':						
+					case '6':
 						switchNum = 2;
 						switchState = false;
 						break;
@@ -235,7 +353,7 @@ client.on('message', function (topic, msg, packet) {
 					default:
 						log.warn('>', "Invalid brightness %s for %j", brightness, cmd_array[MQTTM_OOK_ZONE]);
 						return;
-                } // switch
+				} // switch
 				var ener_cmd = { cmd: 'send', mode: 'ook', repeat: ook_xmits, brightness: brightness, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: switchNum, switchState: switchState };
 
 			} else {
@@ -259,7 +377,7 @@ client.on('message', function (topic, msg, packet) {
 			else if (msg == "ON" || msg == "on" || msg == 1 || msg == '1')
 				switchState = true;
 			var ener_cmd = {
-				cmd: 'send', mode: 'fsk', repeat: fsk_xmits, command: 'switch', 
+				cmd: 'send', mode: 'fsk', repeat: fsk_xmits, command: 'switch',
 				productId: cmd_array[MQTTM_OT_PRODUCTID],
 				deviceId: cmd_array[MQTTM_OT_DEVICEID],
 				switchState: switchState
@@ -273,7 +391,7 @@ client.on('message', function (topic, msg, packet) {
 				// this will be checked on the next periodic report from the device to ensure it has processed the switch command
 				let dynamicName = `_${ener_cmd.deviceId}`;
 				rstate[dynamicName] = switchState;
-				log.verbose("cmd", "openThingsSwitch() retry enabled %s=%s",dynamicName,rstate[dynamicName]);
+				log.verbose("cmd", "openThingsSwitch() retry enabled %s=%s", dynamicName, rstate[dynamicName]);
 			}
 
 			break;
@@ -343,7 +461,7 @@ client.on('message', function (topic, msg, packet) {
 							otCommand = VOLTAGE;
 							break;
 						default:
-							log.warn('cmd', "Unsupported MAINTENANCE command: %s type:%j for eTRV", msg, typeof(msg));
+							log.warn('cmd', "Unsupported MAINTENANCE command: %s type:%j for eTRV", msg, typeof (msg));
 					}  // msg
 					break;
 
@@ -378,7 +496,7 @@ client.on('message', function (topic, msg, packet) {
 					break;
 				default:
 					// unsupported command
-					log.warn('cmd', "Unsupported cacheCmd for eTRV: %j %j",cmd_array[MQTTM_OT_CMD], msg);
+					log.warn('cmd', "Unsupported cacheCmd for eTRV: %j %j", cmd_array[MQTTM_OT_CMD], msg);
 					return;
 			} // switch 3: MQTTM_OT_CMD;
 
@@ -386,7 +504,7 @@ client.on('message', function (topic, msg, packet) {
 				// We have a valid eTRV command
 
 				// swap out CANCEL for 0
-				if (otCommand == CANCEL ){
+				if (otCommand == CANCEL) {
 					otCommand = 0;
 				} else {
 					// Convert booleans from HA default (ON/OFF)
@@ -413,7 +531,7 @@ client.on('message', function (topic, msg, packet) {
 					retries: cached_retries
 				};
 			} else {
-				log.warn('cmd',"Invalid otCommand for eTRV: %j",otCommand);
+				log.warn('cmd', "Invalid otCommand for eTRV: %j", otCommand);
 			}
 			break;
 
@@ -421,14 +539,14 @@ client.on('message', function (topic, msg, packet) {
 		case 18:
 			// MIHO069 - Smart Thermostat (alpha)
 			var msg_data = Number(msg);
-			log.verbose('cmd', "Thermostat msg_data : %s",msg);
+			log.verbose('cmd', "Thermostat msg_data : %s", msg);
 
 			// Process (cached) command
 			switch (cmd_array[MQTTM_OT_CMD]) {
-				case 'TARGET_TEMP':	
+				case 'TARGET_TEMP':
 					otCommand = TARGET_TEMP;
 					break;
-				case 'THERMOSTAT_MODE':	
+				case 'THERMOSTAT_MODE':
 					otCommand = THERMOSTAT_MODE;
 					break;
 				case 'HYSTERESIS':				// aka TEMP_MARGIN
@@ -437,10 +555,10 @@ client.on('message', function (topic, msg, packet) {
 				case 'RELAY_POLARITY':
 					otCommand = RELAY_POLARITY;
 					// Convert booleans from HA default (ON/OFF)
-					if (msg == "ON" || msg == "on"){
-							msg_data = 1;
-					} else if (msg == "OFF"  || msg == "off" ) {
-							msg_data = 0;
+					if (msg == "ON" || msg == "on") {
+						msg_data = 1;
+					} else if (msg == "OFF" || msg == "off") {
+						msg_data = 0;
 					}
 					break;
 				case 'TEMP_OFFSET':
@@ -458,7 +576,7 @@ client.on('message', function (topic, msg, packet) {
 				default:
 					// unsupported command (but allow it through)
 					otCommand = Number(cmd_array[MQTTM_OT_CMD]);
-					log.warn('cmd', "Unsupported Cmd for Thermostat: %j (%d) %j",cmd_array[MQTTM_OT_CMD], otCommand, msg);
+					log.warn('cmd', "Unsupported Cmd for Thermostat: %j (%d) %j", cmd_array[MQTTM_OT_CMD], otCommand, msg);
 
 			} // switch 18: MQTTM_OT_CMD;
 
@@ -466,7 +584,7 @@ client.on('message', function (topic, msg, packet) {
 				// We have a valid Thermostat command
 
 				// swap out CANCEL for 0
-				if (otCommand == CANCEL ){
+				if (otCommand == CANCEL) {
 					otCommand = 0;
 				}
 
@@ -481,7 +599,7 @@ client.on('message', function (topic, msg, packet) {
 					retries: cached_retries
 				};
 			} else {
-				log.warn('cmd',"Invalid otCommand for Thermostat : %j",otCommand);
+				log.warn('cmd', "Invalid otCommand for Thermostat : %j", otCommand);
 			}
 			break;
 		case 'board':
@@ -491,32 +609,38 @@ client.on('message', function (topic, msg, packet) {
 				case 'scan':
 					// Call discovery function - force a scan as button was pressed
 					ener_cmd = { cmd: "discovery", scan: true };
-					break;					
+					break;
 			}
 			break;
 
 		default:
-			// Undefined device
+		// Undefined device
 	} // switch MQTTM_DEVICE
 
 	if (ener_cmd !== undefined) {
 		// Send request to energenie process, any responses are handled by forked.on('message')
 		log.http("command", "%j", ener_cmd);
-		forked.send(ener_cmd);
+
+		// Use command queue for eTRV to prevent conflicts
+		if (ener_cmd.productId === 3 && ener_cmd.cmd === 'cacheCmd') {
+			queueETRVCommand(ener_cmd.deviceId, ener_cmd);
+		} else {
+			forked.send(ener_cmd);
+		}
 	} else {
-		log.warn('cmd',"Invalid MQTT device/command %j:%j",cmd_array[MQTTM_DEVICE],msg);
+		log.warn('cmd', "Invalid MQTT device/command %j:%j", cmd_array[MQTTM_DEVICE], msg);
 	}
 });
-  
+
 //handle MQTT errors
-client.on('error', function(error){
+client.on('error', function (error) {
 	if (!shutdown)
-		log.error('MQTT',"ERROR %j connecting to MQTT broker: %j", error, CONFIG.mqtt_broker);
+		log.error('MQTT', "ERROR %j connecting to MQTT broker: %j", error, CONFIG.mqtt_broker);
 	process.exit(1)
 });
 
 //Report MQTT close
-client.on('close',function(){
+client.on('close', function () {
 	log.warn('MQTT', "Disconnected from MQTT broker: %s", CONFIG.mqtt_broker);
 	//process.exit(1)
 });
@@ -527,7 +651,7 @@ const forked = fork("energenie.js", [log.level]);
 
 forked.on("spawn", msg => {
 	// process started succesfully, request start of the monitor loop if configured in config file
-	if (CONFIG.monitoring){
+	if (CONFIG.monitoring) {
 		log.info("monitor", "starting monitoring of FSK devices...");
 		forked.send({ cmd: "monitor", enabled: true });
 	}
@@ -537,15 +661,15 @@ forked.on("spawn", msg => {
 */
 forked.on("message", msg => {
 	// we have a monitor or ACK message, transform into MQTT message
-    log.http("monitor","received: %j", msg);
+	log.http("monitor", "received: %j", msg);
 
-	switch (msg.cmd){
+	switch (msg.cmd) {
 		case 'send':
 			var rtn_msg = "UNKNOWN";
 			var state_topic;
 			switch (msg.mode) {
 				case 'ook':
-					if (msg.brightness){
+					if (msg.brightness) {
 						// dimmer switch uses brightness instead of state: 1-10 (ON at Brightness) or OFF
 						log.verbose('app', "dimmer: %j", msg);
 
@@ -555,27 +679,27 @@ forked.on("message", msg => {
 
 					} else {
 						state_topic = `${CONFIG.topic_stub}ook/${msg.zone}/${msg.switchNum}/state`;
-						
-						if (typeof(msg.state) === 'boolean'){
+
+						if (typeof (msg.state) === 'boolean') {
 							if (msg.state) {
 								rtn_msg = "ON";
 							} else {
 								rtn_msg = "OFF";
 							}
 						} else {
-							log.error('app', "msg.state not boolean, type = %j", typeof(msg.state));
+							log.error('app', "msg.state not boolean, type = %j", typeof (msg.state));
 						}
 					}
 					// send response back via MQTT state topic, setting the retained flag to survive restart on client
 					log.verbose('<', "%s: %s (retained)", state_topic, rtn_msg);
-					client.publish(state_topic,rtn_msg,{retain: true});
+					client.publish(state_topic, rtn_msg, { retain: true });
 					break;
 
 				case 'fsk':
 					// TODO allow for multiple parameters being returned
 					state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/${msg.command}/state`;
-					
-					if (typeof(msg.state) === 'boolean'){
+
+					if (typeof (msg.state) === 'boolean') {
 						if (msg.state) {
 							rtn_msg = "ON";
 						} else {
@@ -588,10 +712,10 @@ forked.on("message", msg => {
 
 					// send single response back via MQTT state topic
 					log.verbose('<', "%s: %s", state_topic, rtn_msg);
-					client.publish(state_topic,rtn_msg);
+					client.publish(state_topic, rtn_msg);
 
 					break;
-				
+
 			} // switch 'send' msg.mode
 
 
@@ -601,7 +725,7 @@ forked.on("message", msg => {
 			// OpenThings monitor message
 
 			let keys = Object.keys(msg);
-			
+
 			// Variable to cache temperature for HVAC action calculation
 			let cachedTemperature = null;
 
@@ -621,7 +745,7 @@ forked.on("message", msg => {
 					case 'timestamp':
 						// epoch to last_seen timestamp
 						topic_key = 'last_seen';
-						break;							
+						break;
 					case 'SWITCH_STATE':
 						// use friendly name and value
 						topic_key = 'switch';
@@ -691,24 +815,24 @@ forked.on("message", msg => {
 							}
 						}
 						break;
-					
+
 					case 'TARGET_TEMP':
 						// Calculate HVAC action when TARGET_TEMP is received (eTRV only)
 						if (msg.productId == 3 && cachedTemperature !== null) {
 							const targetTemp = parseFloat(msg[key]);
-							
+
 							if (!isNaN(targetTemp)) {
 								// Determine HVAC action: heating if current temp is below target, otherwise idle
 								const hvacAction = cachedTemperature < targetTemp ? 'heating' : 'idle';
 								const deltaTemp = (cachedTemperature - targetTemp).toFixed(2);
-								
-								log.info('eTRV', 'HVAC calculation - Current: %s°C, Target: %s°C, Delta: %s°C, Action: %s', 
+
+								log.info('eTRV', 'HVAC calculation - Current: %s°C, Target: %s°C, Delta: %s°C, Action: %s',
 									cachedTemperature, targetTemp, deltaTemp, hvacAction);
-								
+
 								// Publish HVAC action and temperature delta
 								const hvacTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/HVAC_ACTION/state`;
 								const deltaTempTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/DELTA_TEMP/state`;
-								
+
 								client.publish(hvacTopic, hvacAction, { qos: 0, retain: false });
 								client.publish(deltaTempTopic, deltaTemp, { qos: 0, retain: false });
 							} else {
@@ -718,7 +842,7 @@ forked.on("message", msg => {
 						// Set retain flag for TARGET_TEMP
 						retain = true;
 						break;
-					
+
 					case 'VALVE_STATE':
 					case 'REPORT_PERIOD':
 					case 'ERROR_TEXT':
@@ -733,7 +857,7 @@ forked.on("message", msg => {
 					case 'BATTERY_LEVEL':
 						let batteries = 0;
 						// Voltage values are device specific
-						switch(msg.productId){
+						switch (msg.productId) {
 							case 3:		// eTRV
 								batteries = 2;
 								retain = true;
@@ -747,52 +871,52 @@ forked.on("message", msg => {
 							case 19:    // Click - 3V single battery ~ 2 AA batteries
 								batteries = 2;
 						}
-						if (batteries > 0){
+						if (batteries > 0) {
 							// calculate battery % where applicable assuming alkaline batteries, calculations from internet ;)
-							let v = msg[key]/batteries;
+							let v = msg[key] / batteries;
 							let charge = 0;
-							if (v >= 1.55){
+							if (v >= 1.55) {
 								charge = 100;
-							} else if (v < 1.1 ){
+							} else if (v < 1.1) {
 								charge = 0
-							} else if (v < 1.18 ){
+							} else if (v < 1.18) {
 								charge = 5;
 							} else {
 								// use a simple linear equation for the rest (y=mx+c), based on 1.44v=90% and 1.2v=10%
-								charge = (333.3*v) - 390;
+								charge = (333.3 * v) - 390;
 
 								// Can produce high values at top end, restrict down
-								if (charge>95){
-									charge=95;
+								if (charge > 95) {
+									charge = 95;
 								}
 								//charge = 9412 - 23449*(v/batteries) + 19240*(v*v/batteries) - 5176*(v*v*v/batteries); // cubic regression
 							}
-							
+
 							// send addition battery percentage response back via MQTT state topic
 							state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/battery/state`;
 							state = String(Math.round(charge));
 							if (retain) {
 								log.verbose('<', "%s: %s (retained)", state_topic, state);
-								client.publish(state_topic,state,{retain: true});
+								client.publish(state_topic, state, { retain: true });
 							} else {
 								log.verbose('<', "%s: %s", state_topic, state);
-								client.publish(state_topic,state);
+								client.publish(state_topic, state);
 							}
 						}
 
 					case 'ALARM':
 						// Translate suspected low battery alert to text
-						if (msg[key] == 66 | msg[key] == '66'){
+						if (msg[key] == 66 | msg[key] == '66') {
 							// send low battery alert - NOT retained as this never clears
 							msg[key] = "Low Battery";
 						}
 
 					default:
 						// captured OpenThings commands (e.g from MiHome gateway) are preceeded with '_', set retained on these so we can find them more easily in MQTT Explorer
-						if(key.startsWith("_")){
+						if (key.startsWith("_")) {
 							retain = true;
 						}
-						// assume an unknown key we need to set in topic tree
+					// assume an unknown key we need to set in topic tree
 				}
 
 				// send MQTT response (state) if we have a valid topic string
@@ -803,33 +927,33 @@ forked.on("message", msg => {
 					// send response back via MQTT state topic
 					if (retain) {
 						log.verbose('<', "%s: %s (retained)", state_topic, state);
-						client.publish(state_topic,state,{retain: true});
+						client.publish(state_topic, state, { retain: true });
 					} else {
 						log.verbose('<', "%s: %s", state_topic, state);
-						client.publish(state_topic,state);
+						client.publish(state_topic, state);
 					}
 
 					// Update MAINTENANCE if retries=0 for trv
-					if (msg.productId == MIHO013 && topic_key == "retries" && state == '0'){
+					if (msg.productId == MIHO013 && topic_key == "retries" && state == '0') {
 						// retries are now empty, also change the MAINTENANCE Select back to None
 						state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/MAINTENANCE/state`;
 						log.verbose('<', "%s: None", state_topic);
-						client.publish(state_topic,"None");
+						client.publish(state_topic, "None");
 					}
 
 					// Check returned state for MIHO005 to see if switched correctly
-					if ( retry_switch && msg.productId == MIHO005 && topic_key == 'switch') {
+					if (retry_switch && msg.productId == MIHO005 && topic_key == 'switch') {
 						let dynamicName = `_${msg.deviceId}`;
 						if (dynamicName in rstate) {
-							log.verbose('monitor','checking switch command for %s',msg.deviceId);
+							log.verbose('monitor', 'checking switch command for %s', msg.deviceId);
 							// we have previously sent a command, did the device switch?
-							if (switchState == rstate[dynamicName]){
+							if (switchState == rstate[dynamicName]) {
 								// switch was ok, remove the dynamic key to prevent re-checking
 								delete rstate[dynamicName];
 							} else {
 								// retry switch command
 								var ener_cmd = {
-									cmd: 'send', mode: 'fsk', repeat: fsk_xmits, command: 'switch', 
+									cmd: 'send', mode: 'fsk', repeat: fsk_xmits, command: 'switch',
 									productId: msg.productId,
 									deviceId: msg.deviceId,
 									switchState: rstate[dynamicName]
@@ -846,8 +970,14 @@ forked.on("message", msg => {
 		case 'discovery':
 			// device discovery message publish discovery messages to Home Assistant
 			log.info('discovery', "found %i devices", msg.numDevices);
-			publishBoardState('discover', msg.numDevices);			
-			msg.devices.forEach(publishDiscovery);
+			publishBoardState('discover', msg.numDevices);
+			msg.devices.forEach(device => {
+				publishDiscovery(device);
+				// Track eTRVs for battery voltage polling
+				if (device.productId === 3) {
+					addKnownETRV(device.deviceId);
+				}
+			});
 			break;
 
 		case 'cacheCmd':
@@ -857,34 +987,34 @@ forked.on("message", msg => {
 
 			// send MQTT if we have a valid topic string
 			if (msg.productId !== undefined && msg.deviceId !== undefined) {
-				
-				if (typeof(msg.retries) != "undefined") {
+
+				if (typeof (msg.retries) != "undefined") {
 					state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/retries/state`;
 					state = String(msg.retries);
 					// set retries on MQTT
 					log.verbose('<', "%s: %s", state_topic, state);
-					client.publish(state_topic,state);
+					client.publish(state_topic, state);
 				}
-				
-				if (typeof(msg.otCommand) != "undefined"){
+
+				if (typeof (msg.otCommand) != "undefined") {
 					state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/command/state`;
 					state = String(lookupCommand(msg.otCommand, msg.data));
 
 					// save cached command on MQTT
 					log.verbose('<', "%s: %s", state_topic, state);
-					client.publish(state_topic,state);
+					client.publish(state_topic, state);
 				}
 
 				// Store cached state for values that are NEVER returned by monitor messages (confirmed by energenie)
-				if (msg.productId == MIHO013 && msg.command == 'VALVE_STATE'){
+				if (msg.productId == MIHO013 && msg.command == 'VALVE_STATE') {
 					state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/${msg.command}/state`;
 					state = String(msg.data);
 
 					// send response back via MQTT
 					log.verbose('<', "%s: %s (optimistic retained)", state_topic, state);
-					client.publish(state_topic,state,{retain: true});
+					client.publish(state_topic, state, { retain: true });
 				}
-				
+
 			};
 			break;
 	} // switch msg.cmd
@@ -892,21 +1022,21 @@ forked.on("message", msg => {
 });
 
 forked.on('close', (code, signal) => {
-    log.warn('app', "closed due to terminated energenie process. code=%j, signal=%j", code, signal);
-    // clear interval timer (causes program to exit as nothing left to do!)
-    //clearInterval(doDiscovery);
+	log.warn('app', "closed due to terminated energenie process. code=%j, signal=%j", code, signal);
+	// clear interval timer (causes program to exit as nothing left to do!)
+	//clearInterval(doDiscovery);
 	process.exit();
 });
 
 forked.on('exit', (code, signal) => {
-    log.warn('app', "exit due to terminated energenie process. code=%j, signal=%j", code, signal);
-    // clear interval timer (causes program to exit as nothing left to do!)
-    //clearInterval(doDiscovery);
+	log.warn('app', "exit due to terminated energenie process. code=%j, signal=%j", code, signal);
+	// clear interval timer (causes program to exit as nothing left to do!)
+	//clearInterval(doDiscovery);
 	process.exit();
 });
 
 function UpdateMQTTDiscovery() {
-	if (discovery){
+	if (discovery) {
 		log.info('auto', "calling discovery");
 		forked.send({ cmd: "discovery", scan: false });
 	}
@@ -917,11 +1047,11 @@ function UpdateMQTTDiscovery() {
 //
 // Configuration of what values to publish is externalised to a file for each device product 'devices/<productId>.json'
 //
-function publishDiscovery( device ){
+function publishDiscovery(device) {
 
-	log.info('discovery',"discovered: %j",device);
+	log.info('discovery', "discovered: %j", device);
 
-	if ( device.mfrId == 4){
+	if (device.mfrId == 4) {
 		// energenie device
 
 		// Read discovery config
@@ -930,11 +1060,11 @@ function publishDiscovery( device ){
 				log.error('discovery', "skipped for device %i - unknown device type 'devices/%j.json' missing", device.deviceId, device.productId);
 			} else {
 				device_defaults = JSON.parse(data);
-				device_defaults.parameters.forEach( (parameter) => {
+				device_defaults.parameters.forEach((parameter) => {
 					//
 					// To save on network/processing only the main entity will contain the details of the device that they belong to
 					//
-					if (parameter.main){
+					if (parameter.main) {
 						var device_details = {
 							name: `${device_defaults.mdl} ${device.deviceId}`,
 							ids: [`ener314rt-${device.deviceId}`],
@@ -945,7 +1075,7 @@ function publishDiscovery( device ){
 						}
 						// To align to HA standards, the main parameter should not be appended to the entity name
 						// Except when the main component is type sensor, where we must preserve it
-						if ( parameter.component == "sensor"){
+						if (parameter.component == "sensor") {
 							var entity_name = toTitleCase(parameter.id);
 						} else {
 							var entity_name = null;
@@ -953,7 +1083,7 @@ function publishDiscovery( device ){
 
 					} else {
 						var entity_name = toTitleCase(parameter.id);
-						var device_details = {ids: [`ener314rt-${device.deviceId}`]};
+						var device_details = { ids: [`ener314rt-${device.deviceId}`] };
 					}
 
 					var dmsg = Object.assign({
@@ -968,21 +1098,21 @@ function publishDiscovery( device ){
 							url: `https://github.com/Achronite/mqtt-energenie-ener314rt`
 						}
 					},
-					parameter.config );
+						parameter.config);
 
 					// replace @ in topics with the address where each of the data items are published (state) or read (command)
-					if (parameter.stat_t){
+					if (parameter.stat_t) {
 						dmsg.stat_t = parameter.stat_t.replace("@", `${parameter.id}`);
 					}
 
-					if (parameter.cmd_t){
+					if (parameter.cmd_t) {
 						dmsg.cmd_t = parameter.cmd_t.replace("@", `${parameter.id}`);
 					}
 
 					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${device.deviceId}-${parameter.id}/config`;
 
 					log.verbose('<', "discovery %s", discoveryTopic);
-					client.publish(discoveryTopic,JSON.stringify(dmsg),{retain: true});
+					client.publish(discoveryTopic, JSON.stringify(dmsg), { retain: true });
 
 				})
 
@@ -999,21 +1129,21 @@ function publishDiscovery( device ){
 ** Internal Function that return the english parameter name (for display) of a given OpenThings parameter code (cmd)
 ** If the parameter requires a data value (data) to be set this is appended to the name of the command giving the full string
 */
-function lookupCommand( cmd, data ){
+function lookupCommand(cmd, data) {
 	let command = null;
-	switch( Number(cmd) ){
+	switch (Number(cmd)) {
 		case 0:
 			return 'None';
 		case THERMOSTAT_MODE:
 			command = 'Thermostat Mode';
 			break;
 		case TARGET_TEMP:
-			command =  'Set Temperature';
+			command = 'Set Temperature';
 			break;
 		case EXERCISE_VALVE:
 			return 'Exercise Valve';
 		case LOW_POWER_MODE:
-			command = 'Low Power Mode';		
+			command = 'Low Power Mode';
 			break;
 		case VALVE_STATE:
 			command = 'Valve Mode';
@@ -1078,29 +1208,29 @@ function handleSignal(signal) {
 
 // Convert '_' delimited string to Title Case, replacing '_' with spaces
 function toTitleCase(str) {
-    let upper = false;
-    let newStr = str[0].toUpperCase();
-    for (let i = 1, l = str.length; i < l; i++) {
-        if (str[i] == "_") {
-            upper = true;
-            newStr += ' ';
-            continue;
-        }
-        newStr += upper ? str[i].toUpperCase() : str[i].toLowerCase();
-        upper = false;
-    }
-    return newStr;
+	let upper = false;
+	let newStr = str[0].toUpperCase();
+	for (let i = 1, l = str.length; i < l; i++) {
+		if (str[i] == "_") {
+			upper = true;
+			newStr += ' ';
+			continue;
+		}
+		newStr += upper ? str[i].toUpperCase() : str[i].toLowerCase();
+		upper = false;
+	}
+	return newStr;
 }
 
 // This function publishes the config items for parent board @<discovery_prefix>/board/1/<object_id>/config
 // This is only called once on initialisation
 // Configuration of the values to publish is externalised to a file 'devices/board.json'
 //
-function publishBoardDiscovery(){
+function publishBoardDiscovery() {
 
 	const deviceId = 'board';
 
-	log.info('discovery',"board discovered");
+	log.info('discovery', "board discovered");
 
 	// Read discovery config
 	fs.readFile(`devices/board.json`, (err, data) => {
@@ -1134,7 +1264,7 @@ function publishBoardDiscovery(){
 						url: `https://github.com/Achronite/mqtt-energenie-ener314rt`
 					}
 				},
-				parameter.config,);
+					parameter.config,);
 
 				// Add MQTT availability only to the 'Discover' button
 				if (parameter.id == 'discover') {
@@ -1162,9 +1292,9 @@ function publishBoardDiscovery(){
 }
 
 // Update stats to MQTT for the overall program
-function publishBoardState(param,state) {
+function publishBoardState(param, state) {
 	state_topic = `${CONFIG.topic_stub}board/1/${param}/state`;
-	
+
 	// send response back via MQTT
 	log.verbose('<', "%s: %s (board)", state_topic, state);
 	client.publish(state_topic, String(state));
@@ -1186,27 +1316,25 @@ function publishLatestRelease() {
 			// Publish it to MQTT version
 			state_topic = `${CONFIG.topic_stub}board/1/version/state`;
 			log.verbose('<', "%s: %j (board)", state_topic, github_details.latest_version);
-			client.publish(state_topic, JSON.stringify(github_details), {retain: true});
+			client.publish(state_topic, JSON.stringify(github_details), { retain: true });
 		})
-		.catch(error => log.warn('version','error getting latest release data from github:',error)
-	); 
+		.catch(error => log.warn('version', 'error getting latest release data from github:', error)
+		);
 
 }
 
 // run a function at the same time every day (credit @farhad-taran)
-function runAtSpecificTimeOfDay(hour, minutes, func)
-{
-  const twentyFourHours = 86400000;
-  const now = new Date();
-  let eta_ms = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minutes, 0, 0).getTime() - now;
-  if (eta_ms < 0)
-  {
-    eta_ms += twentyFourHours;
-  }
-  setTimeout(function() {
-    //run once
-    func();
-    // run every 24 hours from now on
-    setInterval(func, twentyFourHours);
-  }, eta_ms);
+function runAtSpecificTimeOfDay(hour, minutes, func) {
+	const twentyFourHours = 86400000;
+	const now = new Date();
+	let eta_ms = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minutes, 0, 0).getTime() - now;
+	if (eta_ms < 0) {
+		eta_ms += twentyFourHours;
+	}
+	setTimeout(function () {
+		//run once
+		func();
+		// run every 24 hours from now on
+		setInterval(func, twentyFourHours);
+	}, eta_ms);
 }
