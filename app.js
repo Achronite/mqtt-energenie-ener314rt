@@ -601,6 +601,9 @@ forked.on("message", msg => {
 			// OpenThings monitor message
 
 			let keys = Object.keys(msg);
+			
+			// Variable to cache temperature for HVAC action calculation
+			let cachedTemperature = null;
 
 			// Iterate through the object returned
 			keys.forEach((key) => {
@@ -676,89 +679,52 @@ forked.on("message", msg => {
 						else
 							topic_key = null;
 						break;
+					case 'TEMPERATURE':
+						// Cache temperature for later HVAC action calculation (eTRV only)
+						if (msg.productId == 3) {
+							cachedTemperature = parseFloat(msg.TEMPERATURE);
+							if (isNaN(cachedTemperature)) {
+								log.warn('eTRV', 'Invalid TEMPERATURE value received: %s', msg.TEMPERATURE);
+								cachedTemperature = null;
+							} else {
+								log.verbose('eTRV', 'Cached TEMPERATURE: %s for deviceId: %s', cachedTemperature, msg.deviceId);
+							}
+						}
+						break;
+					
+					case 'TARGET_TEMP':
+						// Calculate HVAC action when TARGET_TEMP is received (eTRV only)
+						if (msg.productId == 3 && cachedTemperature !== null) {
+							const targetTemp = parseFloat(msg[key]);
+							
+							if (!isNaN(targetTemp)) {
+								// Determine HVAC action: heating if current temp is below target, otherwise idle
+								const hvacAction = cachedTemperature < targetTemp ? 'heating' : 'idle';
+								const deltaTemp = (cachedTemperature - targetTemp).toFixed(2);
+								
+								log.info('eTRV', 'HVAC calculation - Current: %s°C, Target: %s°C, Delta: %s°C, Action: %s', 
+									cachedTemperature, targetTemp, deltaTemp, hvacAction);
+								
+								// Publish HVAC action and temperature delta
+								const hvacTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/HVAC_ACTION/state`;
+								const deltaTempTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/DELTA_TEMP/state`;
+								
+								client.publish(hvacTopic, hvacAction, { qos: 0, retain: false });
+								client.publish(deltaTempTopic, deltaTemp, { qos: 0, retain: false });
+							} else {
+								log.warn('eTRV', 'Invalid TARGET_TEMP value: %s', msg[key]);
+							}
+						}
+						// Set retain flag for TARGET_TEMP
+						retain = true;
+						break;
+					
 					case 'VALVE_STATE':
 					case 'REPORT_PERIOD':
-					case 'TARGET_TEMP':
 					case 'ERROR_TEXT':
 					case 'THERMOSTAT_MODE':
 					case 'HYSTERESIS':
 					case 'TEMP_OFFSET':
-					case 'TEMPERATURE': {
-						// Validate message productId before proceeding to check its an eTRV
-						if (msg.productId == 3) {
-							log.info('eTRV TEMPERATURE monitor received: %j', msg);
-							const targetTempTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/TARGET_TEMP/state`;
-
-							// Parse current temperature from eTRV and validate
-							const currentTemp = parseFloat(msg.TEMPERATURE);
-							if (isNaN(currentTemp)) {
-								log.warn(`eTRV TEMPERATURE Invalid current temperature data: currentTemp=${currentTemp}`);
-							} else {
-								// Set a timeout to handle cases where no response is received from MQTT, happens if no TARGET_TEMP has yet been set
-								let timeoutHandle = setTimeout(() => {
-									log.warn(`Timeout: No response received for TARGET_TEMP on topic: ${targetTempTopic}`);
-									// Unsubscribe from topic in timeout scenario
-									client.unsubscribe(targetTempTopic);
-									client.removeListener('message', onTargetTempMessage); // Ensure listener is removed on timeout
-								}, 5000);
-
-								// Subscribe to the TARGET_TEMP MQTT topic
-								log.info(`eTRV TEMPERATURE monitor requesting:`, `TARGET_TEMP from MQTT: ${targetTempTopic}`);
-								client.subscribe(targetTempTopic, { qos: 0 }, (err) => {
-									if (err) {
-										log.error(`Error subscribing to TARGET_TEMP topic: ${err}`);
-										clearTimeout(timeoutHandle);
-									} else {
-										log.info(`eTRV TEMPERATURE Subscribed to topic:`,`${targetTempTopic}`);
-
-										// Listen for messages on the subscribed topic
-										client.on('message', function onTargetTempMessage(topic, targetMsg) {
-											if (topic === targetTempTopic) {
-												// Clear the timeout as we received a message
-												clearTimeout(timeoutHandle);
-
-												if (!targetMsg) {
-													log.warn(`eTRV TEMPERATURE No value received in TARGET_TEMP topic:`,`${targetMsg}`);
-												} else {
-													log.info(`eTRV TEMPERATURE Received`,`TARGET_TEMP from MQTT: ${targetTempTopic}`);
-
-													// Parse target temperature and validate
-													const targetTemp = parseFloat(targetMsg);
-													if (isNaN(targetTemp)) {
-														log.warn(`eTRV TEMPERATURE Invalid target temperature data: targetTemp=${targetTemp}`);
-													} else {
-														log.info(`eTRV TEMPERATURE Data:`,`TARGET_TEMP: ${targetTemp}, currentTemp: ${currentTemp}`);
-
-														// Determine HVAC action based on temperature comparison
-														const hvacAction = currentTemp <= targetTemp ? 'ON' : 'OFF';
-														const deltaTemp = (currentTemp - targetTemp).toFixed(2);
-
-														log.info(`eTRV TEMPERATURE Calculated:`,`hvacAction:`,`${hvacAction}, deltaTemp: ${deltaTemp}`);
-
-														// Define topics for publishing HVAC_ACTION and delta_temp
-														const hvacTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/HVAC_ACTION/state`;
-														const deltaTempTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/DELTA_TEMP/state`;
-
-														// Publish the calculated values
-														try {
-															client.publish(hvacTopic, hvacAction, { qos: 0, retain: false });
-															client.publish(deltaTempTopic, deltaTemp.toString(), { qos: 0, retain: false });
-															log.info(`eTRV TEMPERATURE Published:`,`HVAC_ACTION and delta_temp successfully.`);
-														} catch (publishErr) {
-															log.error(`eTRV TEMPERATURE Error publishing to MQTT: ${publishErr}`);
-														}
-													}
-												}
-												// Unsubscribe from the topic and clean up the listener
-												client.unsubscribe(targetTempTopic);
-												client.removeListener('message', onTargetTempMessage);
-											}
-										});
-									}
-								});
-							}
-						}
-					}
 					case 'HUMID_OFFSET':
 						// These values need to be retained on MQTT as they are irregularly reported
 						retain = true;
