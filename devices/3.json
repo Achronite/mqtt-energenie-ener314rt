@@ -205,44 +205,13 @@
          }
       },
       {
-         "id": "TEMP_COMMAND",
-         "component": "sensor",
-         "stat_t": "~@/state",
-         "config": {
-            "name": "Temperature Command",
-            "ic": "mdi:thermostat",
-            "ent_cat": "diagnostic"
-         }
-      },
-      {
-         "id": "MODE_COMMAND",
-         "component": "sensor",
-         "stat_t": "~@/state",
-         "config": {
-            "name": "Mode Command",
-            "ic": "mdi:tune-variant",
-            "ent_cat": "diagnostic"
-         }
-      },
-      {
-         "id": "QUEUE_DIAG_COMMAND",
+         "id": "QUEUE_COMMAND",
          "component": "sensor",
          "stat_t": "~@/state",
          "json_attr_t": "~@/attributes",
          "config": {
-            "name": "Queued Diagnostic Command",
-            "ic": "mdi:tools",
-            "ent_cat": "diagnostic"
-         }
-      },
-      {
-         "id": "QUEUE_DIAG_LEN",
-         "component": "sensor",
-         "stat_t": "~@/state",
-         "config": {
-            "name": "Diagnostic Queue Length",
-            "ic": "mdi:numeric",
-            "stat_cla": "measurement",
+            "name": "Current Queue Command",
+            "ic": "mdi:format-list-numbered",
             "ent_cat": "diagnostic"
          }
       },
@@ -250,8 +219,9 @@
          "id": "QUEUE_LEN",
          "component": "sensor",
          "stat_t": "~@/state",
+         "json_attr_t": "~@/attributes",
          "config": {
-            "name": "Command Queue Length",
+            "name": "Queue Length",
             "ic": "mdi:numeric",
             "stat_cla": "measurement",
             "ent_cat": "diagnostic"
