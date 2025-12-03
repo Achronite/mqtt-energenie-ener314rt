@@ -48,7 +48,7 @@
          "component": "sensor",
          "stat_t": "~DELTA_TEMP/state",
          "config": {
-            "ic": "mdi:compare-horizontal",
+            "ic": "mdi:thermometer-lines",
             "dev_cla": "temperature",
             "stat_cla": "measurement",
             "unit_of_meas": "°C",
@@ -72,7 +72,7 @@
          "component": "sensor",
          "stat_t": "~TARGET_TEMP/state",
          "config": {
-            "ic": "mdi:target",
+            "ic": "mdi:thermostat",
             "dev_cla": "temperature",
             "stat_cla": "measurement",
             "unit_of_meas": "°C",
@@ -178,7 +178,9 @@
          "component": "sensor",
          "stat_t": "~@/state",
          "config": {
-            "ic": "mdi:cached",
+            "name": "Retries (Send Attempts)",
+            "ic": "mdi:repeat",
+            "stat_cla": "measurement",
             "ent_cat": "diagnostic"
          }
       },
@@ -188,6 +190,70 @@
          "stat_t": "~@/state",
          "config": {
             "ic": "mdi:traffic-light",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "QUEUE_PROCESSING",
+         "component": "binary_sensor",
+         "stat_t": "~@/state",
+         "config": {
+            "dev_cla": "running",
+            "pl_on": "true",
+            "pl_off": "false",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "TEMP_COMMAND",
+         "component": "sensor",
+         "stat_t": "~@/state",
+         "config": {
+            "name": "Temperature Command",
+            "ic": "mdi:thermostat",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "MODE_COMMAND",
+         "component": "sensor",
+         "stat_t": "~@/state",
+         "config": {
+            "name": "Mode Command",
+            "ic": "mdi:tune-variant",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "QUEUE_DIAG_COMMAND",
+         "component": "sensor",
+         "stat_t": "~@/state",
+         "json_attr_t": "~@/attributes",
+         "config": {
+            "name": "Queued Diagnostic Command",
+            "ic": "mdi:tools",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "QUEUE_DIAG_LEN",
+         "component": "sensor",
+         "stat_t": "~@/state",
+         "config": {
+            "name": "Diagnostic Queue Length",
+            "ic": "mdi:numeric",
+            "stat_cla": "measurement",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "QUEUE_LEN",
+         "component": "sensor",
+         "stat_t": "~@/state",
+         "config": {
+            "name": "Command Queue Length",
+            "ic": "mdi:numeric",
+            "stat_cla": "measurement",
             "ent_cat": "diagnostic"
          }
       },

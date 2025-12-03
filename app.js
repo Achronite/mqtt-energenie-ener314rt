@@ -163,21 +163,164 @@ client.on('connect', function () {
 //
 // eTRV Command Queue System
 // Priority levels: temperature (highest), mode (medium), diagnostic (lowest)
-// Only keep latest command per priority level
+// Temperature & mode keep only the latest pending command.
+// Diagnostic holds a deduplicated list of pending diagnostic commands.
+// Track the command currently being processed to expose it via sensors.
 //
-const etrv_command_queues = {};  // deviceId -> { temperature: cmd, mode: cmd, diagnostic: cmd, processing: boolean }
+// eTRVs only wake and process cached commands every ~5 minutes; allow a generous timeout
+// so we do not prematurely move on to the next command while retries are still pending.
+const ETRV_COMMAND_TIMEOUT_MS = 10 * 60 * 1000;  // 10 minute safety fallback if no completion message arrives.
+const etrv_command_queues = {};  // deviceId -> { temperature: cmd|null, mode: cmd|null, diagnostics: cmd[], cancel: cmd|null, processing: boolean, current: { priority, command }|null, completionTimer: NodeJS.Timeout|null }
+
+function isCancelCommand(ener_cmd) {
+	return !!ener_cmd && (ener_cmd.otCommand === 0 || ener_cmd.command === 'CANCEL');
+}
+
+function markETRVCommandComplete(deviceId, reason) {
+	const queue = etrv_command_queues[deviceId];
+	if (!queue || !queue.processing) {
+		return;
+	}
+
+	if (queue.completionTimer) {
+		clearTimeout(queue.completionTimer);
+		queue.completionTimer = null;
+	}
+
+	const current = queue.current;
+	const commandName = current && current.command ? (current.command.command || current.command.otCommand || 'unknown') : 'unknown';
+	log.verbose('queue', "eTRV %d: completed %s command (%s)", deviceId, commandName, reason || 'complete');
+
+	queue.processing = false;
+	queue.current = null;
+
+	publishETRVQueueState(deviceId);
+	processETRVQueue(deviceId);
+}
+
+function handleETRVRetriesUpdate(deviceId, retries, source) {
+	if (isNaN(retries)) {
+		return;
+	}
+
+	const queue = etrv_command_queues[deviceId];
+	if (!queue) {
+		return;
+	}
+
+	if (queue.processing && retries === 0) {
+		markETRVCommandComplete(deviceId, source);
+	}
+}
+
+function describeQueuedCommand(cmd) {
+	if (!cmd) {
+		return null;
+	}
+
+	if (isCancelCommand(cmd)) {
+		return null;
+	}
+
+	const otCmd = cmd.otCommand;
+	const baseCommand = cmd.command;
+	const data = cmd.data;
+
+	if (otCmd === TARGET_TEMP || baseCommand === 'TARGET_TEMP') {
+		const temp = parseFloat(data);
+		if (!Number.isNaN(temp)) {
+			const rounded = Number.isInteger(temp) ? temp.toFixed(0) : temp.toFixed(1);
+			return `${rounded}°C`;
+		}
+		return 'Target Temperature';
+	}
+
+	if (otCmd === VALVE_STATE || baseCommand === 'VALVE_STATE') {
+		const numeric = typeof data === 'number' ? data : parseInt(data, 10);
+		switch (numeric) {
+			case 0:
+				return 'Valve Open';
+			case 1:
+				return 'Valve Closed';
+			case 2:
+				return 'Valve Heat';
+			default:
+				return 'Valve Mode';
+		}
+	}
+
+	if (otCmd === LOW_POWER_MODE || baseCommand === 'LOW_POWER_MODE') {
+		const isOn = data === 1 || data === '1' || data === true || data === 'ON';
+		const isOff = data === 0 || data === '0' || data === false || data === 'OFF';
+		if (isOn) {
+			return 'Low Power Mode On';
+		}
+		if (isOff) {
+			return 'Low Power Mode Off';
+		}
+		return 'Low Power Mode';
+	}
+
+	if (otCmd === EXERCISE_VALVE || baseCommand === 'EXERCISE_VALVE') {
+		return 'Exercise Valve';
+	}
+
+	if (otCmd === DIAGNOSTICS || baseCommand === 'DIAGNOSTICS') {
+		return 'Request Diagnostics';
+	}
+
+	if (otCmd === IDENTIFY || baseCommand === 'IDENTIFY') {
+		return 'Identify';
+	}
+
+	if (otCmd === VOLTAGE || baseCommand === 'VOLTAGE') {
+		return 'Request Voltage';
+	}
+
+	if (otCmd === REPORT_PERIOD || baseCommand === 'REPORT_PERIOD') {
+		if (data !== undefined && data !== null) {
+			return `Interval ${data}s`;
+		}
+		return 'Interval';
+	}
+
+	if (typeof otCmd === 'number' && otCmd > 0) {
+		const desc = lookupCommand(otCmd, data);
+		if (desc !== undefined && desc !== null) {
+			return String(desc);
+		}
+	}
+
+	if (baseCommand) {
+		return String(baseCommand);
+	}
+
+	return 'Unknown';
+}
+
+function resolveQueueDisplay(value, hasCommand) {
+	if (value === null || value === undefined) {
+		return hasCommand ? 'Unknown' : 'None';
+	}
+
+	const str = String(value).trim();
+	if (str.length === 0) {
+		return hasCommand ? 'Unknown' : 'None';
+	}
+
+	return str;
+}
 
 function getCommandPriority(command, otCommand) {
 	// Temperature commands: highest priority
 	if (command === 'TARGET_TEMP' || otCommand === TARGET_TEMP) {
 		return 'temperature';
 	}
-	// Mode commands: medium priority
-	if (command === 'VALVE_STATE' || otCommand === VALVE_STATE ||
-		command === 'LOW_POWER_MODE' || otCommand === LOW_POWER_MODE) {
+	// Mode commands: medium priority (valve states only)
+	if (command === 'VALVE_STATE' || otCommand === VALVE_STATE) {
 		return 'mode';
 	}
-	// All other commands (diagnostics, identify, etc): lowest priority
+	// All other commands (diagnostics, identify, low power mode, etc): lowest priority
 	return 'diagnostic';
 }
 
@@ -186,17 +329,38 @@ function queueETRVCommand(deviceId, ener_cmd) {
 		etrv_command_queues[deviceId] = {
 			temperature: null,
 			mode: null,
-			diagnostic: null,
-			processing: false
+			diagnostics: [],
+			cancel: null,
+			processing: false,
+			current: null,
+			completionTimer: null
 		};
 	}
 
 	const priority = getCommandPriority(ener_cmd.command, ener_cmd.otCommand);
+	const queue = etrv_command_queues[deviceId];
 
-	// Replace existing command at this priority level
-	etrv_command_queues[deviceId][priority] = ener_cmd;
+	if (isCancelCommand(ener_cmd)) {
+		// Clear all pending commands and process cancel immediately, without queuing it
+		queue.temperature = null;
+		queue.mode = null;
+		queue.diagnostics = [];
+		queue.cancel = ener_cmd;
+	} else if (priority === 'temperature') {
+		// Temperature: always keep only the latest pending command
+		queue.temperature = ener_cmd;
+	} else if (priority === 'mode') {
+		// Mode: always keep only the latest pending mode command
+		queue.mode = ener_cmd;
+	} else {
+		// Diagnostic commands: deduplicated list with replacement rules
+		queue.diagnostics = updateDiagnosticQueue(queue.diagnostics, ener_cmd);
+	}
 
 	log.verbose('queue', "eTRV %d: queued %s command (priority: %s)", deviceId, ener_cmd.command, priority);
+
+	// Publish updated queue state
+	publishETRVQueueState(deviceId);
 
 	// Try to process queue
 	processETRVQueue(deviceId);
@@ -212,33 +376,171 @@ function processETRVQueue(deviceId) {
 	let next_cmd = null;
 	let priority_name = null;
 
-	if (queue.temperature) {
+	if (queue.cancel) {
+		next_cmd = queue.cancel;
+		priority_name = 'cancel';
+	} else if (queue.temperature) {
 		next_cmd = queue.temperature;
 		priority_name = 'temperature';
 	} else if (queue.mode) {
 		next_cmd = queue.mode;
 		priority_name = 'mode';
-	} else if (queue.diagnostic) {
-		next_cmd = queue.diagnostic;
+	} else if (queue.diagnostics.length > 0) {
+		// FIFO for diagnostics
+		next_cmd = queue.diagnostics[0];
 		priority_name = 'diagnostic';
 	}
 
 	if (next_cmd) {
+		if (queue.completionTimer) {
+			clearTimeout(queue.completionTimer);
+			queue.completionTimer = null;
+		}
+
 		queue.processing = true;
-		queue[priority_name] = null;  // Remove from queue
+		queue.current = { priority: priority_name, command: next_cmd };
+
+		// Remove from queue now that it is being processed
+		if (priority_name === 'cancel') {
+			queue.cancel = null;
+		} else if (priority_name === 'temperature') {
+			queue.temperature = null;
+		} else if (priority_name === 'mode') {
+			queue.mode = null;
+		} else if (priority_name === 'diagnostic') {
+			queue.diagnostics.shift();
+		}
 
 		log.verbose('queue', "eTRV %d: processing %s command from queue", deviceId, next_cmd.command);
+
+		// Publish updated queue state (now processing)
+		publishETRVQueueState(deviceId);
 
 		// Send command to energenie process
 		forked.send(next_cmd);
 
-		// Mark as not processing after a delay (allow for monitor confirmation)
-		// eTRV typically responds within 5-10 seconds
-		setTimeout(() => {
-			queue.processing = false;
-			processETRVQueue(deviceId);  // Try next command
-		}, 10000);  // 10 second delay
+		// Fallback in case no completion signal arrives
+		queue.completionTimer = setTimeout(() => {
+			log.warn('queue', "eTRV %d: timeout waiting for %s command completion", deviceId, next_cmd.command);
+			markETRVCommandComplete(deviceId, 'timeout');
+		}, ETRV_COMMAND_TIMEOUT_MS);
 	}
+}
+
+// Update diagnostic queue with deduplication and replacement rules
+// - LOW_POWER_MODE: new replaces any existing LOW_POWER_MODE in queue
+// - REPORT_PERIOD: keep only latest REPORT_PERIOD
+// - Other diagnostics: enqueue only if not already present
+function updateDiagnosticQueue(existingQueue, ener_cmd) {
+	const otCmd = ener_cmd.otCommand;
+	const isLowPower = (otCmd === LOW_POWER_MODE);
+	const isReportPeriod = (otCmd === REPORT_PERIOD);
+
+	let newQueue = existingQueue.slice();
+
+	if (isLowPower) {
+		// Remove any existing LOW_POWER_MODE commands, then add this one
+		newQueue = newQueue.filter(c => c.otCommand !== LOW_POWER_MODE);
+		newQueue.push(ener_cmd);
+		return newQueue;
+	}
+
+	if (isReportPeriod) {
+		// Remove existing REPORT_PERIOD commands, then add this one
+		newQueue = newQueue.filter(c => c.otCommand !== REPORT_PERIOD);
+		newQueue.push(ener_cmd);
+		return newQueue;
+	}
+
+	// For other diagnostic commands: only enqueue if not already present
+	const exists = newQueue.some(c => c.otCommand === otCmd && c.deviceId === ener_cmd.deviceId);
+	if (!exists) {
+		newQueue.push(ener_cmd);
+	}
+
+	return newQueue;
+}
+
+// Publish per-device eTRV queue state to MQTT for Home Assistant sensors
+function publishETRVQueueState(deviceId) {
+	const queue = etrv_command_queues[deviceId];
+	if (!queue) return;
+
+	// Helper to publish a single key
+	function pub(key, value, retain = false) {
+		const state_topic = `${CONFIG.topic_stub}${MIHO013}/${deviceId}/${key}/state`;
+		const state = String(value === undefined || value === null ? '' : value);
+		if (retain) {
+			log.verbose('<', "%s: %s (retained)", state_topic, state);
+			client.publish(state_topic, state, { retain: true });
+		} else {
+			log.verbose('<', "%s: %s", state_topic, state);
+			client.publish(state_topic, state);
+		}
+	}
+
+	const currentPriority = queue.current ? queue.current.priority : null;
+	const currentCommandObj = queue.current ? queue.current.command : null;
+	const currentDisplayRaw = describeQueuedCommand(currentCommandObj);
+
+	// processing flag
+	pub('QUEUE_PROCESSING', queue.processing ? 'true' : 'false');
+
+	// temperature queue display
+	const tempQueuedRaw = queue.temperature ? describeQueuedCommand(queue.temperature) : null;
+	let tempDisplayRaw = tempQueuedRaw;
+	if (!tempDisplayRaw && currentPriority === 'temperature') {
+		tempDisplayRaw = currentDisplayRaw;
+	}
+	const tempHasCommand = Boolean(tempDisplayRaw);
+	const tempDisplay = resolveQueueDisplay(tempDisplayRaw, tempHasCommand);
+	pub('TEMP_COMMAND', tempDisplay);
+
+	// mode queue display
+	const modeQueuedRaw = queue.mode ? describeQueuedCommand(queue.mode) : null;
+	let modeDisplayRaw = modeQueuedRaw;
+	if (!modeDisplayRaw && currentPriority === 'mode') {
+		modeDisplayRaw = currentDisplayRaw;
+	}
+	const modeHasCommand = Boolean(modeDisplayRaw);
+	const modeDisplay = resolveQueueDisplay(modeDisplayRaw, modeHasCommand);
+	pub('MODE_COMMAND', modeDisplay);
+
+	// diagnostic queue display (include current diagnostic when processing)
+	const diagPendingRaw = queue.diagnostics
+		.map(cmd => describeQueuedCommand(cmd))
+		.filter(val => val !== null && val !== undefined && String(val).trim().length > 0);
+	let diagDisplayListRaw = diagPendingRaw.slice();
+	let currentDiagDisplayRaw = null;
+	if (currentPriority === 'diagnostic') {
+		currentDiagDisplayRaw = (currentDisplayRaw !== null && currentDisplayRaw !== undefined && String(currentDisplayRaw).trim().length > 0)
+			? currentDisplayRaw
+			: null;
+		if (currentDiagDisplayRaw) {
+			diagDisplayListRaw.unshift(currentDiagDisplayRaw);
+		}
+	}
+	const diagHasCommand = diagDisplayListRaw.length > 0;
+	const primaryDiagRaw = diagHasCommand ? diagDisplayListRaw[0] : null;
+	const primaryDiagDisplay = resolveQueueDisplay(primaryDiagRaw, diagHasCommand);
+	pub('QUEUE_DIAG_COMMAND', primaryDiagDisplay);
+	pub('QUEUE_DIAG_LEN', diagHasCommand ? diagDisplayListRaw.length : 0);
+
+	// Total queue length across temp, mode, diagnostics (exclude cancel)
+	const tempCount = (queue.temperature || currentPriority === 'temperature') ? 1 : 0;
+	const modeCount = (queue.mode || currentPriority === 'mode') ? 1 : 0;
+	const diagCount = diagHasCommand ? diagDisplayListRaw.length : 0;
+	pub('QUEUE_LEN', tempCount + modeCount + diagCount);
+
+	// Also publish full diagnostic queue as JSON attribute payload
+	const diagAttrTopic = `${CONFIG.topic_stub}${MIHO013}/${deviceId}/QUEUE_DIAG_COMMAND/attributes`;
+	const diagAttr = {
+		current: resolveQueueDisplay(currentDiagDisplayRaw, Boolean(currentDiagDisplayRaw)),
+		pending: diagPendingRaw.map(item => resolveQueueDisplay(item, true)),
+		queue: diagDisplayListRaw.map(item => resolveQueueDisplay(item, true))
+	};
+	log.verbose('<', "%s: %j", diagAttrTopic, diagAttr);
+	client.publish(diagAttrTopic, JSON.stringify(diagAttr));
 }
 
 //
@@ -933,6 +1235,10 @@ forked.on("message", msg => {
 						client.publish(state_topic, state);
 					}
 
+					if (msg.productId == MIHO013 && topic_key == "retries") {
+						handleETRVRetriesUpdate(msg.deviceId, Number(state), 'monitor');
+					}
+
 					// Update MAINTENANCE if retries=0 for trv
 					if (msg.productId == MIHO013 && topic_key == "retries" && state == '0') {
 						// retries are now empty, also change the MAINTENANCE Select back to None
@@ -994,6 +1300,10 @@ forked.on("message", msg => {
 					// set retries on MQTT
 					log.verbose('<', "%s: %s", state_topic, state);
 					client.publish(state_topic, state);
+
+					if (msg.productId === MIHO013) {
+						handleETRVRetriesUpdate(msg.deviceId, Number(state), 'cache');
+					}
 				}
 
 				if (typeof (msg.otCommand) != "undefined") {
@@ -1107,6 +1417,11 @@ function publishDiscovery(device) {
 
 					if (parameter.cmd_t) {
 						dmsg.cmd_t = parameter.cmd_t.replace("@", `${parameter.id}`);
+					}
+
+					// Include JSON attributes topic mapping for sensors
+					if (parameter.json_attr_t) {
+						dmsg.json_attr_t = parameter.json_attr_t.replace("@", `${parameter.id}`);
 					}
 
 					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${device.deviceId}-${parameter.id}/config`;
