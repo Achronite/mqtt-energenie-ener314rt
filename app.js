@@ -162,10 +162,31 @@ client.on('connect', function () {
 
 //
 // eTRV Command Queue System
-// Single dynamic queue with priority-based ordering and preemption.
-// Priority order (descending): TARGET_TEMP > VALVE_STATE > REPORT_PERIOD > others
-// Only one instance of each command type allowed in queue (latest replaces existing).
-// Higher priority commands preempt currently processing command.
+// ========================
+// 
+// CRITICAL CONSTRAINT: The underlying C library (energenie-ener314rt) only supports
+// ONE cached command per device at a time. Calling openThingsCacheCmd() REPLACES
+// any existing cached command in the C library.
+//
+// QUEUE BEHAVIOR:
+// - Single dynamic queue per device with priority-based ordering
+// - Priority order (descending): TARGET_TEMP > VALVE_STATE > REPORT_PERIOD > others
+// - Only one instance of each command type allowed in queue (latest replaces existing)
+// - Higher priority commands preempt currently processing command
+// - Commands are sent ONE AT A TIME and must complete (retries=0) before next command
+//
+// PROCESSING FLOW:
+// 1. Command added to queue via queueETRVCommand()
+// 2. processETRVQueue() sends command to C library via openThingsCacheCmd()
+// 3. C library holds command and retransmits when eTRV wakes (every ~5 minutes)
+// 4. Monitor thread receives retries updates as C library processes command
+// 5. When retries=0, handleETRVRetriesUpdate() marks command complete
+// 6. markETRVCommandComplete() calls processETRVQueue() for next command
+//
+// PREEMPTION:
+// - Higher priority commands can preempt lower priority ones
+// - Same command type replaces existing (e.g., new TARGET_TEMP replaces old TARGET_TEMP)
+// - Preemption works because openThingsCacheCmd() atomically replaces the cached command
 //
 // eTRVs only wake and process cached commands every ~5 minutes; allow a generous timeout
 // so we do not prematurely move on to the next command while retries are still pending.
@@ -208,8 +229,14 @@ function handleETRVRetriesUpdate(deviceId, retries, source) {
 		return;
 	}
 
+	// When retries reaches 0, the C library has finished with this command.
+	// This is our signal that it's safe to send the next queued command.
+	// The C library sends retries updates via monitor messages as it processes the cached command.
 	if (queue.processing && retries === 0) {
+		log.verbose('queue', "eTRV %d: retries=0 from %s, command complete", deviceId, source);
 		markETRVCommandComplete(deviceId, source);
+	} else if (queue.processing && retries > 0) {
+		log.verbose('queue', "eTRV %d: retries=%d from %s, command still processing", deviceId, retries, source);
 	}
 }
 
@@ -408,8 +435,13 @@ function queueETRVCommand(deviceId, ener_cmd) {
 				shouldPreempt = true;
 				log.info('queue', "eTRV %d: preempting current %s command with %s", deviceId, queueState.current.command, ener_cmd.command);
 				
-				// Push current command back to queue (will be removed by deduplication if same type)
-				queueState.queue.push(queueState.current);
+				// IMPORTANT: Preemption is safe with the C library because calling openThingsCacheCmd()
+				// with a new command automatically REPLACES the old cached command in the C library.
+				// The C library WARNING "existing cached command replaced" confirms this behavior.
+				// We don't need to cancel first - the new cacheCmd call does it atomically.
+				
+				// Don't push current command back - it's being replaced, not queued
+				// The old current command is abandoned (this is intentional preemption behavior)
 				
 				// Stop current processing
 				if (queueState.completionTimer) {
@@ -474,7 +506,10 @@ function processETRVQueue(deviceId) {
 	// Publish queue state before sending command
 	publishETRVQueueState(deviceId);
 
-	// Send command to energenie process
+	// CRITICAL: The underlying C library only supports ONE cached command per device.
+	// Calling openThingsCacheCmd() REPLACES any existing cached command.
+	// Therefore, we MUST wait for retries=0 before sending the next command.
+	// The queue ensures we don't lose commands, but only send them one at a time.
 	forked.send(commandToSend);
 
 	// Set fallback timeout (10 minutes for eTRV wake cycle)
@@ -567,18 +602,35 @@ function publishETRVQueueState(deviceId) {
 // Request battery voltage from all known eTRVs periodically
 //
 const known_etrvs = new Set();  // Track discovered eTRV deviceIds
+const etrv_last_seen = {};  // Track last seen timestamp for each eTRV
 
 function addKnownETRV(deviceId) {
 	if (!known_etrvs.has(deviceId)) {
 		known_etrvs.add(deviceId);
 		log.verbose('battery', "Added eTRV %d to battery polling list", deviceId);
 	}
+	// Update last seen time
+	etrv_last_seen[deviceId] = Date.now();
 }
 
 function requestETRVBatteryVoltages() {
 	if (known_etrvs.size > 0) {
 		log.verbose('battery', "Requesting voltage from %d eTRVs", known_etrvs.size);
+		const now = Date.now();
+		// eTRV REPORT_PERIOD can be set from 300-3600 seconds (5 min - 1 hour)
+		// Wait at least 2x the maximum interval (2 hours) before warning about missing eTRV
+		const TWO_HOURS = 2 * 60 * 60 * 1000;
+		
 		known_etrvs.forEach(deviceId => {
+			// Check when we last saw this eTRV
+			if (etrv_last_seen[deviceId]) {
+				const timeSinceLastSeen = now - etrv_last_seen[deviceId];
+				if (timeSinceLastSeen > TWO_HOURS) {
+					log.warn('battery', "eTRV %d not seen for %d minutes - may have RF reception issues", 
+						deviceId, Math.round(timeSinceLastSeen / 60000));
+				}
+			}
+			
 			const voltage_cmd = {
 				cmd: 'cacheCmd',
 				mode: 'fsk',
@@ -1045,6 +1097,11 @@ forked.on("message", msg => {
 		case 'monitor':
 			// OpenThings monitor message
 
+			// Track eTRV reception for diagnostics
+			if (msg.productId === 3 || msg.productId === MIHO013) {
+				addKnownETRV(msg.deviceId);
+			}
+
 			let keys = Object.keys(msg);
 
 			// Variable to cache temperature for HVAC action calculation
@@ -1298,7 +1355,7 @@ forked.on("message", msg => {
 			publishBoardState('discover', msg.numDevices);
 			msg.devices.forEach(device => {
 				publishDiscovery(device);
-				// Track eTRVs for battery voltage polling
+				// Track eTRVs for battery voltage polling and reception diagnostics
 				if (device.productId === 3) {
 					addKnownETRV(device.deviceId);
 				}
