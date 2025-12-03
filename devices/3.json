@@ -198,6 +198,7 @@
          "component": "binary_sensor",
          "stat_t": "~@/state",
          "config": {
+            "name": "Queue Processing",
             "dev_cla": "running",
             "pl_on": "true",
             "pl_off": "false",
@@ -210,7 +211,7 @@
          "stat_t": "~@/state",
          "json_attr_t": "~@/attributes",
          "config": {
-            "name": "Current Queue Command",
+            "name": "Queue Command",
             "ic": "mdi:format-list-numbered",
             "ent_cat": "diagnostic"
          }
