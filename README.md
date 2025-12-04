@@ -438,8 +438,8 @@ A different mechanism of reporting processed commands has been implemented for t
 |battery|Estimated battery percentage|state|0-100|sensor|
 |BATTERY_LEVEL|Current battery voltage|state|float|sensor|
 |REL_HUMIDITY|The current relative humidity as a percentage|state|float|sensor|
-|TEMPERATURE|The current temperature in celcius|state|float|sensor|
-|TARGET_TEMP|Target temperature in celcius|state,command|5.0 to 40.0<br>0.5 increments|Number|
+|TEMPERATURE|The current temperature in celsius|state|float|sensor|
+|TARGET_TEMP|Target temperature in celsius|state,command|5.0 to 40.0<br>0.5 increments|Number|
 |THERMOSTAT_MODE|Set operating mode for thermostat, where<br>0=Off, 1=Auto, 2=On|state,command|0,1,2|sensor|
 |MOTION_DETECTOR|Somehow relates to motion being detected|state|who knows!|sensor|
 |RELAY_POLARITY|Set relay polarity, where<br>0=Normally Open, 1=Normally Closed|command,state|0,1|switch|
