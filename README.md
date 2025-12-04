@@ -354,6 +354,18 @@ Where .data shows an entry in "", this is the string that should be sent as the 
 
 > \^ Do not set *VALVE_STATE* 0='Valve Fully Open' When used with Home Assistant in MQTT Discovery mode as it will interfere with the Climate Control Entity
 
+### eTRV LED Indicators
+
+The eTRV has LED indicators that provide feedback on its operation:
+
+**Setting Valve State:**
+- Red LED flashes continuously while the motor is running
+- Terminated by three long green LED flashes when the valve is fully open
+- Terminated by three long red LED flashes when the valve is fully closed
+
+**Diagnostics, Exercise Valve, or Voltage Request:**
+- Red LED will flash once every 5 seconds if the 'battery dead' flag is set
+
 ### eTRV Topics
 
 To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code has been added to also cache the monitor information for these devices.  Examples of the values are shown below, only 'known' values are returned when the eTRV regularly reports.
