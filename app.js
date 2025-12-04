@@ -959,7 +959,7 @@ client.on('message', function (topic, msg, packet) {
 							otCommand = VALVE_STATE;
 							msg_data = 0;
 							break;
-						case 'Valve Fully Close':
+						case 'Valve Fully Closed':
 							otCommand = VALVE_STATE;
 							msg_data = 1;
 							break;
