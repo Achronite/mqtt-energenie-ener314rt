@@ -9,6 +9,7 @@
           "main": true,
           "config": {
              "dev_cla": "power",
+             "stat_cla": "measurement",
              "unit_of_meas": "W"
           }
        },
@@ -18,6 +19,7 @@
           "stat_t": "~@/state",
           "config": {
              "dev_cla": "reactive_power",
+             "stat_cla": "measurement",
              "unit_of_meas": "var"
           }
        },
@@ -28,6 +30,7 @@
           "config": {
              "val_tpl": "{{ value|round(2) }}",
              "dev_cla": "frequency",
+             "stat_cla": "measurement",
              "unit_of_meas": "Hz",
              "en": "false"
           }
@@ -38,6 +41,7 @@
           "stat_t": "~@/state",
           "config": {
              "dev_cla": "voltage",
+             "stat_cla": "measurement",
              "unit_of_meas": "V",
              "en": "false"
           }

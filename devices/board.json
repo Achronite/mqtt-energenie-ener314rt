@@ -7,7 +7,7 @@
          "component": "binary_sensor",
          "stat_t": "energenie/availability/state",
          "config": {
-            "dev_cla":"connectivity",
+            "dev_cla": "connectivity",
             "pl_on": "online",
             "pl_off": "offline",
             "ent_cat": "diagnostic"
