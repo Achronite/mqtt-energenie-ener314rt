@@ -357,7 +357,7 @@ function getCommandType(ener_cmd) {
 	// Return a unique identifier for command type (for deduplication)
 	const otCmd = ener_cmd.otCommand;
 	const baseCommand = ener_cmd.command;
-	
+
 	if (isCancelCommand(ener_cmd)) {
 		return 'CANCEL';
 	}
@@ -406,7 +406,7 @@ function queueETRVCommand(deviceId, ener_cmd) {
 	if (isCancelCommand(ener_cmd)) {
 		// Cancel: clear entire queue and stop current processing
 		queueState.queue = [];
-		
+
 		// Stop current processing
 		if (queueState.completionTimer) {
 			clearTimeout(queueState.completionTimer);
@@ -414,12 +414,12 @@ function queueETRVCommand(deviceId, ener_cmd) {
 		}
 		queueState.processing = false;
 		queueState.current = null;
-		
+
 		// Publish retries = 0 to signal cancellation
 		const state_topic = `${CONFIG.topic_stub}${MIHO013}/${deviceId}/retries/state`;
 		log.verbose('<', "%s: 0 (cancel)", state_topic);
 		client.publish(state_topic, '0');
-		
+
 		// Add cancel command to queue
 		queueState.queue.push(ener_cmd);
 		log.info('queue', "eTRV %d: CANCEL - cleared all commands, set retries=0, queued cancel", deviceId);
@@ -429,20 +429,19 @@ function queueETRVCommand(deviceId, ener_cmd) {
 		if (queueState.processing && queueState.current) {
 			const currentType = getCommandType(queueState.current);
 			const currentPriority = getCommandPriority(queueState.current.command, queueState.current.otCommand);
-			
+
 			// Preempt if: higher priority OR same type (replace with newer)
 			if (priority > currentPriority || cmdType === currentType) {
 				shouldPreempt = true;
 				log.info('queue', "eTRV %d: preempting current %s command with %s", deviceId, queueState.current.command, ener_cmd.command);
-				
-				// IMPORTANT: Preemption is safe with the C library because calling openThingsCacheCmd()
-				// with a new command automatically REPLACES the old cached command in the C library.
-				// The C library WARNING "existing cached command replaced" confirms this behavior.
-				// We don't need to cancel first - the new cacheCmd call does it atomically.
-				
-				// Don't push current command back - it's being replaced, not queued
-				// The old current command is abandoned (this is intentional preemption behavior)
-				
+
+				// If same type: replace (don't push back)
+				// If different type but higher priority: push current back to queue
+				if (cmdType !== currentType) {
+					// Different type, higher priority - save current command to queue
+					queueState.queue.push(queueState.current);
+				}
+
 				// Stop current processing
 				if (queueState.completionTimer) {
 					clearTimeout(queueState.completionTimer);
@@ -452,13 +451,13 @@ function queueETRVCommand(deviceId, ener_cmd) {
 				queueState.current = null;
 			}
 		}
-		
+
 		// Remove any existing command of same type (keep only latest)
 		queueState.queue = queueState.queue.filter(cmd => getCommandType(cmd) !== cmdType);
-		
+
 		// Add new command to queue
 		queueState.queue.push(ener_cmd);
-		
+
 		// Sort queue by priority (descending)
 		queueState.queue.sort((a, b) => {
 			const priorityA = getCommandPriority(a.command, a.otCommand);
@@ -488,7 +487,7 @@ function processETRVQueue(deviceId) {
 	}
 
 	const commandToSend = queueState.queue.shift(); // Take from front (already sorted by priority)
-	
+
 	if (queueState.completionTimer) {
 		clearTimeout(queueState.completionTimer);
 		queueState.completionTimer = null;
@@ -500,7 +499,7 @@ function processETRVQueue(deviceId) {
 		priority: getCommandPriority(commandToSend.command, commandToSend.otCommand)
 	};
 
-	log.verbose('queue', "eTRV %d: processing %s command (priority: %d, remaining: %d)", 
+	log.verbose('queue', "eTRV %d: processing %s command (priority: %d, remaining: %d)",
 		deviceId, commandToSend.command, queueState.current.priority, queueState.queue.length);
 
 	// Publish queue state before sending command
@@ -547,11 +546,11 @@ function publishETRVQueueState(deviceId) {
 	// Note: Don't double-count current if it's also in queue
 	const allCommands = [];
 	const currentType = queueState.current ? getCommandType(queueState.current) : null;
-	
+
 	if (queueState.current && currentType !== 'CANCEL') {
 		allCommands.push(queueState.current);
 	}
-	
+
 	queueState.queue.forEach(cmd => {
 		const cmdType = getCommandType(cmd);
 		// Skip if CANCEL or if it's the same command currently processing
@@ -577,7 +576,7 @@ function publishETRVQueueState(deviceId) {
 		.map(cmd => describeQueuedCommand(cmd))
 		.filter(val => val !== null && val !== undefined && String(val).trim().length > 0)
 		.map(item => resolveQueueDisplay(item, true));
-	
+
 	const queueAttr = {
 		current: queueState.current ? resolveQueueDisplay(describeQueuedCommand(queueState.current), true) : 'None',
 		pending: queueState.queue
@@ -585,12 +584,12 @@ function publishETRVQueueState(deviceId) {
 			.map(cmd => resolveQueueDisplay(describeQueuedCommand(cmd), true)),
 		all: allDisplays
 	};
-	
+
 	// Publish to QUEUE_COMMAND attributes
 	const queueCmdAttrTopic = `${CONFIG.topic_stub}${MIHO013}/${deviceId}/QUEUE_COMMAND/attributes`;
 	log.verbose('<', "%s: %j", queueCmdAttrTopic, queueAttr);
 	client.publish(queueCmdAttrTopic, JSON.stringify(queueAttr));
-	
+
 	// Publish to QUEUE_LEN attributes
 	const queueLenAttrTopic = `${CONFIG.topic_stub}${MIHO013}/${deviceId}/QUEUE_LEN/attributes`;
 	log.verbose('<', "%s: %j", queueLenAttrTopic, queueAttr);
@@ -620,17 +619,17 @@ function requestETRVBatteryVoltages() {
 		// eTRV REPORT_PERIOD can be set from 300-3600 seconds (5 min - 1 hour)
 		// Wait at least 2x the maximum interval (2 hours) before warning about missing eTRV
 		const TWO_HOURS = 2 * 60 * 60 * 1000;
-		
+
 		known_etrvs.forEach(deviceId => {
 			// Check when we last saw this eTRV
 			if (etrv_last_seen[deviceId]) {
 				const timeSinceLastSeen = now - etrv_last_seen[deviceId];
 				if (timeSinceLastSeen > TWO_HOURS) {
-					log.warn('battery', "eTRV %d not seen for %d minutes - may have RF reception issues", 
+					log.warn('battery', "eTRV %d not seen for %d minutes - may have RF reception issues",
 						deviceId, Math.round(timeSinceLastSeen / 60000));
 				}
 			}
-			
+
 			const voltage_cmd = {
 				cmd: 'cacheCmd',
 				mode: 'fsk',
