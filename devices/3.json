@@ -125,7 +125,7 @@
          }
       },
       {
-         "id": "EXERCISE_VALVE_STATE",
+         "id": "EXERCISE_VALVE_STATUS",
          "component": "binary_sensor",
          "stat_t": "~@/state",
          "config": {
