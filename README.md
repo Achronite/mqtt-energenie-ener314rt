@@ -416,8 +416,8 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 |EXERCISE_VALVE|The result of the *EXERCISE_VALVE* command|state|success, fail|binary_sensor|
 |LOW_POWER_MODE|eTRV is in low power mode state>|state|ON, OFF|binary_sensor|
 |REPORT_PERIOD|Frequency the eTRV will work up and report (in seconds)|command|300-3600|Number|
-|TARGET_TEMP|Target temperature in celcius|state,command|5.0 to 40.0<br>0.5 increments|Number|
-|TEMPERATURE|The current temperature in celcius|state|float|sensor|
+|TARGET_TEMP|Target temperature in celsius|state,command|5.0 to 40.0<br>0.5 increments|Number|
+|TEMPERATURE|The current temperature in celsius|state|float|sensor|
 |VALVE_STATE|Current valve mode/state|state|0=Open<br>1=Closed<br>2=Normal|sensor|
 |VALVE_TS|The time the valve was last exercised|state|state|epoch||
 |VOLTAGE|Current battery voltage|state|float|sensor|
