@@ -649,6 +649,140 @@ function requestETRVBatteryVoltages() {
 // Poll battery voltage every 24 hours (86400000 ms)
 const batteryPollInterval = setInterval(requestETRVBatteryVoltages, 86400000);
 
+//
+// eTRV Weekly Valve Exercise
+// Exercise valve on all known eTRVs on a weekly schedule
+//
+let valve_exercise_enabled = false;
+let valve_exercise_day = 0;  // Sunday (0-6, where 0 = Sunday)
+let valve_exercise_time = { hour: 12, minutes: 0 };  // 12:00
+let last_valve_exercise_timestamp = null;
+
+// Read configuration
+if (CONFIG.weekly_valve_exercise_enabled !== undefined) {
+	valve_exercise_enabled = Boolean(CONFIG.weekly_valve_exercise_enabled);
+}
+
+if (CONFIG.weekly_valve_exercise_day !== undefined && CONFIG.weekly_valve_exercise_day !== '') {
+	const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+	const dayInput = String(CONFIG.weekly_valve_exercise_day).toLowerCase();
+	const dayIndex = dayNames.indexOf(dayInput);
+	if (dayIndex !== -1) {
+		valve_exercise_day = dayIndex;
+	} else {
+		const numericDay = parseInt(CONFIG.weekly_valve_exercise_day, 10);
+		if (!isNaN(numericDay) && numericDay >= 0 && numericDay <= 6) {
+			valve_exercise_day = numericDay;
+		}
+	}
+}
+
+if (CONFIG.weekly_valve_exercise_time !== undefined && CONFIG.weekly_valve_exercise_time !== '') {
+	const timeMatch = String(CONFIG.weekly_valve_exercise_time).match(/^(\d{1,2}):(\d{2})$/);
+	if (timeMatch) {
+		const hour = parseInt(timeMatch[1], 10);
+		const minutes = parseInt(timeMatch[2], 10);
+		if (hour >= 0 && hour <= 23 && minutes >= 0 && minutes <= 59) {
+			valve_exercise_time = { hour, minutes };
+		}
+	}
+}
+
+function exerciseAllETRVValves() {
+	if (!valve_exercise_enabled) {
+		return;
+	}
+
+	if (known_etrvs.size > 0) {
+		log.info('valve-exercise', "Starting weekly valve exercise for %d eTRVs", known_etrvs.size);
+
+		known_etrvs.forEach(deviceId => {
+			const exercise_cmd = {
+				cmd: 'cacheCmd',
+				mode: 'fsk',
+				repeat: fsk_xmits,
+				command: 'EXERCISE_VALVE',
+				productId: 3,  // MIHO013
+				deviceId: deviceId,
+				otCommand: EXERCISE_VALVE,
+				data: 0,
+				retries: cached_retries
+			};
+			queueETRVCommand(deviceId, exercise_cmd);
+			log.verbose('valve-exercise', "Queued EXERCISE_VALVE command for eTRV %d", deviceId);
+		});
+
+		// Update last run timestamp
+		last_valve_exercise_timestamp = new Date().toISOString();
+		publishBoardState('valve_exercise_last_run', last_valve_exercise_timestamp);
+		log.info('valve-exercise', "Completed queuing valve exercise commands");
+	} else {
+		log.info('valve-exercise', "No eTRVs found for valve exercise");
+	}
+}
+
+function runOnSpecificDayAndTime(dayOfWeek, hour, minutes, func) {
+	const oneWeek = 7 * 24 * 60 * 60 * 1000;  // 7 days in milliseconds
+
+	function getNextRunTime() {
+		const now = new Date();
+		const currentDay = now.getDay();  // 0 = Sunday, 1 = Monday, etc.
+
+		// Calculate target date/time
+		let daysUntilTarget = dayOfWeek - currentDay;
+		if (daysUntilTarget < 0) {
+			daysUntilTarget += 7;  // Next week
+		}
+
+		const targetDate = new Date(
+			now.getFullYear(),
+			now.getMonth(),
+			now.getDate() + daysUntilTarget,
+			hour,
+			minutes,
+			0,
+			0
+		);
+
+		// If target time is in the past (e.g., same day but earlier time), schedule for next week
+		if (targetDate.getTime() <= now.getTime()) {
+			targetDate.setTime(targetDate.getTime() + oneWeek);
+		}
+
+		return targetDate.getTime() - now.getTime();
+	}
+
+	const eta_ms = getNextRunTime();
+	const targetDate = new Date(Date.now() + eta_ms);
+	log.info('valve-exercise', "Next valve exercise scheduled for %s", targetDate.toLocaleString());
+
+	setTimeout(function () {
+		// Run the function
+		func();
+		// Schedule next run in exactly one week
+		setInterval(func, oneWeek);
+	}, eta_ms);
+}
+
+// Initialize valve exercise scheduling if enabled
+if (valve_exercise_enabled) {
+	const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+	const timeStr = `${String(valve_exercise_time.hour).padStart(2, '0')}:${String(valve_exercise_time.minutes).padStart(2, '0')}`;
+	log.info('valve-exercise', "Weekly valve exercise enabled: %s at %s",
+		dayNames[valve_exercise_day], timeStr);
+	runOnSpecificDayAndTime(valve_exercise_day, valve_exercise_time.hour, valve_exercise_time.minutes, exerciseAllETRVValves);
+} else {
+	log.info('valve-exercise', "Weekly valve exercise disabled");
+}
+
+// Publish initial state
+if (CONFIG.monitoring && CONFIG.discovery_prefix) {
+	publishBoardState('valve_exercise_enabled', valve_exercise_enabled ? 'ON' : 'OFF');
+	if (last_valve_exercise_timestamp) {
+		publishBoardState('valve_exercise_last_run', last_valve_exercise_timestamp);
+	}
+}
+
 //handle incoming MQTT messages
 client.on('message', function (topic, msg, packet) {
 	// format command for passing to energenie process
@@ -1109,7 +1243,8 @@ forked.on("message", msg => {
 			// Iterate through the object returned
 			keys.forEach((key) => {
 				let topic_key = key;
-				let retain = false;;
+				// Default retain to true for eTRV (productId 3) to persist state across sleep cycles
+				let retain = (msg.productId === 3 || msg.productId === MIHO013);
 				switch (key) {
 					case 'productId':
 					case 'deviceId':
@@ -1122,6 +1257,8 @@ forked.on("message", msg => {
 					case 'timestamp':
 						// epoch to last_seen timestamp
 						topic_key = 'last_seen';
+						// Don't retain timestamps as they should reflect current state
+						retain = false;
 						break;
 					case 'SWITCH_STATE':
 						// use friendly name and value
@@ -1206,12 +1343,12 @@ forked.on("message", msg => {
 								log.info('eTRV', 'HVAC calculation - Current: %s°C, Target: %s°C, Delta: %s°C, Action: %s',
 									cachedTemperature, targetTemp, deltaTemp, hvacAction);
 
-								// Publish HVAC action and temperature delta
+								// Publish HVAC action and temperature delta (retained to persist across sleep cycles)
 								const hvacTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/HVAC_ACTION/state`;
 								const deltaTempTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/DELTA_TEMP/state`;
 
-								client.publish(hvacTopic, hvacAction, { qos: 0, retain: false });
-								client.publish(deltaTempTopic, deltaTemp, { qos: 0, retain: false });
+								client.publish(hvacTopic, hvacAction, { qos: 0, retain: true });
+								client.publish(deltaTempTopic, deltaTemp, { qos: 0, retain: true });
 							} else {
 								log.warn('eTRV', 'Invalid TARGET_TEMP value: %s', msg[key]);
 							}

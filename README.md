@@ -89,6 +89,9 @@ It should contain the following entities configured for your environment. The ex
 * `cached_retries` (optional) contains the number of times to retry a cached command before stopping (applies to eTRV and thermostat)
 * `log_level` the application logging level, see [Logging](#logging) below
 * `retry` auto-retry capability for MIHO005 (optional, enabled by default).  Checks that the resulting monitor message switch state from the Smart Plug+ matches the (just) sent switch command state; if it is different it retries the command again (indefinitely) until the state matches.  Set this to `false` to disable the auto-retry switch command for the MIHO005 (Smart Plug+).
+* `weekly_valve_exercise_enabled` (optional, default: false) enables automatic weekly valve exercise for all eTRVs. When enabled, sends the EXERCISE_VALVE command to all known eTRVs on the configured schedule. This maintenance process helps valves relearn their fully open and closed positions.
+* `weekly_valve_exercise_day` (optional, default: "Sunday") specifies the day of week for valve exercise. Accepts day names ("Sunday", "Monday", etc.) or numbers (0-6, where 0=Sunday).
+* `weekly_valve_exercise_time` (optional, default: "12:00") specifies the time of day in 24-hour format (HH:MM) when valve exercise should run.
 
 9) Run the application manually first using the command: ``node app.js``.  When you know this runs OK a system service can then be set-up as shown in the [Systemd Service](#systemd-service) below.
 
@@ -365,6 +368,37 @@ The eTRV has LED indicators that provide feedback on its operation:
 
 **Diagnostics, Exercise Valve, or Voltage Request:**
 - Red LED will flash once every 5 seconds if the 'battery dead' flag is set
+
+### Weekly Valve Exercise Automation
+
+The application supports automated weekly valve exercise for all eTRVs. This maintenance feature helps valves recalibrate by relearning their fully open and fully closed positions, which is recommended by the manufacturer.
+
+**Configuration:**
+Enable this feature by adding these optional settings to your `config.json`:
+
+```json
+{
+  "weekly_valve_exercise_enabled": true,
+  "weekly_valve_exercise_day": "Sunday",
+  "weekly_valve_exercise_time": "12:00"
+}
+```
+
+**Settings:**
+- `weekly_valve_exercise_enabled`: Set to `true` to enable automatic valve exercise (default: `false`)
+- `weekly_valve_exercise_day`: Day of week for exercise. Accepts day names ("Sunday", "Monday", etc.) or numbers (0-6, where 0=Sunday). Default: "Sunday"
+- `weekly_valve_exercise_time`: Time in 24-hour format (HH:MM) when exercise should run. Default: "12:00"
+
+**Behavior:**
+- When enabled, the application automatically sends the EXERCISE_VALVE command to all known eTRVs on the configured schedule
+- The schedule uses the system timezone
+- Commands are queued through the normal eTRV command queue system, respecting priority and retry logic
+- eTRVs must be discovered (have reported at least once) to be included in the automation
+
+**Home Assistant Integration:**
+When using MQTT discovery, two additional sensors are available on the board device:
+- `Valve Exercise Enabled` - Binary sensor showing whether the feature is enabled
+- `Valve Exercise Last Run` - Timestamp sensor showing when the last valve exercise was performed
 
 ### eTRV Topics
 
