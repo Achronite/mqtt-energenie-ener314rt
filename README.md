@@ -338,12 +338,12 @@ The MiHome Thermostatic Radiator valve (eTRV) can accept commands to perform ope
 
 Where .data shows an entry in "", this is the string that should be sent as the 'Command' for the MQTT MAINTENANCE topic. This can be used if you want to send a request without using the select dropdown set-up by MQTT discovery.
 
-| Command | MQTT Command Topic(s) | # | Description | .data | Response Msg |
+| Command | MQTT Command Topic(s) | # | Description | Data | Response Msg |
 |---|:---:|---|---|:---:|---|
 |Clear|MAINTENANCE|0|Cancel current outstanding cached command for the device (set command & retries to 0)| "Cancel Command"|All Msgs|
 |Exercise Valve|MAINTENANCE EXERCISE_VALVE|163|Send exercise valve command, recommended once a week to calibrate eTRV|"Exercise Valve"|DIAGNOSTICS|
-|Low power mode|MAINTENANCE LOW_POWER_MODE|164|This is used to enhance battery life by limiting the hunting of the actuator, ie it limits small adjustments to degree of opening, when the room temperature is close to the *TEMP_SET* point. A consequence of the Low Power mode is that it may cause larger errors in controlling room temperature to the set temperature.|0=Off<br>1=On OR "Low Power Mode ON" "Low Power Mode OFF"|No*|
-|Valve state^|MAINTENANCE<br>VALVE_STATE|165|Set valve state|"Valve Auto"<br>"Valve Open"<br>"Valve Closed"<br> OR 0=Open<br>1=Closed<br>2=Auto (default)|No|
+|Low power mode|MAINTENANCE LOW_POWER_MODE|164|This is used to enhance battery life by limiting the hunting of the actuator, ie it limits small adjustments to degree of opening, when the room temperature is close to the *TEMP_SET* point. A consequence of the Low Power mode is that it may cause larger errors in controlling room temperature to the set temperature.|0=Off<br>1=On <br> OR <br> "Low Power Mode ON" "Low Power Mode OFF"|No*|
+|Valve state^|MAINTENANCE<br>VALVE_STATE|165|Set valve state|"Valve Fully Open"<br>"Valve Fully Close"<br>"Valve Normal"<br> OR <br> 0=Open<br>1=Closed<br>2=Normal (default)|No|
 |Diagnostics|MAINTENANCE<br>DIAGNOSTICS|166|Request diagnostic data from device, if all is OK it will return 0. Otherwise see additional monitored values for status messages|"Request Diagnostics"|DIAGNOSTICS|
 |Identify|MAINTENANCE<br>IDENTIFY|191|Identify the device by making the green light flash on the selected eTRV for 60 seconds|"Identify"|No|
 |Reporting Interval|MAINTENANCE REPORT_PERIOD|210|Update reporting interval to requested value|300-3600 seconds|No|
@@ -352,7 +352,7 @@ Where .data shows an entry in "", this is the string that should be sent as the 
 
 > \* Although this will not auto-report, a subsequent call to *REQUEST_DIAGNOTICS* will confirm the *LOW_POWER_MODE* setting
 
-> \^ Do not set *VALVE_STATE* 0='Valve Open' When used with Home Assistant in MQTT Discovery mode as it will interfere with the Climate Control Entity
+> \^ Do not set *VALVE_STATE* 0='Valve Fully Open' When used with Home Assistant in MQTT Discovery mode as it will interfere with the Climate Control Entity
 
 ### eTRV Topics
 
@@ -360,7 +360,7 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 
 |Parameter|Description|Topics|Data|Discovery Type|
 |---|---|:---:|:---:|:---:|
-|MAINTENANCE|For sending MAINTENANCE commands|state,command|None, Cancel Command, Request Diagnostics, Exercise Valve, Identify, Low Power Mode ON, Low Power Mode OFF, Valve Auto, Valve Open,Valve Closed|select|
+|MAINTENANCE|For sending MAINTENANCE commands|state,command|None, Cancel Command, Request Diagnostics, Exercise Valve, Identify, Low Power Mode ON, Low Power Mode OFF, Valve Open, Valve Closed, Valve Normal|select|
 |command|Current cached command being sent to device|state,command|None,...|sensor|
 |retries|The number of remaining retries for 'command' to be sent to the device|state,*soon*|0-10|sensor|
 |DIAGNOSTICS|Numeric diagnostic code|state|Numeric||

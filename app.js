@@ -266,11 +266,11 @@ function describeQueuedCommand(cmd) {
 		const numeric = typeof data === 'number' ? data : parseInt(data, 10);
 		switch (numeric) {
 			case 0:
-				return 'Valve Open';
+				return 'Valve Fully Open';
 			case 1:
-				return 'Valve Closed';
+				return 'Valve Fully Closed';
 			case 2:
-				return 'Valve Heat';
+				return 'Valve Normal Operation';
 			default:
 				return 'Valve Mode';
 		}
@@ -817,15 +817,15 @@ client.on('message', function (topic, msg, packet) {
 							otCommand = LOW_POWER_MODE;
 							msg_data = 0;
 							break;
-						case 'Valve Auto':
+						case 'Valve Normal':
 							otCommand = VALVE_STATE;
 							msg_data = 2;
 							break;
-						case 'Valve Open':
+						case 'Valve Fully Open':
 							otCommand = VALVE_STATE;
 							msg_data = 0;
 							break;
-						case 'Valve Closed':
+						case 'Valve Fully Close':
 							otCommand = VALVE_STATE;
 							msg_data = 1;
 							break;
