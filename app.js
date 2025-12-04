@@ -425,14 +425,12 @@ function queueETRVCommand(deviceId, ener_cmd) {
 		log.info('queue', "eTRV %d: CANCEL - cleared all commands, set retries=0, queued cancel", deviceId);
 	} else {
 		// Check if new command should preempt or replace current
-		let shouldPreempt = false;
 		if (queueState.processing && queueState.current) {
 			const currentType = getCommandType(queueState.current);
 			const currentPriority = getCommandPriority(queueState.current.command, queueState.current.otCommand);
 
 			// Preempt if: higher priority OR same type (replace with newer)
 			if (priority > currentPriority || cmdType === currentType) {
-				shouldPreempt = true;
 				log.info('queue', "eTRV %d: preempting current %s command with %s", deviceId, queueState.current.command, ener_cmd.command);
 
 				// If same type: replace (don't push back)
@@ -664,9 +662,9 @@ if (CONFIG.weekly_valve_exercise_enabled !== undefined) {
 }
 
 if (CONFIG.weekly_valve_exercise_day !== undefined && CONFIG.weekly_valve_exercise_day !== '') {
-	const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+	const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 	const dayInput = String(CONFIG.weekly_valve_exercise_day).toLowerCase();
-	const dayIndex = dayNames.indexOf(dayInput);
+	const dayIndex = dayNames.map(d => d.toLowerCase()).indexOf(dayInput);
 	if (dayIndex !== -1) {
 		valve_exercise_day = dayIndex;
 	} else {
@@ -745,7 +743,7 @@ function runOnSpecificDayAndTime(dayOfWeek, hour, minutes, func) {
 		);
 
 		// If target time is in the past (e.g., same day but earlier time), schedule for next week
-		if (targetDate.getTime() <= now.getTime()) {
+		if (targetDate.getTime() < now.getTime()) {
 			targetDate.setTime(targetDate.getTime() + oneWeek);
 		}
 
@@ -1237,8 +1235,9 @@ forked.on("message", msg => {
 
 			let keys = Object.keys(msg);
 
-			// Variable to cache temperature for HVAC action calculation
-			let cachedTemperature = null;
+			// Variables to cache temperature values for HVAC action calculation (eTRV only)
+			let currentTemperature = null;
+			let targetTemperature = null;
 
 			// Iterate through the object returned
 			keys.forEach((key) => {
@@ -1318,37 +1317,23 @@ forked.on("message", msg => {
 							topic_key = null;
 						break;
 					case 'TEMPERATURE':
-						// Cache temperature for later HVAC action calculation (eTRV only)
+						// Store temperature for HVAC action calculation after all keys processed (eTRV only)
 						if (msg.productId == 3) {
-							cachedTemperature = parseFloat(msg.TEMPERATURE);
-							if (isNaN(cachedTemperature)) {
-								log.warn('eTRV', 'Invalid TEMPERATURE value received: %s', msg.TEMPERATURE);
-								cachedTemperature = null;
+							const temp = parseFloat(msg.TEMPERATURE);
+							if (!isNaN(temp)) {
+								currentTemperature = temp;
 							} else {
-								log.verbose('eTRV', 'Cached TEMPERATURE: %s for deviceId: %s', cachedTemperature, msg.deviceId);
+								log.warn('eTRV', 'Invalid TEMPERATURE value received: %s', msg.TEMPERATURE);
 							}
 						}
 						break;
 
 					case 'TARGET_TEMP':
-						// Calculate HVAC action when TARGET_TEMP is received (eTRV only)
-						if (msg.productId == 3 && cachedTemperature !== null) {
-							const targetTemp = parseFloat(msg[key]);
-
-							if (!isNaN(targetTemp)) {
-								// Determine HVAC action: heating if current temp is below target, otherwise idle
-								const hvacAction = cachedTemperature < targetTemp ? 'heating' : 'idle';
-								const deltaTemp = (cachedTemperature - targetTemp).toFixed(2);
-
-								log.info('eTRV', 'HVAC calculation - Current: %s°C, Target: %s°C, Delta: %s°C, Action: %s',
-									cachedTemperature, targetTemp, deltaTemp, hvacAction);
-
-								// Publish HVAC action and temperature delta (retained to persist across sleep cycles)
-								const hvacTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/HVAC_ACTION/state`;
-								const deltaTempTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/DELTA_TEMP/state`;
-
-								client.publish(hvacTopic, hvacAction, { qos: 0, retain: true });
-								client.publish(deltaTempTopic, deltaTemp, { qos: 0, retain: true });
+						// Store target temperature for HVAC action calculation after all keys processed (eTRV only)
+						if (msg.productId == 3) {
+							const temp = parseFloat(msg[key]);
+							if (!isNaN(temp)) {
+								targetTemperature = temp;
 							} else {
 								log.warn('eTRV', 'Invalid TARGET_TEMP value: %s', msg[key]);
 							}
@@ -1484,6 +1469,24 @@ forked.on("message", msg => {
 				};
 			})
 
+			// Calculate HVAC action after all keys processed (eTRV only)
+			// This ensures calculation works regardless of key iteration order
+			if (msg.productId == 3 && currentTemperature !== null && targetTemperature !== null) {
+				// Determine HVAC action: heating if current temp is below target, otherwise idle
+				const hvacAction = currentTemperature < targetTemperature ? 'heating' : 'idle';
+				const deltaTemp = (currentTemperature - targetTemperature).toFixed(2);
+
+				log.info('eTRV', 'HVAC calculation - Current: %s°C, Target: %s°C, Delta: %s°C, Action: %s',
+					currentTemperature, targetTemperature, deltaTemp, hvacAction);
+
+				// Publish HVAC action and temperature delta (retained to persist across sleep cycles)
+				const hvacTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/HVAC_ACTION/state`;
+				const deltaTempTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/DELTA_TEMP/state`;
+
+				client.publish(hvacTopic, hvacAction, { qos: 0, retain: true });
+				client.publish(deltaTempTopic, deltaTemp, { qos: 0, retain: true });
+			}
+
 			break;
 		case 'discovery':
 			// device discovery message publish discovery messages to Home Assistant
@@ -1594,7 +1597,7 @@ function publishDiscovery(device) {
 							mf: 'Energenie',
 							sw: `mqtt-ener314rt ${APP_VERSION}`,
 							via_device: 'mqtt-energenie-ener314rt'
-						}
+						};
 						// To align to HA standards, the main parameter should not be appended to the entity name
 						// Except when the main component is type sensor, where we must preserve it
 						if (parameter.component == "sensor") {
