@@ -309,32 +309,32 @@
          }
       },
       {
-         "id": "VALVE_AUTO",
+         "id": "VALVE_NORMAL",
          "component": "button",
          "cmd_t": "~MAINTENANCE/command",
          "config": {
             "ic": "mdi:valve",
-            "pl_prs": "Valve Auto",
+            "pl_prs": "Valve Normal",
             "ent_cat": "config"
          }
       },
       {
-         "id": "VALVE_OPEN",
+         "id": "VALVE_FULLY_OPEN",
          "component": "button",
          "cmd_t": "~MAINTENANCE/command",
          "config": {
             "ic": "mdi:valve-open",
-            "pl_prs": "Valve Open",
+            "pl_prs": "Valve Fully Open",
             "ent_cat": "config"
          }
       },
       {
-         "id": "VALVE_CLOSED",
+         "id": "VALVE_FULLY_CLOSED",
          "component": "button",
          "cmd_t": "~MAINTENANCE/command",
          "config": {
             "ic": "mdi:valve-closed",
-            "pl_prs": "Valve Closed",
+            "pl_prs": "Valve Fully Closed",
             "ent_cat": "config"
          }
       },

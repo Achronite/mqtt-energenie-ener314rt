@@ -348,7 +348,7 @@ Where .data shows an entry in "", this is the string that should be sent as the 
 |Identify|MAINTENANCE<br>IDENTIFY|191|Identify the device by making the green light flash on the selected eTRV for 60 seconds|"Identify"|No|
 |Reporting Interval|MAINTENANCE REPORT_PERIOD|210|Update reporting interval to requested value|300-3600 seconds|No|
 |Voltage|MAINTENANCE<br>VOLTAGE|226|Report current voltage of the batteries||VOLTAGE|
-|Target temperature|TARGET_TEMP|244|Send new target temperature for eTRV.<br>NOTE: The VALVE_STATE must be set to 'Auto' for this to work.|5-40<br>(Integer)|No|
+|Target temperature|TARGET_TEMP|244|Send new target temperature for eTRV.<br>NOTE: The VALVE_STATE must be set to 'Normal' for this to work.|5-40<br>(Integer)|No|
 
 > \* Although this will not auto-report, a subsequent call to *REQUEST_DIAGNOTICS* will confirm the *LOW_POWER_MODE* setting
 
@@ -372,7 +372,7 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 
 |Parameter|Description|Topics|Data|Discovery Type|
 |---|---|:---:|:---:|:---:|
-|MAINTENANCE|For sending MAINTENANCE commands|state,command|None, Cancel Command, Request Diagnostics, Exercise Valve, Identify, Low Power Mode ON, Low Power Mode OFF, Valve Open, Valve Closed, Valve Normal|select|
+|MAINTENANCE|For sending MAINTENANCE commands|state,command|None, Cancel Command, Request Diagnostics, Exercise Valve, Identify, Low Power Mode ON, Low Power Mode OFF, Valve Fully Open, Valve Fully Closed, Valve Normal|select|
 |command|Current cached command being sent to device|state,command|None,...|sensor|
 |retries|The number of remaining retries for 'command' to be sent to the device|state,*soon*|0-10|sensor|
 |DIAGNOSTICS|Numeric diagnostic code|state|Numeric||
@@ -384,7 +384,7 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 |REPORT_PERIOD|Frequency the eTRV will work up and report (in seconds)|command|300-3600|Number|
 |TARGET_TEMP|Target temperature in celcius|state,command|5.0 to 40.0<br>0.5 increments|Number|
 |TEMPERATURE|The current temperature in celcius|state|float|sensor|
-|VALVE_STATE|Current valve mode/state|state|0=Open<br>1=Closed<br>2=Auto|sensor|
+|VALVE_STATE|Current valve mode/state|state|0=Open<br>1=Closed<br>2=Normal|sensor|
 |VALVE_TS|The time the valve was last exercised|state|state|epoch||
 |VOLTAGE|Current battery voltage|state|float|sensor|
 |VOLTAGE_TS|The time the battery last updated|state|epoch|sensor|

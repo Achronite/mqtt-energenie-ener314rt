@@ -776,7 +776,7 @@ client.on('message', function (topic, msg, packet) {
 			/* Valid Commands:
 				163 EXERCISE_VALVE 	   	(DIAGNOSTICS)
 				164 SET_LOW_POWER_MODE	(DIAGNOSTICS)
-				165 SET_VALVE_STATE 	Set valve state 0=Open, 1=Closed, 2=Auto
+				165 SET_VALVE_STATE 	Set valve state 0=Open, 1=Closed, 2=Normal
 				166 DIAGNOSTICS 		(DIAGNOSTICS)
 				191 IDENTIFY
 				210 REPORT_PERIOD	300-3600 seconds
