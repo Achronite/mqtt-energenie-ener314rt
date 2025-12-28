@@ -1513,9 +1513,10 @@ forked.on("message", msg => {
 			// Calculate HVAC action after all keys processed (eTRV only)
 			// This ensures calculation works regardless of key iteration order
 			if (msg.productId == 3 && currentTemperature !== null && targetTemperature !== null) {
-				// Determine HVAC action: heating if current temp is below target, otherwise idle
-				const hvacAction = currentTemperature < targetTemperature ? 'heating' : 'idle';
-				const deltaTemp = (currentTemperature - targetTemperature).toFixed(2);
+				// Determine HVAC action: heating if target temp is above current, otherwise idle
+				const delta = targetTemperature - currentTemperature;
+				const hvacAction = delta > 0 ? 'heating' : 'idle';
+				const deltaTemp = delta.toFixed(2);
 
 				log.info('eTRV', 'HVAC calculation - Current: %s°C, Target: %s°C, Delta: %s°C, Action: %s',
 					currentTemperature, targetTemperature, deltaTemp, hvacAction);
