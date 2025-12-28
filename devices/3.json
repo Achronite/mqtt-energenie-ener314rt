@@ -20,6 +20,7 @@
             "mode_stat_tpl": "{% if value == '1' %} off {% else %} heat {% endif %}",
             "temp_cmd_t": "~TARGET_TEMP/command",
             "temp_stat_t": "~TARGET_TEMP/state",
+            "act_t": "~HVAC_ACTION/state",
             "ic": "mdi:radiator",
             "temp_step": "0.5",
             "temp_unit": "C"
