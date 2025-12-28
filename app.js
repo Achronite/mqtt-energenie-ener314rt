@@ -1626,7 +1626,7 @@ function publishDiscovery(device) {
 			if (err) {
 				log.error('discovery', "skipped for device %i - unknown device type 'devices/%j.json' missing", device.deviceId, device.productId);
 			} else {
-				device_defaults = JSON.parse(data);
+				const device_defaults = JSON.parse(data);
 				device_defaults.parameters.forEach((parameter) => {
 					//
 					// To save on network/processing only the main entity will contain the details of the device that they belong to
@@ -1809,7 +1809,7 @@ function publishBoardDiscovery() {
 		if (err) {
 			log.error('discovery', "devices/board.json missing");
 		} else {
-			device_defaults = JSON.parse(data);
+			const device_defaults = JSON.parse(data);
 			device_defaults.parameters.forEach((parameter) => {
 				//
 				var object_id = `${deviceId}-${parameter.id}`;
