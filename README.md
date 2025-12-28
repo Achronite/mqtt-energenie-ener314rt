@@ -400,6 +400,13 @@ When using MQTT discovery, two additional sensors are available on the board dev
 - `Valve Exercise Enabled` - Binary sensor showing whether the feature is enabled
 - `Valve Exercise Last Run` - Timestamp sensor showing when the last valve exercise was performed
 
+### Automated Battery Voltage Polling
+
+The application automatically polls battery voltage from all eTRVs every 24 hours after application startup to monitor battery health.
+
+**Manual Voltage Request:**
+You can also manually request voltage at any time using the MAINTENANCE command topic (see eTRV Topics below).
+
 ### eTRV Topics
 
 To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code has been added to also cache the monitor information for these devices.  Examples of the values are shown below, only 'known' values are returned when the eTRV regularly reports.
