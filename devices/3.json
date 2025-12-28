@@ -30,7 +30,7 @@
          "component": "binary_sensor",
          "stat_t": "~HVAC_ACTION/state",
          "config": {
-            "dev_cla": "running",
+            "dev_cla": "heat",
             "val_tpl": "{% if value == 'heating' %} ON {% else %} OFF {% endif %}",
             "ent_cat": "diagnostic"
          }
