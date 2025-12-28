@@ -36,14 +36,6 @@
          }
       },
       {
-         "id": "HEAT_DEMAND",
-         "component": "sensor",
-         "stat_t": "~HVAC_ACTION/state",
-         "config": {
-            "ent_cat": "diagnostic"
-         }
-      },
-      {
          "id": "TEMPERATURE_DELTA",
          "component": "sensor",
          "stat_t": "~DELTA_TEMP/state",
@@ -121,17 +113,6 @@
             "ic": "mdi:timeline-clock",
             "val_tpl": "{{ as_datetime(value) }}",
             "dev_cla": "timestamp",
-            "ent_cat": "diagnostic"
-         }
-      },
-      {
-         "id": "EXERCISE_VALVE_STATUS",
-         "component": "binary_sensor",
-         "stat_t": "~@/state",
-         "config": {
-            "dev_cla": "moving",
-            "pl_on": "success",
-            "pl_off": "fail",
             "ent_cat": "diagnostic"
          }
       },

@@ -190,8 +190,10 @@ client.on('connect', function () {
 //
 // eTRVs only wake and process cached commands every ~5 minutes; allow a generous timeout
 // so we do not prematurely move on to the next command while retries are still pending.
-const ETRV_COMMAND_TIMEOUT_MS = 10 * 60 * 1000;  // 10 minute safety fallback if no completion message arrives.
+const ETRV_COMMAND_TIMEOUT_MS = 2 * 60 * 60 * 1000;  // 2 hours safety fallback (accounts for max 1 hour report period + buffer)
 const etrv_command_queues = {};  // deviceId -> { queue: cmd[], processing: boolean, current: cmd|null, completionTimer: NodeJS.Timeout|null }
+const etrv_exercise_valve_pending = {};  // Track which eTRVs have pending EXERCISE_VALVE commands waiting for DIAGNOSTICS response
+const EXERCISE_VALVE_DIAGNOSTICS_TIMEOUT_MS = 2 * 60 * 60 * 1000;  // 2 hours to wait for DIAGNOSTICS response (accounts for max 1 hour report period + buffer)
 
 function isCancelCommand(ener_cmd) {
 	return !!ener_cmd && (ener_cmd.otCommand === 0 || ener_cmd.command === 'CANCEL');
@@ -211,6 +213,21 @@ function markETRVCommandComplete(deviceId, reason) {
 	const current = queueState.current;
 	const commandName = current ? (current.command || current.otCommand || 'unknown') : 'unknown';
 	log.verbose('queue', "eTRV %d: completed %s command (%s)", deviceId, commandName, reason || 'complete');
+
+	// Track EXERCISE_VALVE commands that will get a DIAGNOSTICS response
+	if (current && (current.otCommand === EXERCISE_VALVE || current.command === 'EXERCISE_VALVE')) {
+		etrv_exercise_valve_pending[deviceId] = {
+			timestamp: Date.now(),
+			timer: setTimeout(() => {
+				// If we don't get DIAGNOSTICS response within timeout, clean up
+				if (etrv_exercise_valve_pending[deviceId]) {
+					log.warn('eTRV', 'EXERCISE_VALVE timeout for device %d - no DIAGNOSTICS response received', deviceId);
+					delete etrv_exercise_valve_pending[deviceId];
+				}
+			}, EXERCISE_VALVE_DIAGNOSTICS_TIMEOUT_MS)
+		};
+		log.verbose('queue', "eTRV %d: marked EXERCISE_VALVE as pending - waiting for DIAGNOSTICS response (timeout: %d min)", deviceId, EXERCISE_VALVE_DIAGNOSTICS_TIMEOUT_MS / 60000);
+	}
 
 	queueState.processing = false;
 	queueState.current = null;
@@ -1409,6 +1426,30 @@ forked.on("message", msg => {
 							// send low battery alert - NOT retained as this never clears
 							msg[key] = "Low Battery";
 						}
+
+					case 'DIAGNOSTICS':
+						// Handle DIAGNOSTICS response - update VALVE_TS timestamp when exercise completes
+						if (msg.productId == MIHO013 && etrv_exercise_valve_pending[msg.deviceId]) {
+							const pending = etrv_exercise_valve_pending[msg.deviceId];
+
+							// Clear the timeout since we got the response
+							if (pending.timer) {
+								clearTimeout(pending.timer);
+							}
+							delete etrv_exercise_valve_pending[msg.deviceId];
+
+							const diagnosticsCode = Number(msg[key]);
+							log.info('eTRV', 'EXERCISE_VALVE response for device %d: diagnostics=%d',
+								msg.deviceId, diagnosticsCode);
+
+							// Set VALVE_TS to current epoch timestamp (retained) - confirms valve was exercised
+							const valveTsTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/VALVE_TS/state`;
+							const timestamp = Math.floor(Date.now() / 1000);
+							log.verbose('<', "%s: %d (retained)", valveTsTopic, timestamp);
+							client.publish(valveTsTopic, String(timestamp), { retain: true });
+						}
+						retain = true;
+						break;
 
 					default:
 						// captured OpenThings commands (e.g from MiHome gateway) are preceeded with '_', set retained on these so we can find them more easily in MQTT Explorer
