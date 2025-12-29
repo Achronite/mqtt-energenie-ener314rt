@@ -357,6 +357,16 @@ Where .data shows an entry in "", this is the string that should be sent as the 
 
 > \^ Do not set *VALVE_STATE* 0='Valve Fully Open' When used with Home Assistant in MQTT Discovery mode as it will interfere with the Climate Control Entity
 
+#### Climate Mode Mapping
+
+The Home Assistant climate entity displays two modes for the eTRV:
+- **'off'** mode: VALVE_STATE = 1 (Fully Closed) - valve is forced closed, no heat flows
+- **'heat'** mode: VALVE_STATE = 2 (Normal) - valve controls heat output automatically based on temperature comparison with the HVAC_ACTION sensor
+
+When VALVE_STATE is 2 (Normal), the valve controls heat output automatically based on temperature control. The climate entity provides a simple, user-friendly interface for the common heating use case.
+
+**Note on 'Fully Open' State:** The eTRV supports a third valve state (VALVE_STATE = 0, Fully Open) which forces the valve fully open for maximum heat flow. This state is intentionally NOT exposed through the climate mode selector because it's a manual override that should be explicitly chosen. To set the valve to fully open, use the "Valve Fully Open" maintenance button instead. This design prevents accidental use of this override mode through the standard thermostat controls.
+
 ### eTRV LED Indicators
 
 The eTRV has LED indicators that provide feedback on its operation:

@@ -61,7 +61,7 @@
          "component": "sensor",
          "stat_t": "~@/state",
          "config": {
-            "value_template": "{{ as_datetime(value) if value else 'Never' }}",
+            "value_template": "{{ as_datetime(value) if value else none }}",
             "dev_cla": "timestamp",
             "ic": "mdi:valve-open",
             "ent_cat": "diagnostic"
