@@ -26,6 +26,7 @@ Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) 
 * Transmission defaults increased to OOK/FSK = 20/20 in sample config for better reliability
 * Monitor polling interval reduced from 10s to 1s for improved eTRV reception
 * Documentation expanded for queue behavior, HVAC action, valve exercise, and climate mapping
+* README now points to example Home Assistant helper/automation YAMLs for boiler control via TRVs and Nest/OpenTherm
 
 ### Fixed
 

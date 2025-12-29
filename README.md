@@ -176,6 +176,8 @@ Other devices will return other OpenThings parameters which you can use. I have 
 ## Home Assistant Set-up
 Enable the [MQTT Integration](https://www.home-assistant.io/integrations/mqtt/) in Home Assistant (if not already enabled).
 
+Example Home Assistant helpers/automation are provided in [Home Assistant Examples/example_helpers.yaml](Home%20Assistant%20Examples/example_helpers.yaml) and [Home Assistant Examples/example_automation.yaml](Home%20Assistant%20Examples/example_automation.yaml). They normalize heat demand across TRVs and drive a boiler via a Nest/OpenTherm thermostat; copy and adapt them to your entity names and topology before use.
+
 ### MQTT Discovery
 Most MiHome Monitor devices will auto-add and be available in Home Assistant via [MQTT discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery), consult the table above to see if your devices are supported.  If your Monitor device is not found you can force it to transmit a 'join' request by holding down the button on the device for 5 seconds. The default discovery topics for the devices follow the pattern `homeassistant/<component>/ener314rt/<deviceId>-<ParameterName>`, the value `homeassistant/` can be changed in the `config.json` file if your discovery topic is configured differently.
 
