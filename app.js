@@ -194,7 +194,6 @@ const ETRV_COMMAND_TIMEOUT_MS = 2 * 60 * 60 * 1000;  // 2 hours safety fallback 
 const etrv_command_queues = {};  // deviceId -> { queue: cmd[], processing: boolean, current: cmd|null, completionTimer: NodeJS.Timeout|null }
 const etrv_exercise_valve_pending = {};  // Track which eTRVs have pending EXERCISE_VALVE commands waiting for DIAGNOSTICS response
 const EXERCISE_VALVE_DIAGNOSTICS_TIMEOUT_MS = 2 * 60 * 60 * 1000;  // 2 hours to wait for DIAGNOSTICS response (accounts for max 1 hour report period + buffer)
-const discovered_devices = new Set();  // Track which devices have had discovery published (productId-deviceId)
 
 function isCancelCommand(ener_cmd) {
 	return !!ener_cmd && (ener_cmd.otCommand === 0 || ener_cmd.command === 'CANCEL');
@@ -1251,34 +1250,13 @@ forked.on("message", msg => {
 				addKnownETRV(msg.deviceId);
 			}
 
-			// Publish discovery for any device that sends monitor messages (if not already discovered)
-			// This ensures eTRVs that are asleep during discovery scans get registered
-			if (discovery && msg.productId && msg.deviceId && msg.mfrId === 4) {
-				const deviceKey = `${msg.productId}-${msg.deviceId}`;
-				if (!discovered_devices.has(deviceKey)) {
-					discovered_devices.add(deviceKey);
-					// Construct minimal device object for discovery
-					const device = {
-						mfrId: msg.mfrId,
-						productId: msg.productId,
-						deviceId: msg.deviceId,
-						control: msg.productId === 2 ? 1 : 0,  // Smart Plug+ is controllable
-						product: msg.productId === 1 ? "Monitor Plug" :
-							msg.productId === 2 ? "Smart Plug+" :
-								msg.productId === 3 ? "eTRV" : "Unknown",
-						joined: 0
-					};
-					log.info('monitor', "Auto-discovering device from monitor message: %j", device);
-					publishDiscovery(device);
-				}
-			}
-
 			let keys = Object.keys(msg);
 
-			// Variables to cache temperature values and valve state for HVAC action calculation (eTRV only)
+			// Variables to cache temperature values for HVAC action calculation (eTRV only)
 			let currentTemperature = null;
 			let targetTemperature = null;
-			let valveState = null;
+
+			// Iterate through the object returned
 			keys.forEach((key) => {
 				let topic_key = key;
 				// Default retain to true for eTRV (productId 3) to persist state across sleep cycles
@@ -1382,16 +1360,6 @@ forked.on("message", msg => {
 						break;
 
 					case 'VALVE_STATE':
-						// Store valve state for HVAC action calculation (eTRV only)
-						if (msg.productId == 3) {
-							const state = Number(msg[key]);
-							if (!isNaN(state)) {
-								valveState = state;
-							}
-						}
-						// These values need to be retained on MQTT as they are irregularly reported
-						retain = true;
-						break;
 					case 'REPORT_PERIOD':
 					case 'ERROR_TEXT':
 					case 'THERMOSTAT_MODE':
@@ -1544,14 +1512,13 @@ forked.on("message", msg => {
 
 			// Calculate HVAC action after all keys processed (eTRV only)
 			// This ensures calculation works regardless of key iteration order
-			// HVAC action is only calculated when valve is in Normal mode (2), not when off (1) or fully open (0)
-			if (msg.productId == 3 && currentTemperature !== null && targetTemperature !== null && valveState === 2) {
+			if (msg.productId == 3 && currentTemperature !== null && targetTemperature !== null) {
 				// Determine HVAC action: heating if target temp is above current, otherwise idle
 				const delta = targetTemperature - currentTemperature;
 				const hvacAction = delta > 0 ? 'heating' : 'idle';
 				const deltaTemp = delta.toFixed(2);
 
-				log.info('eTRV', 'HVAC calculation - Current: %s°C, Target: %s°C, Delta: %s°C, Valve: Normal, Action: %s',
+				log.info('eTRV', 'HVAC calculation - Current: %s°C, Target: %s°C, Delta: %s°C, Action: %s',
 					currentTemperature, targetTemperature, deltaTemp, hvacAction);
 
 				// Publish HVAC action and temperature delta (retained to persist across sleep cycles)
@@ -1560,11 +1527,6 @@ forked.on("message", msg => {
 
 				client.publish(hvacTopic, hvacAction, { qos: 0, retain: true });
 				client.publish(deltaTempTopic, deltaTemp, { qos: 0, retain: true });
-			} else if (msg.productId == 3 && valveState !== null && valveState !== 2) {
-				// Valve is not in Normal mode - publish "off" to indicate no automatic heating control
-				log.info('eTRV', 'Valve not in Normal mode (state=%d) - HVAC action set to off', valveState);
-				const hvacTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/HVAC_ACTION/state`;
-				client.publish(hvacTopic, 'off', { qos: 0, retain: true });
 			}
 
 			break;
@@ -1573,10 +1535,6 @@ forked.on("message", msg => {
 			log.info('discovery', "found %i devices", msg.numDevices);
 			publishBoardState('discover', msg.numDevices);
 			msg.devices.forEach(device => {
-				// Mark as discovered
-				const deviceKey = `${device.productId}-${device.deviceId}`;
-				discovered_devices.add(deviceKey);
-
 				publishDiscovery(device);
 				// Track eTRVs for battery voltage polling and reception diagnostics
 				if (device.productId === 3) {
@@ -1668,7 +1626,7 @@ function publishDiscovery(device) {
 			if (err) {
 				log.error('discovery', "skipped for device %i - unknown device type 'devices/%j.json' missing", device.deviceId, device.productId);
 			} else {
-				const device_defaults = JSON.parse(data);
+				device_defaults = JSON.parse(data);
 				device_defaults.parameters.forEach((parameter) => {
 					//
 					// To save on network/processing only the main entity will contain the details of the device that they belong to
@@ -1851,7 +1809,7 @@ function publishBoardDiscovery() {
 		if (err) {
 			log.error('discovery', "devices/board.json missing");
 		} else {
-			const device_defaults = JSON.parse(data);
+			device_defaults = JSON.parse(data);
 			device_defaults.parameters.forEach((parameter) => {
 				//
 				var object_id = `${deviceId}-${parameter.id}`;
