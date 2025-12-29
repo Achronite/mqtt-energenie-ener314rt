@@ -7,6 +7,39 @@
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
+## [0.8.0] 2025-12-29
+
+### Added
+
+* eTRV command queue with priority, dedupe, and preemption to avoid lost commands when sent in quick succession
+* Queue visibility sensors: `QUEUE_PROCESSING`, `QUEUE_COMMAND`, `QUEUE_LEN` (with JSON attributes for full queue)
+* HVAC action reporting (`HVAC_ACTION`) and delta temperature (`DELTA_TEMP`) for boiler automation
+* New sensors and buttons in eTRV discovery (ROOM_TEMPERATURE, TEMPERATURE_SET_POINT, HEAT_DEMANDED, 11 maintenance buttons)
+* Weekly valve exercise automation with board status sensors and configurable day/time options in `config.json`
+* State classes added across device sensors for long-term statistics in Home Assistant
+
+### Changed
+
+* Climate modes simplified to `heat` and `off`; Fully Open remains available via maintenance button (not via climate mode)
+* Climate mode mapping documented: `off` -> VALVE_STATE=1 (closed), `heat` -> VALVE_STATE=2 (normal); VALVE_STATE=0 (fully open) requires maintenance button
+* Report interval parameter renamed to `REPORT_PERIOD` for consistency with the C library
+* Transmission defaults increased to OOK/FSK = 20/20 in sample config for better reliability
+* Monitor polling interval reduced from 10s to 1s for improved eTRV reception
+* Documentation expanded for queue behavior, HVAC action, valve exercise, and climate mapping
+
+### Fixed
+
+* HVAC action calculation now runs only when valve is in Normal mode (VALVE_STATE=2); reports `off` when manually forced fully open or fully closed to prevent false boiler triggers
+* VALVE_STATE handling in climate templates now explicit for states 0/1/2 to avoid misleading mode display
+
+### Addresses
+
+* [#96](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/96) - eTRV Temperature Monitoring
+* [#91](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/91) - Boiler Automation Support via HVAC action
+* [#90](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/90) - Maintenance Controls Accessibility (buttons replacing dropdown)
+* [#72](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/72) - Parameter Naming Consistency (`REPORT_PERIOD`)
+* [#68](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/68) - Historical Data Tracking (state_class additions)
+
 ## [0.7.2] 2024-03-04
 
 The v0.7.x releases require the following updates that will need to be manually installed if upgrading from v0.6.x or below:
