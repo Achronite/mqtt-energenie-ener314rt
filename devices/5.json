@@ -9,6 +9,7 @@
           "main": true,
           "config": {
              "dev_cla": "apparent_power",
+             "stat_cla": "measurement",
              "unit_of_meas": "VA"
           }
        },
@@ -19,6 +20,7 @@
           "config": {
              "ic": "mdi:battery",
              "dev_cla": "voltage",
+             "stat_cla": "measurement",
              "unit_of_meas": "V"
           }
        },
@@ -28,6 +30,7 @@
           "stat_t": "~@/state",
           "config": {
              "dev_cla": "current",
+             "stat_cla": "measurement",
              "unit_of_meas": "A"
           }
        },

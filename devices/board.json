@@ -7,7 +7,7 @@
          "component": "binary_sensor",
          "stat_t": "energenie/availability/state",
          "config": {
-            "dev_cla":"connectivity",
+            "dev_cla": "connectivity",
             "pl_on": "online",
             "pl_off": "offline",
             "ent_cat": "diagnostic"
@@ -44,6 +44,28 @@
          "component": "update",
          "stat_t": "~@/state",
          "config": {}
+      },
+      {
+         "id": "valve_exercise_enabled",
+         "component": "binary_sensor",
+         "stat_t": "~@/state",
+         "config": {
+            "pl_on": "ON",
+            "pl_off": "OFF",
+            "ic": "mdi:valve",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "valve_exercise_last_run",
+         "component": "sensor",
+         "stat_t": "~@/state",
+         "config": {
+            "value_template": "{{ as_datetime(value) if value else none }}",
+            "dev_cla": "timestamp",
+            "ic": "mdi:valve-open",
+            "ent_cat": "diagnostic"
+         }
       }
    ]
 }

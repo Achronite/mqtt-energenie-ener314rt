@@ -230,7 +230,9 @@ function handleSignal(signal) {
 
 // monitor thread version in ener314rt uses a callback to return monitor messages directly (collected below), it needs the callback passing in
 function startMonitoringThread() {
-    ener314rt.openThingsReceiveThread(10000, (msg) => {
+    // Use 1 second timeout instead of 10 seconds to check for messages more frequently
+    // This reduces the chance of missing eTRV broadcasts that occur while processing other messages
+    ener314rt.openThingsReceiveThread(1000, (msg) => {
         log.verbose("energenie", "received=%j", msg);
         var OTmsg = JSON.parse(msg);
         OTmsg.cmd = 'monitor';

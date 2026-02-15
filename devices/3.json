@@ -11,21 +11,65 @@
             "max_temp": 40,
             "min_temp": 5,
             "modes": [
-               "auto",
-               "heat",
-               "off"
+               "off",
+               "heat"
             ],
             "mode_cmd_t": "~VALVE_STATE/command",
             "mode_stat_t": "~VALVE_STATE/state",
-            "mode_cmd_tpl": "{% if value == 'off' %} 1 {% elif value == 'auto' %} 2 {% else %} 0 {% endif %}",
-            "mode_stat_tpl": "{% if value == '1' %} off {% elif value == '2' %} auto {% else %} heat {% endif %}",
+            "mode_cmd_tpl": "{% if value == 'off' %} 1 {% else %} 2 {% endif %}",
+            "mode_stat_tpl": "{% if value == '1' %} off {% elif value == '0' or value == '2' %} heat {% else %} heat {% endif %}",
             "temp_cmd_t": "~TARGET_TEMP/command",
             "temp_stat_t": "~TARGET_TEMP/state",
+            "act_t": "~HVAC_ACTION/state",
             "ic": "mdi:radiator",
-            "opt": "true",
             "temp_step": "0.5",
-            "act_tpl": "{% if value == 'Off' %} off {% else %} heating {% endif %}",
-            "act_t": "heating/state"
+            "temp_unit": "C"
+         }
+      },
+      {
+         "id": "HEAT_DEMANDED",
+         "component": "binary_sensor",
+         "stat_t": "~HVAC_ACTION/state",
+         "config": {
+            "dev_cla": "heat",
+            "val_tpl": "{% if value == 'heating' %} ON {% else %} OFF {% endif %}",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "TEMPERATURE_DELTA",
+         "component": "sensor",
+         "stat_t": "~DELTA_TEMP/state",
+         "config": {
+            "ic": "mdi:thermometer-lines",
+            "dev_cla": "temperature",
+            "stat_cla": "measurement",
+            "unit_of_meas": "°C",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "ROOM_TEMPERATURE",
+         "component": "sensor",
+         "stat_t": "~TEMPERATURE/state",
+         "config": {
+            "ic": "mdi:thermometer",
+            "dev_cla": "temperature",
+            "stat_cla": "measurement",
+            "unit_of_meas": "°C",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "TEMPERATURE_SET_POINT",
+         "component": "sensor",
+         "stat_t": "~TARGET_TEMP/state",
+         "config": {
+            "ic": "mdi:thermostat",
+            "dev_cla": "temperature",
+            "stat_cla": "measurement",
+            "unit_of_meas": "°C",
+            "ent_cat": "diagnostic"
          }
       },
       {
@@ -35,7 +79,9 @@
          "config": {
             "ic": "mdi:battery",
             "dev_cla": "voltage",
-            "unit_of_meas": "V"
+            "stat_cla": "measurement",
+            "unit_of_meas": "V",
+            "ent_cat": "diagnostic"
          }
       },
       {
@@ -45,7 +91,8 @@
          "config": {
             "ic": "mdi:battery-clock",
             "val_tpl": "{{ as_datetime(value) }}",
-            "dev_cla": "timestamp"
+            "dev_cla": "timestamp",
+            "ent_cat": "diagnostic"
          }
       },
       {
@@ -71,23 +118,12 @@
          }
       },
       {
-         "id": "EXERCISE_VALVE",
-         "component": "binary_sensor",
-         "stat_t": "~@/state",
-         "cmd_t": "~@/command",
-         "config": {
-            "dev_cla": "moving",
-            "pl_on": "success",
-            "pl_off": "fail",
-            "ent_cat": "diagnostic"
-         }
-      },
-      {
          "id": "LOW_POWER_MODE",
          "component": "binary_sensor",
          "stat_t": "~@/state",
-         "cmd_t": "~@/command",
-         "config": {}
+         "config": {
+            "ent_cat": "diagnostic"
+         }
       },
       {
          "id": "ERRORS",
@@ -107,7 +143,7 @@
          }
       },
       {
-         "id": "REPORTING_INTERVAL",
+         "id": "REPORT_PERIOD",
          "component": "number",
          "cmd_t": "~@/command",
          "config": {
@@ -124,7 +160,10 @@
          "component": "sensor",
          "stat_t": "~@/state",
          "config": {
-            "ic": "mdi:cached"
+            "name": "Retries (Send Attempts)",
+            "ic": "mdi:repeat",
+            "stat_cla": "measurement",
+            "ent_cat": "diagnostic"
          }
       },
       {
@@ -132,7 +171,43 @@
          "component": "sensor",
          "stat_t": "~@/state",
          "config": {
-            "ic": "mdi:traffic-light"
+            "ic": "mdi:traffic-light",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "QUEUE_PROCESSING",
+         "component": "binary_sensor",
+         "stat_t": "~@/state",
+         "config": {
+            "name": "Queue Processing",
+            "dev_cla": "running",
+            "pl_on": "true",
+            "pl_off": "false",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "QUEUE_COMMAND",
+         "component": "sensor",
+         "stat_t": "~@/state",
+         "json_attr_t": "~@/attributes",
+         "config": {
+            "name": "Queue Command",
+            "ic": "mdi:format-list-numbered",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "QUEUE_LEN",
+         "component": "sensor",
+         "stat_t": "~@/state",
+         "json_attr_t": "~@/attributes",
+         "config": {
+            "name": "Queue Length",
+            "ic": "mdi:numeric",
+            "stat_cla": "measurement",
+            "ent_cat": "diagnostic"
          }
       },
       {
@@ -141,31 +216,8 @@
          "stat_t": "~@/state",
          "config": {
             "val_tpl": "{{ as_datetime(value) }}",
-            "dev_cla": "timestamp"
-         }
-      },
-      {
-         "id": "Maintenance",
-         "component": "select",
-         "stat_t": "~@/state",
-         "cmd_t": "~@/command",
-         "config": {
-            "ent_cat": "config",
-            "ic": "mdi:radiator",
-            "opt": true,
-            "options": [
-               "None",
-               "Cancel Command",
-               "Request Diagnostics",
-               "Request Voltage",
-               "Exercise Valve",
-               "Identify",
-               "Low Power Mode ON",
-               "Low Power Mode OFF",
-               "Valve Auto",
-               "Valve Open",
-               "Valve Closed"
-            ]
+            "dev_cla": "timestamp",
+            "ent_cat": "diagnostic"
          }
       },
       {
@@ -174,16 +226,108 @@
          "stat_t": "~@/state",
          "config": {
             "dev_cla": "battery",
-            "unit_of_meas": "%"
+            "unit_of_meas": "%",
+            "ent_cat": "diagnostic"
          }
       },
       {
          "id": "IDENTIFY",
          "component": "button",
-         "cmd_t": "~Maintenance/command",
+         "cmd_t": "~MAINTENANCE/command",
          "config": {
             "dev_cla": "identify",
-            "pl_prs": "Identify"
+            "pl_prs": "Identify",
+            "ent_cat": "config"
+         }
+      },
+      {
+         "id": "REQUEST_DIAGNOSTICS",
+         "component": "button",
+         "cmd_t": "~MAINTENANCE/command",
+         "config": {
+            "ic": "mdi:stethoscope",
+            "pl_prs": "Request Diagnostics",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "REQUEST_VOLTAGE",
+         "component": "button",
+         "cmd_t": "~MAINTENANCE/command",
+         "config": {
+            "ic": "mdi:battery-check",
+            "pl_prs": "Request Voltage",
+            "ent_cat": "diagnostic"
+         }
+      },
+      {
+         "id": "EXERCISE_VALVE",
+         "component": "button",
+         "cmd_t": "~MAINTENANCE/command",
+         "config": {
+            "ic": "mdi:valve",
+            "pl_prs": "Exercise Valve",
+            "ent_cat": "config"
+         }
+      },
+      {
+         "id": "LOW_POWER_MODE_ON",
+         "component": "button",
+         "cmd_t": "~MAINTENANCE/command",
+         "config": {
+            "ic": "mdi:power-sleep",
+            "pl_prs": "Low Power Mode ON",
+            "ent_cat": "config"
+         }
+      },
+      {
+         "id": "LOW_POWER_MODE_OFF",
+         "component": "button",
+         "cmd_t": "~MAINTENANCE/command",
+         "config": {
+            "ic": "mdi:power",
+            "pl_prs": "Low Power Mode OFF",
+            "ent_cat": "config"
+         }
+      },
+      {
+         "id": "VALVE_NORMAL",
+         "component": "button",
+         "cmd_t": "~MAINTENANCE/command",
+         "config": {
+            "ic": "mdi:valve",
+            "pl_prs": "Valve Normal",
+            "ent_cat": "config"
+         }
+      },
+      {
+         "id": "VALVE_FULLY_OPEN",
+         "component": "button",
+         "cmd_t": "~MAINTENANCE/command",
+         "config": {
+            "ic": "mdi:valve-open",
+            "pl_prs": "Valve Fully Open",
+            "ent_cat": "config"
+         }
+      },
+      {
+         "id": "VALVE_FULLY_CLOSED",
+         "component": "button",
+         "cmd_t": "~MAINTENANCE/command",
+         "config": {
+            "ic": "mdi:valve-closed",
+            "pl_prs": "Valve Fully Closed",
+            "ent_cat": "config"
+         }
+      },
+      {
+         "id": "CANCEL_COMMAND",
+         "component": "button",
+         "cmd_t": "~MAINTENANCE/command",
+         "config": {
+            "ic": "mdi:cancel",
+            "pl_prs": "Cancel Command",
+            "ent_cat": "config"
          }
       }
    ]
