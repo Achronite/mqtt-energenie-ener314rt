@@ -171,6 +171,8 @@ client.on('message', function (topic, msg, packet) {
 	// format command for passing to energenie process
 	// format is OOK: 'energenie/c/ook/zone/switchNum/command' or OT: 'energenie/c/2/deviceNum/command'
 	log.verbose('>',"%s: %s", topic, msg);
+	let ener_cmd = null;
+
 	const cmd_array = topic.split("/");
 
 	let otCommand = 0;
@@ -179,8 +181,15 @@ client.on('message', function (topic, msg, packet) {
 		case 'ook':
 		case 'OOK':
 		case 'o':
+		case 'ENER002':
+		case 'MIHO008':
+		case 'MIHO010':
+		case 'MIHO024':
+		case 'MIHO025':
+		case 'MIHO026':
 			// All ook 1-way devices
-			
+			const deviceType = cmd_array[MQTTM_DEVICE];
+
 			// Is this request for a dimmer switch?
 			if (cmd_array[MQTTM_OOK_SWITCH] == "dimmer"){
                 /*
@@ -197,18 +206,22 @@ client.on('message', function (topic, msg, packet) {
                 */
 
 				// default dimmer OFF
-				var switchNum = 1;
-				var switchState = false;
+				let switchNum = 1;
+				let switchState = false;
 
-				var brightness = String(msg);
-
+				const brightness = String(msg);
+				let txParameters = getDeviceTxParameters(deviceType, 'brightness');
 				// Brightness steps vary
 				switch (brightness) {
+					case 'off':
 					case 'OFF':
 					case '0':
 						// off
+						txParameters = getDeviceTxParameters(deviceType, 'off');
 						break;
+					case 'on':
 					case 'ON':		// unused by Home Assistant as it should send brightness
+						txParameters = getDeviceTxParameters(deviceType, 'on');
 						switchState = true;
 						break;
 					case '1':
@@ -243,16 +256,19 @@ client.on('message', function (topic, msg, packet) {
 						log.warn('>', "Invalid brightness %s for %j", brightness, cmd_array[MQTTM_OOK_ZONE]);
 						return;
                 } // switch
-				var ener_cmd = { cmd: 'send', mode: 'ook', repeat: ook_xmits, brightness: brightness, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: switchNum, switchState: switchState };
+				ener_cmd = { cmd: 'send', mode: 'ook', repeat: txParameters.ook_transmit, brightness: brightness, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: switchNum, switchState: switchState, productId: deviceType, txParameters: txParameters };
 
 			} else {
 				//validate standard on/off request, default to OFF
-				var switchState = false;
+				let switchState = false;
 				if (typeof msg == typeof true)
 					switchState = msg;
 				else if (msg == "ON" || msg == "on" || msg == 1 || msg == '1')
 					switchState = true;
-				var ener_cmd = { cmd: 'send', mode: 'ook', repeat: ook_xmits, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: cmd_array[MQTTM_OOK_SWITCH], switchState: switchState };
+				
+				const txParameters = getDeviceTxParameters(deviceType, switchState ? 'on' : 'off');
+				
+				ener_cmd = { cmd: 'send', mode: 'ook', repeat: txParameters.ook_transmit, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: cmd_array[MQTTM_OOK_SWITCH], switchState: switchState, productId: deviceType, txParameters: txParameters };
 			}
 			break;
 		case '2':
@@ -260,12 +276,12 @@ client.on('message', function (topic, msg, packet) {
 			// MIHO005 - Adaptor+
 
 			//validate on/off request, default to OFF
-			var switchState = false;
+			let switchState = false;
 			if (typeof msg == typeof true)
 				switchState = msg;
 			else if (msg == "ON" || msg == "on" || msg == 1 || msg == '1')
 				switchState = true;
-			var ener_cmd = {
+			ener_cmd = {
 				cmd: 'send', mode: 'fsk', repeat: fsk_xmits, command: 'switch', 
 				productId: cmd_array[MQTTM_OT_PRODUCTID],
 				deviceId: cmd_array[MQTTM_OT_DEVICEID],
@@ -410,7 +426,7 @@ client.on('message', function (topic, msg, packet) {
 
 
 				// All eTRV commands are cached
-				var ener_cmd = {
+				ener_cmd = {
 					cmd: 'cacheCmd', mode: 'fsk', repeat: fsk_xmits,
 					command: cmd_array[MQTTM_OT_CMD],
 					productId: Number(cmd_array[MQTTM_OT_PRODUCTID]),
@@ -478,7 +494,7 @@ client.on('message', function (topic, msg, packet) {
 				}
 
 				// Thermostat commands are cached
-				var ener_cmd = {
+				ener_cmd = {
 					cmd: 'cacheCmd', mode: 'fsk', repeat: fsk_xmits,
 					command: cmd_array[MQTTM_OT_CMD],
 					productId: Number(cmd_array[MQTTM_OT_PRODUCTID]),
@@ -506,11 +522,11 @@ client.on('message', function (topic, msg, packet) {
 			// Undefined device
 	} // switch MQTTM_DEVICE
 
-	if (ener_cmd !== undefined) {
+	if (ener_cmd !== null) {
 		// Send request to energenie process, any responses are handled by forked.on('message')
 		log.http("command", "%j", ener_cmd);
 		// forked.send(ener_cmd);
-		queueMessage(msg);
+		queueMessage(ener_cmd);
 	} else {
 		log.warn('cmd',"Invalid MQTT device/command %j:%j",cmd_array[MQTTM_DEVICE],msg);
 	}
@@ -537,6 +553,7 @@ forked.on("spawn", msg => {
 	// process started succesfully, request start of the monitor loop if configured in config file
 	if (CONFIG.monitoring){
 		log.info("monitor", "starting monitoring of FSK devices...");
+		// queueMessage({ cmd: "monitor", enabled: true });
 		forked.send({ cmd: "monitor", enabled: true });
 	}
 });
@@ -551,6 +568,7 @@ forked.on("message", msg => {
 		case 'send':
 			var rtn_msg = "UNKNOWN";
 			var state_topic;
+			const prefix = msg.productId ? msg.productId : 'ook';
 			switch (msg.mode) {
 				case 'ook':
 					if (msg.brightness){
@@ -558,11 +576,12 @@ forked.on("message", msg => {
 						log.verbose('app', "dimmer: %j", msg);
 
 						// use the value of dimmer instead of switchNum
-						state_topic = `${CONFIG.topic_stub}ook/${msg.zone}/dimmer/state`;
+						state_topic = `${CONFIG.topic_stub}${prefix}/${msg.zone}/dimmer/state`;
 						rtn_msg = String(msg.brightness);
 
 					} else {
-						state_topic = `${CONFIG.topic_stub}ook/${msg.zone}/${msg.switchNum}/state`;
+						
+						state_topic = `${CONFIG.topic_stub}${prefix}/${msg.zone}/${msg.switchNum}/state`;
 						
 						if (typeof(msg.state) === 'boolean'){
 							if (msg.state) {
@@ -801,7 +820,8 @@ forked.on("message", msg => {
 									switchState: rstate[dynamicName]
 								};
 								log.http("command", "RETRY %j", ener_cmd);
-								forked.send(ener_cmd);
+								queueMessage(ener_cmd);
+								// forked.send(ener_cmd);
 							}
 						}
 					}
@@ -874,7 +894,8 @@ forked.on('exit', (code, signal) => {
 function UpdateMQTTDiscovery() {
 	if (discovery){
 		log.info('auto', "calling discovery");
-		forked.send({ cmd: "discovery", scan: false });
+		// forked.send({ cmd: "discovery", scan: false });
+		queueMessage({ cmd: "discovery", scan: false });
 	}
 }
 
@@ -1196,7 +1217,10 @@ function queueMessage(msg) {
  * Waits for child to finish each message before sending the next
  */
 function processQueue() {
-	if (processingQueue) return;
+	if (processingQueue === true) {
+		log.verbose('<', 'Already processing Queue - exiting...');
+		return;
+	}
 
 	processingQueue = true;
 	const next = async () => {
@@ -1251,14 +1275,18 @@ function sendAndWait(msg) {
 		}, 10000);  // Safety timeout if nothing comes back after 10 seconds
 
 		function onMessage(response) {
-			if (!response || response.requestId !== requestId && 
-				response.done === true
-			) {
-				// A message which has been returned mactching the requestID
-				return;
-			}
+			if ( !response ) return;
+			if (  response.requestId !== requestId ) return;
+			if (  response.done !== true ) return;
+			// if (!response || response.requestId !== requestId && 
+			// 	response.done === true
+			// ) {
+			// 	// A message which has been returned mactching the requestID
+			// 	return;
+			// }
 			clearTimeout(timeout);
 			forked.removeListener('message', onMessage);
+			resolve(response);
 		}
 
 		forked.on('message', onMessage);
@@ -1296,7 +1324,7 @@ function getDeviceTxParameters(deviceType, state) {
 		if (profile.devices.includes(deviceType)) {
 			if (profile[state]) {
 				// Merge this profile's stat into the mergedOptions
-				Object.assign(mergedOptions, perofile[state]);
+				Object.assign(mergedOptions, profile[state]);
 			}
 		}
 	}
