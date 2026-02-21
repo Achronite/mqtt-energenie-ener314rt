@@ -56,6 +56,13 @@ const MIHO033 = 13;
 const MIHO069 = 18;
 const MIHO089 = 19;
 
+// MessageQueue - provide a queue so that multiple
+// messages are processed one at a time
+const messageQueue = [];
+let processingQueue = false; 	// boolean to indicate items in queue
+let requestCounter = 0;			// Used in sendAndWait
+								// requestCounter - used to apply a counterId to message queue requests 
+
 // retry state object
 const rstate = {};
 
@@ -502,7 +509,8 @@ client.on('message', function (topic, msg, packet) {
 	if (ener_cmd !== undefined) {
 		// Send request to energenie process, any responses are handled by forked.on('message')
 		log.http("command", "%j", ener_cmd);
-		forked.send(ener_cmd);
+		// forked.send(ener_cmd);
+		queueMessage(msg);
 	} else {
 		log.warn('cmd',"Invalid MQTT device/command %j:%j",cmd_array[MQTTM_DEVICE],msg);
 	}
@@ -1167,4 +1175,93 @@ function runAtSpecificTimeOfDay(hour, minutes, func)
     // run every 24 hours from now on
     setInterval(func, twentyFourHours);
   }, eta_ms);
+}
+
+
+/**
+ * Queue Message
+ * 
+ * @param {object} msg - the message to send
+ */
+function queueMessage(msg) {
+	const delay = msg.txParameters?.delay || 0;
+	messageQueue.push({msg, delay});
+	processQueue();
+}
+
+
+/**
+ * Process a queue of message, and stop flooding of ener314-rt
+ * 
+ * Waits for child to finish each message before sending the next
+ */
+function processQueue() {
+	if (processingQueue) return;
+
+	processingQueue = true;
+	const next = async () => {
+		if (messageQueue.length === 0) {
+			processingQueue = false;
+			return;
+		}
+
+		const { msg, delay } = messageQueue[0];
+
+		const ts = new Date().toISOString();
+		log.verbose('processQueue', `${ts} - Sending message:`, msg, `(delay after send: ${delay}ms)`);
+
+		try {
+			await sendAndWait(msg);
+		} catch (err) {
+			log.error('processQueue', 'Error waiting for child:', err);
+		}
+
+		messageQueue.shift();
+		
+		setTimeout(next, delay);
+	}
+
+	next();
+}
+
+
+/**
+ * SendAndWait for child process to report bac it has successfully
+ * processed the RF message.
+ * 
+ * Have applied a requestId, to be used to monitor the appropriate send
+ * message.
+ * 
+ * Safety: will automatically timeout after 10 seconds.
+ * 
+ * @param {object} msg
+ * @return Promise<any>
+ */
+function sendAndWait(msg) {
+	return new Promise((resolve, reject) => {
+
+		const requestId = ++requestCounter;
+		const payload   = {
+			...msg, requestId
+		};
+
+		const timeout = setTimeout( () => {
+			forked.removeListener('message', onMessage);
+			reject(new Error("Child response timeout"));
+		}, 10000);  // Safety timeout if nothing comes back after 10 seconds
+
+		function onMessage(response) {
+			if (!response || response.requestId !== requestId && 
+				response.done === true
+			) {
+				// A message which has been returned mactching the requestID
+				return;
+			}
+			clearTimeout(timeout);
+			forked.removeListener('message', onMessage);
+		}
+
+		forked.on('message', onMessage);
+		forked.send(payload);
+	});
 }
