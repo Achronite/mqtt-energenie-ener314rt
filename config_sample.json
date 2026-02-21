@@ -12,5 +12,18 @@
     "fsk_xmits": 5,
     "cached_retries": 10,
     "log_level": "info",
-    "retry":true
+    "retry":true,
+    "tx_profiles": {
+        "ook": {
+            "devices": ["ook", "OOK", "o", "ENER002"],
+            "on": { "outer_loop": 1, "delay": 250, "ook_transmit": 15 },
+            "off": { "outer_loop": 1, "delay": 250, "ook_transmit": 15 }
+        },
+        "light_switch": {
+            "devices": ["MIHO0008", "MIHO010"],
+            "on": { "outer_loop": 4, "delay": 500, "ook_transmit": 20 },
+            "off": { "outer_loop": 1, "delay": 500, "ook_transmit": 10 },
+            "brightness": {"outer_loop": 1, "delay": 500, "ook_transmit": 10 }
+        }
+    }
 }

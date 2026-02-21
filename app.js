@@ -1265,3 +1265,45 @@ function sendAndWait(msg) {
 		forked.send(payload);
 	});
 }
+
+
+/**
+ * @typedef {Object} TxState
+ * @property {number} outer_loop - Number of outer loop repititions
+ * @property {number} delay - delay between outer_loops in milliseconds (applies delay on last loop too)
+ * @property {number} ook_transmits - inner transmits of message
+ */
+
+/**
+ * @typedef {Object} TxStates
+ * @property {TxState} on - Parameters for the "on" state
+ * @property {TxState} off - Parameters for the "off" state
+ * @property {TxState} [brightness] - Optional parameters for "brightness"
+ */
+
+/**
+ * Retrieved tx_profiles from the config.json
+ * 
+ * @param {string} deviceType - The device type to get parameter for
+ * @param {string} state - State to retrieve (on/off/brightness)
+ * 
+ * @returns {TxStates} TX Parameters object
+ */
+function getDeviceTxParameters(deviceType, state) {
+	const mergedOptions = {};
+
+	for (const profile of Object.values(CONFIG.tx_profiles)) {
+		if (profile.devices.includes(deviceType)) {
+			if (profile[state]) {
+				// Merge this profile's stat into the mergedOptions
+				Object.assign(mergedOptions, perofile[state]);
+			}
+		}
+	}
+
+	if (Object.keys(mergedOptions).length === 0) {
+		throw new Error(`Unknown device type or state: ${deviceType} / ${state}`);
+	}
+
+	return mergedOptions;
+}
