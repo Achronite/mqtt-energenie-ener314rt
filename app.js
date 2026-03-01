@@ -85,10 +85,7 @@ process.on('SIGINT', handleSignal );
 //process.on('SIGKILL', handleSignal );
 
 // read xmit defaults from config file
-let ook_xmits = 20;
 let fsk_xmits = 20;
-if (CONFIG.ook_xmits)
-	ook_xmits = CONFIG.ook_xmits;
 if (CONFIG.fsk_xmits)
 	fsk_xmits = CONFIG.fsk_xmits;
 // cached retries
@@ -182,11 +179,22 @@ client.on('message', function (topic, msg, packet) {
 		case 'OOK':
 		case 'o':
 		case 'ENER002':
+		case 'MIHO014':
+		// single light switch
 		case 'MIHO008':
-		case 'MIHO010':
 		case 'MIHO024':
 		case 'MIHO025':
 		case 'MIHO026':
+		// dimmable single light switch - tested
+		case 'MIHO010':
+		case 'MIHO075':
+		case 'MIHO076':
+		case 'MIHO077':
+		// two gang light switch - unable to test	
+		case 'MIHO009':
+		case 'MIHO071':
+		case 'MIHO072':
+		case 'MIHO073':
 			// All ook 1-way devices
 			const deviceType = cmd_array[MQTTM_DEVICE];
 
@@ -256,7 +264,7 @@ client.on('message', function (topic, msg, packet) {
 						log.warn('>', "Invalid brightness %s for %j", brightness, cmd_array[MQTTM_OOK_ZONE]);
 						return;
                 } // switch
-				ener_cmd = { cmd: 'send', mode: 'ook', repeat: txParameters.ook_transmit, brightness: brightness, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: switchNum, switchState: switchState, productId: deviceType, txParameters: txParameters };
+				ener_cmd = { cmd: 'send', mode: 'ook', repeat: txParameters.ook_xmits, brightness: brightness, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: switchNum, switchState: switchState, productId: deviceType, txParameters: txParameters };
 
 			} else {
 				//validate standard on/off request, default to OFF
@@ -268,7 +276,7 @@ client.on('message', function (topic, msg, packet) {
 				
 				const txParameters = getDeviceTxParameters(deviceType, switchState ? 'on' : 'off');
 				
-				ener_cmd = { cmd: 'send', mode: 'ook', repeat: txParameters.ook_transmit, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: cmd_array[MQTTM_OOK_SWITCH], switchState: switchState, productId: deviceType, txParameters: txParameters };
+				ener_cmd = { cmd: 'send', mode: 'ook', repeat: txParameters.ook_xmits, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: cmd_array[MQTTM_OOK_SWITCH], switchState: switchState, productId: deviceType, txParameters: txParameters };
 			}
 			break;
 		case '2':
@@ -1278,12 +1286,6 @@ function sendAndWait(msg) {
 			if ( !response ) return;
 			if (  response.requestId !== requestId ) return;
 			if (  response.done !== true ) return;
-			// if (!response || response.requestId !== requestId && 
-			// 	response.done === true
-			// ) {
-			// 	// A message which has been returned mactching the requestID
-			// 	return;
-			// }
 			clearTimeout(timeout);
 			forked.removeListener('message', onMessage);
 			resolve(response);
@@ -1299,7 +1301,7 @@ function sendAndWait(msg) {
  * @typedef {Object} TxState
  * @property {number} outer_loop - Number of outer loop repititions
  * @property {number} delay - delay between outer_loops in milliseconds (applies delay on last loop too)
- * @property {number} ook_transmits - inner transmits of message
+ * @property {number} ook_xmits - inner transmits of message
  */
 
 /**
@@ -1320,7 +1322,7 @@ function sendAndWait(msg) {
 function getDeviceTxParameters(deviceType, state) {
 	const mergedOptions = {};
 
-	for (const profile of Object.values(CONFIG.tx_profiles)) {
+	for (const profile of Object.values(CONFIG.ook_tx_profiles)) {
 		if (profile.devices.includes(deviceType)) {
 			if (profile[state]) {
 				// Merge this profile's stat into the mergedOptions

@@ -8,22 +8,31 @@
     },
     "monitoring": true,
     "discovery_prefix": "homeassistant/",
-    "ook_xmits": 10,
     "fsk_xmits": 5,
     "cached_retries": 10,
     "log_level": "info",
     "retry":true,
-    "tx_profiles": {
+    "ook_tx_profiles": {
         "ook": {
-            "devices": ["ook", "OOK", "o", "ENER002"],
-            "on": { "outer_loop": 1, "delay": 250, "ook_transmit": 15 },
-            "off": { "outer_loop": 1, "delay": 250, "ook_transmit": 15 }
+            "devices": ["ook", "OOK", "o", "ENER002", "MIHO014"],
+            "on": { "outer_loop": 1, "delay": 100, "ook_xmits": 10 },
+            "off": { "outer_loop": 1, "delay": 100, "ook_xmits": 10 }
         },
         "light_switch": {
-            "devices": ["MIHO0008", "MIHO010"],
-            "on": { "outer_loop": 4, "delay": 500, "ook_transmit": 20 },
-            "off": { "outer_loop": 1, "delay": 500, "ook_transmit": 10 },
-            "brightness": {"outer_loop": 1, "delay": 500, "ook_transmit": 10 }
+            "devices": ["MIHO008", "MIHO024", "MIHO025", "MIHO026"],
+            "on": { "outer_loop": 4, "delay": 500, "ook_xmits": 22 },
+            "off": { "outer_loop": 1, "delay": 500, "ook_xmits": 10 }
+        },
+        "dimmable_light_switch": {
+            "devices": ["MIHO010", "MIHO075", "MIHO076", "MIHO077"],
+            "on": { "outer_loop": 4, "delay": 500, "ook_xmits": 20 },
+            "off": { "outer_loop": 1, "delay": 500, "ook_xmits": 10 },
+            "brightness": {"outer_loop": 1, "delay": 500, "ook_xmits": 10 }
+        },
+        "two_gang_light_switch": {
+            "devices": ["MIHO009", "MIHO071", "MIHO072", "MIHO073"],
+            "on": { "outer_loop": 2, "delay": 3000, "ook_xmits": 22},
+            "off": { "outer_loop": 1, "delay": 500, "ook_xmits": 10}
         }
     }
 }
