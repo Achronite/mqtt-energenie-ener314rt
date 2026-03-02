@@ -13,26 +13,17 @@
     "log_level": "info",
     "retry":true,
     "ook_tx_profiles": {
-        "ook": {
-            "devices": ["ook", "OOK", "o", "ENER002", "MIHO014"],
-            "on": { "outer_loop": 1, "delay": 100, "ook_xmits": 10 },
-            "off": { "outer_loop": 1, "delay": 100, "ook_xmits": 10 }
+        "profiles": {
+            "light_switch": {
+                "on": { "delay": 700 }
+            }
         },
-        "light_switch": {
-            "devices": ["MIHO008", "MIHO024", "MIHO025", "MIHO026"],
-            "on": { "outer_loop": 4, "delay": 500, "ook_xmits": 22 },
-            "off": { "outer_loop": 1, "delay": 500, "ook_xmits": 10 }
-        },
-        "dimmable_light_switch": {
-            "devices": ["MIHO010", "MIHO075", "MIHO076", "MIHO077"],
-            "on": { "outer_loop": 4, "delay": 500, "ook_xmits": 20 },
-            "off": { "outer_loop": 1, "delay": 500, "ook_xmits": 10 },
-            "brightness": {"outer_loop": 1, "delay": 500, "ook_xmits": 10 }
-        },
-        "two_gang_light_switch": {
-            "devices": ["MIHO009", "MIHO071", "MIHO072", "MIHO073"],
-            "on": { "outer_loop": 2, "delay": 3000, "ook_xmits": 22},
-            "off": { "outer_loop": 1, "delay": 500, "ook_xmits": 10}
+        "devices": {
+            "MIHO008": {
+                "profile": "dimmable_light_switch",
+                "on": { "outer_loop": 6 },
+                "brightness": { "delay": 900 }
+            }
         }
     }
 }

@@ -63,6 +63,52 @@ let processingQueue = false; 	// boolean to indicate items in queue
 let requestCounter = 0;			// Used in sendAndWait
 								// requestCounter - used to apply a counterId to message queue requests 
 
+// Default OOK TX Profiles
+const DEFAULT_OOK_PROFILES = {
+	ook: {
+		on:  { outer_loop: 1, delay: 100, ook_xmits: 10 },
+		off: { outer_loop: 1, delay: 100, ook_xmits: 10 },
+		brightness: { outer_loop: 1, delay: 100, ook_xmits: 10 },
+	},
+	light_switch: {
+		on:  { outer_loop: 4, delay: 500, ook_xmits: 22 },
+        off: { outer_loop: 1, delay: 500, ook_xmits: 10 }
+	},
+	dimmable_light_switch: {
+		on:  { outer_loop: 4, delay: 500, ook_xmits: 20 },
+		off: { outer_loop: 1, delay: 500, ook_xmits: 10 },
+		brightness: {outer_loop: 1, delay: 500, ook_xmits: 10 }
+	},
+	two_gang_light_switch: {
+		on: { outer_loop: 2, delay: 3000, ook_xmits: 22},
+		off: { outer_loop: 1, delay: 500, ook_xmits: 10}
+	}
+};
+
+const DEVICE_PROFILE_MAP = {
+	ook: ook, 
+	OOK: ook,
+	o: ook,
+	ENER002: ook,
+	MIHI014: ook,
+
+	MIHO008: light_switch,
+	MIHO024: light_switch,
+	MIHO025: light_switch,
+	MIHO026: light_switch,
+
+	MIHO010: dimmable_light_switch,
+	MIHO075: dimmable_light_switch,
+	MIHO076: dimmable_light_switch,
+	MIHO077: dimmable_light_switch,
+
+	MIHO009: two_gang_light_switch,
+	MIHO071: two_gang_light_switch,
+	MIHO072: two_gang_light_switch,
+	MIHO073: two_gang_light_switch
+};
+
+
 // retry state object
 const rstate = {};
 
@@ -1319,7 +1365,7 @@ function sendAndWait(msg) {
  * 
  * @returns {TxStates} TX Parameters object
  */
-function getDeviceTxParameters(deviceType, state) {
+function getDeviceTxParametersOld(deviceType, state) {
 	const mergedOptions = {};
 
 	for (const profile of Object.values(CONFIG.ook_tx_profiles)) {
@@ -1336,4 +1382,91 @@ function getDeviceTxParameters(deviceType, state) {
 	}
 
 	return mergedOptions;
+}
+
+
+/**
+ * Resolve the effective OOK transmission parameters
+ * for a specific device and state.
+ *
+ * Resolution order (lowest → highest priority):
+ *
+ * 1. deviceType default profile definition
+ * 2. JSON profile-level override
+ * 3. JSON device-level override
+ *
+ * Device-level overrides always win.
+ *
+ * @param {string} deviceType - e.g. "MIHO008"
+ * @param {string} state - e.g. "on", "off", "brightness"
+ * @returns {{outer_loop:number, delay:number, ook_xmits:number}}
+ * @throws {Error} if device, profile, or state is invalid
+ */
+function getDevicesTxParameters(deviceType, state) {
+	// Short alias to overrides section (may be undefined)
+	const overrides = CONFIG.ook_tx_profiles ?? {};
+
+	// Resolves base profile from hard-coded device map
+	let profileType = DEVICE_PROFILE_MAP[deviceType];
+	if (!profileType) {
+		throw new Error(`Unknown device: ${deviceType}`);
+	}
+
+	// Allow JSON to override the device's profile type
+	// optional, controlled escape
+	const deviceConfig = overrides.devices?.[deviceType];
+	if (deviceConfig?.profile) {
+		profileType = deviceConfig.profile;
+
+		// Safety check to prevent invalid profile assignment
+		if (!DEFAULT_OOK_PROFILES[profileType]) {
+			throw new Error(
+        		`Invalid profile override "${profileType}" for ${deviceType}`
+      		);
+		}
+	}
+
+	// Retrieve base profile form deviceType defaults
+
+	const baseProfile = DEFAULT_OOK_PROFILES[profileType];
+	if (!baseProfile?.[state]) {
+		throw new Error(`Invalid state "${state}" for profile ${profileType}`);
+	}
+
+	// Clone base profile state as to never mutate defaults
+	let result = { ...baseProfile[state] };
+
+	/**
+	 * Apply profile-level JSON override (if present)
+  	 * Example:
+     * {
+     *   profiles: {
+     *     light_switch: {
+     *       on: { delay: 700 }
+     *     }
+     *   }
+     * }
+	 */
+	const profileOverride = overrides.profiles?.[profileType]?.[state];
+	if (profileOverride) {
+		Object.assign(result, profileOverride);
+	}
+
+	/**
+	 * Apply device-level JSON override (highest priority)
+	 * Example:
+	 * {
+	 * 	devices: {
+	 *		MIHO008: {
+	 * 			on: { outer_loop: 6 }	 	
+	 * 		}
+	 * 	}
+	 * }
+	 */
+	if (deviceConfig?.[state]) {
+		Object.assign(result, deviceConfig[state]);
+	}
+
+	// Final resolved transmission profiles
+	return result;
 }
