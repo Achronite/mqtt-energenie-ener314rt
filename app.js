@@ -58,10 +58,10 @@ const MIHO089 = 19;
 
 // MessageQueue - provide a queue so that multiple
 // messages are processed one at a time
-const messageQueue = [];
-let processingQueue = false; 	// boolean to indicate items in queue
-let requestCounter = 0;			// Used in sendAndWait
-								// requestCounter - used to apply a counterId to message queue requests 
+let messageQueue = [];
+let processingQueue = false;    // boolean to indicate items in queue
+let requestCounter = 0;         // Used in sendAndWait
+                                // requestCounter - used to apply a counterId to message queue requests 
 
 // Default OOK TX Profiles
 const DEFAULT_OOK_PROFILES = {
@@ -86,26 +86,26 @@ const DEFAULT_OOK_PROFILES = {
 };
 
 const DEVICE_PROFILE_MAP = {
-	ook: ook, 
-	OOK: ook,
-	o: ook,
-	ENER002: ook,
-	MIHI014: ook,
+	ook: 'ook',
+	OOK: 'ook',
+	o: 'ook',
+	ENER002: 'ook',
+	MIHI014: 'ook',
 
-	MIHO008: light_switch,
-	MIHO024: light_switch,
-	MIHO025: light_switch,
-	MIHO026: light_switch,
+	MIHO008: 'light_switch',
+	MIHO024: 'light_switch',
+	MIHO025: 'light_switch',
+	MIHO026: 'light_switch',
 
-	MIHO010: dimmable_light_switch,
-	MIHO075: dimmable_light_switch,
-	MIHO076: dimmable_light_switch,
-	MIHO077: dimmable_light_switch,
+	MIHO010: 'dimmable_light_switch',
+	MIHO075: 'dimmable_light_switch',
+	MIHO076: 'dimmable_light_switch',
+	MIHO077: 'dimmable_light_switch',
 
-	MIHO009: two_gang_light_switch,
-	MIHO071: two_gang_light_switch,
-	MIHO072: two_gang_light_switch,
-	MIHO073: two_gang_light_switch
+	MIHO009: 'two_gang_light_switch',
+	MIHO071: 'two_gang_light_switch',
+	MIHO072: 'two_gang_light_switch',
+	MIHO073: 'two_gang_light_switch'
 };
 
 
@@ -1266,20 +1266,28 @@ function queueMessage(msg) {
 	// If OOK, remove previous queued messages
 	// with the same zone + switchNum
 	if (msg.mode === 'ook') {
-		messageQueue = messageQueue.filter(entry => {
-			const queueMessage = entry.msg;
+		// Remove duplications from queue starting at index 1
+		messageQueue = [
+			...(messageQueue[0] ? [messageQueue[0]] : []),
+			...messageQueue.slice(1).filter(entry => {
+				const queueMessage = entry.msg;
 
-			// Keep entry if 
-			// - Not OOK
-			// - OR different zone
-			// - OR different switch number
-			return !(
-				queueMessage.mode === 'ook' && 
-				queueMessage.zone === msg.zone &&
-				queueMessage.switchNum === msg.switchNum
-			);
-		});
-		
+				// Keep entry if
+				// - Not OOK
+				// - OR different zone
+				// - OR different switch number
+				const isDuplicated = (
+					queueMessage.mode === 'ook' &&
+					queueMessage.zone === msg.zone &&
+					queueMessage.switchNum === msg.switchNum
+				);
+
+				if(isDuplicated) {
+					log.verbose('queueMessage', 'Removing queue duplicate:', queueMessage);
+				}
+				return !isDuplicated;
+			})
+		];
 	}
 
 	// Push new message
@@ -1368,48 +1376,6 @@ function sendAndWait(msg) {
 
 
 /**
- * @typedef {Object} TxState
- * @property {number} outer_loop - Number of outer loop repititions
- * @property {number} delay - delay between outer_loops in milliseconds (applies delay on last loop too)
- * @property {number} ook_xmits - inner transmits of message
- */
-
-/**
- * @typedef {Object} TxStates
- * @property {TxState} on - Parameters for the "on" state
- * @property {TxState} off - Parameters for the "off" state
- * @property {TxState} [brightness] - Optional parameters for "brightness"
- */
-
-/**
- * Retrieved tx_profiles from the config.json
- * 
- * @param {string} deviceType - The device type to get parameter for
- * @param {string} state - State to retrieve (on/off/brightness)
- * 
- * @returns {TxStates} TX Parameters object
- */
-function getDeviceTxParametersOld(deviceType, state) {
-	const mergedOptions = {};
-
-	for (const profile of Object.values(CONFIG.ook_tx_profiles)) {
-		if (profile.devices.includes(deviceType)) {
-			if (profile[state]) {
-				// Merge this profile's stat into the mergedOptions
-				Object.assign(mergedOptions, profile[state]);
-			}
-		}
-	}
-
-	if (Object.keys(mergedOptions).length === 0) {
-		throw new Error(`Unknown device type or state: ${deviceType} / ${state}`);
-	}
-
-	return mergedOptions;
-}
-
-
-/**
  * Resolve the effective OOK transmission parameters
  * for a specific device and state.
  *
@@ -1426,7 +1392,7 @@ function getDeviceTxParametersOld(deviceType, state) {
  * @returns {{outer_loop:number, delay:number, ook_xmits:number}}
  * @throws {Error} if device, profile, or state is invalid
  */
-function getDevicesTxParameters(deviceType, state) {
+function getDeviceTxParameters(deviceType, state) {
 	// Short alias to overrides section (may be undefined)
 	const overrides = CONFIG.ook_tx_profiles ?? {};
 

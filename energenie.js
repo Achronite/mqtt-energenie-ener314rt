@@ -272,6 +272,7 @@ if (ret==0){
  * @param {object} msg 
  */
 async function sendOOKSwitch(zone, switchNum, switchState, xmits, msg) {
+    // ener314rt.stopMonitoring(); // TODO: should the monitoring be paused while processing OOK?
     const outerLoop = msg.txParameters?.outer_loop || 1;
     const delay = msg.txParameters?.delay || 0;
     for(let i = 0; i < outerLoop; i++) {
@@ -280,4 +281,5 @@ async function sendOOKSwitch(zone, switchNum, switchState, xmits, msg) {
         var ret = ener314rt.ookSwitch(zone, switchNum, switchState, xmits);
         await new Promise(r => setTimeout(r, delay));
     }
+    // startMonitoringThread(); // TODO: start the monitoring of the monitoring?
 }
