@@ -46,8 +46,10 @@ this.events = new events.EventEmitter();
 var ener314rt = require('energenie-ener314rt');
 
 // main processing section that does stuff when asked by parent
-process.on('message', msg => {
+process.on('message', async msg => {
     log.verbose("energenie","cmd: %j", msg);
+    const { requestId } = msg;
+
     switch (msg.cmd) {
         case 'send':
             // Check xmit times (advanced), 26ms per payload transmission
@@ -57,6 +59,7 @@ process.on('message', msg => {
             switch (msg.mode) {
                 case 'ook':
                 case 'OOK':
+
                     // Check and set parameters
                     let zone = Number(msg.zone);
                     if (zone < 0 || zone > 1048575 || isNaN(zone)) {
@@ -72,7 +75,8 @@ process.on('message', msg => {
 
                     // Invoke C function to do the send
                     if (initialised){
-                        var ret = ener314rt.ookSwitch(zone, switchNum, switchState, xmits);
+                        await sendOOKSwitch(zone, switchNum, switchState, xmits, msg);
+                        // var ret = ener314rt.ookSwitch(zone, switchNum, switchState, xmits);
                         // ignore ret as workaround for https://github.com/Achronite/energenie-ener314rt/issues/32
                         msg.state = switchState;
                     } else {
@@ -82,7 +86,9 @@ process.on('message', msg => {
                     }
 
                     // return result to parent
-                    process.send(msg);
+                    process.send({
+                        ...msg, requestId, done: true 
+                    });
 
                     break;
                 case 'fsk':
@@ -108,7 +114,10 @@ process.on('message', msg => {
                                 // for emulation mode we need to respond, otherwise monitoring loop will do it for us
                                 msg.emulated = true;
                                 msg.state = switchState;
-                                process.send(msg);                                
+                                // process.send(msg);
+                                process.send({
+                                    ...msg, requestId, done: true
+                                });                                
                             }                     
 
                             break;
@@ -172,7 +181,7 @@ process.on('message', msg => {
                     // cancel
                     msg.retries = 0;
                 }
-                process.send(msg);
+                process.send({...msg, requestId, done: true });
             }
             log.verbose("energenie","cached deviceId=%d, cmd=%j, data=%j, retries=%d, res=%d", msg.deviceId, msg.otCommand, msg.data, msg.retries, res);
             break;
@@ -182,7 +191,8 @@ process.on('message', msg => {
             var discovery = JSON.parse(response);
             msg.numDevices = discovery.numDevices;
             msg.devices = discovery.devices;
-            process.send(msg);
+            // process.send(msg);
+            process.send({ ...msg, requestId, done: true });
             break;
         default:
             log.info("energenie", "Unknown or missing command: %j", msg.cmd);
@@ -245,4 +255,31 @@ if (ret==0){
     log.info("energenie", "ENER314-RT initialised succesfully");
 } else {
     log.warn("energenie", "failed to initialise ENER314-RT, err=%j, EMULATOR mode enabled",ret);
+}
+
+
+
+/**
+ * Handle send duty cycles of differing OOK devices according txParameter profiles.
+ * 
+ * Different OOK devices, need different xmit repeat cycles to hear their
+ * respective transmission.
+ * 
+ * @param {number} zone 
+ * @param {number} switchNum 
+ * @param {boolean} switchState 
+ * @param {number} xmits 
+ * @param {object} msg 
+ */
+async function sendOOKSwitch(zone, switchNum, switchState, xmits, msg) {
+    // ener314rt.stopMonitoring(); // TODO: should the monitoring be paused while processing OOK?
+    const outerLoop = msg.txParameters?.outer_loop || 1;
+    const delay = msg.txParameters?.delay || 0;
+    for(let i = 0; i < outerLoop; i++) {
+        log.verbose(`Sending message ${i+1}/${outerLoop}`);
+        // ignore ret as workaround for https://github.com/Achronite/energenie-ener314rt/issues/32
+        var ret = ener314rt.ookSwitch(zone, switchNum, switchState, xmits);
+        await new Promise(r => setTimeout(r, delay));
+    }
+    // startMonitoringThread(); // TODO: start the monitoring of the monitoring?
 }

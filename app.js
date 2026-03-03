@@ -56,6 +56,59 @@ const MIHO033 = 13;
 const MIHO069 = 18;
 const MIHO089 = 19;
 
+// MessageQueue - provide a queue so that multiple
+// messages are processed one at a time
+let messageQueue = [];
+let processingQueue = false;    // boolean to indicate items in queue
+let requestCounter = 0;         // Used in sendAndWait
+                                // requestCounter - used to apply a counterId to message queue requests 
+
+// Default OOK TX Profiles
+const DEFAULT_OOK_PROFILES = {
+	ook: {
+		on:  { outer_loop: 1, delay: 100, ook_xmits: 10 },
+		off: { outer_loop: 1, delay: 100, ook_xmits: 10 },
+		brightness: { outer_loop: 1, delay: 100, ook_xmits: 10 },
+	},
+	light_switch: {
+		on:  { outer_loop: 4, delay: 500, ook_xmits: 22 },
+        off: { outer_loop: 1, delay: 500, ook_xmits: 10 }
+	},
+	dimmable_light_switch: {
+		on:  { outer_loop: 4, delay: 500, ook_xmits: 20 },
+		off: { outer_loop: 1, delay: 500, ook_xmits: 10 },
+		brightness: {outer_loop: 1, delay: 500, ook_xmits: 10 }
+	},
+	two_gang_light_switch: {
+		on: { outer_loop: 2, delay: 3000, ook_xmits: 22},
+		off: { outer_loop: 1, delay: 500, ook_xmits: 10}
+	}
+};
+
+const DEVICE_PROFILE_MAP = {
+	ook: 'ook',
+	OOK: 'ook',
+	o: 'ook',
+	ENER002: 'ook',
+	MIHI014: 'ook',
+
+	MIHO008: 'light_switch',
+	MIHO024: 'light_switch',
+	MIHO025: 'light_switch',
+	MIHO026: 'light_switch',
+
+	MIHO010: 'dimmable_light_switch',
+	MIHO075: 'dimmable_light_switch',
+	MIHO076: 'dimmable_light_switch',
+	MIHO077: 'dimmable_light_switch',
+
+	MIHO009: 'two_gang_light_switch',
+	MIHO071: 'two_gang_light_switch',
+	MIHO072: 'two_gang_light_switch',
+	MIHO073: 'two_gang_light_switch'
+};
+
+
 // retry state object
 const rstate = {};
 
@@ -78,10 +131,7 @@ process.on('SIGINT', handleSignal );
 //process.on('SIGKILL', handleSignal );
 
 // read xmit defaults from config file
-let ook_xmits = 20;
 let fsk_xmits = 20;
-if (CONFIG.ook_xmits)
-	ook_xmits = CONFIG.ook_xmits;
 if (CONFIG.fsk_xmits)
 	fsk_xmits = CONFIG.fsk_xmits;
 // cached retries
@@ -164,6 +214,8 @@ client.on('message', function (topic, msg, packet) {
 	// format command for passing to energenie process
 	// format is OOK: 'energenie/c/ook/zone/switchNum/command' or OT: 'energenie/c/2/deviceNum/command'
 	log.verbose('>',"%s: %s", topic, msg);
+	let ener_cmd = null;
+
 	const cmd_array = topic.split("/");
 
 	let otCommand = 0;
@@ -172,8 +224,26 @@ client.on('message', function (topic, msg, packet) {
 		case 'ook':
 		case 'OOK':
 		case 'o':
+		case 'ENER002':
+		case 'MIHO014':
+		// single light switch
+		case 'MIHO008':
+		case 'MIHO024':
+		case 'MIHO025':
+		case 'MIHO026':
+		// dimmable single light switch - tested
+		case 'MIHO010':
+		case 'MIHO075':
+		case 'MIHO076':
+		case 'MIHO077':
+		// two gang light switch - unable to test	
+		case 'MIHO009':
+		case 'MIHO071':
+		case 'MIHO072':
+		case 'MIHO073':
 			// All ook 1-way devices
-			
+			const deviceType = cmd_array[MQTTM_DEVICE];
+
 			// Is this request for a dimmer switch?
 			if (cmd_array[MQTTM_OOK_SWITCH] == "dimmer"){
                 /*
@@ -190,18 +260,22 @@ client.on('message', function (topic, msg, packet) {
                 */
 
 				// default dimmer OFF
-				var switchNum = 1;
-				var switchState = false;
+				let switchNum = 1;
+				let switchState = false;
 
-				var brightness = String(msg);
-
+				const brightness = String(msg);
+				let txParameters = getDeviceTxParameters(deviceType, 'brightness');
 				// Brightness steps vary
 				switch (brightness) {
+					case 'off':
 					case 'OFF':
 					case '0':
 						// off
+						txParameters = getDeviceTxParameters(deviceType, 'off');
 						break;
+					case 'on':
 					case 'ON':		// unused by Home Assistant as it should send brightness
+						txParameters = getDeviceTxParameters(deviceType, 'on');
 						switchState = true;
 						break;
 					case '1':
@@ -236,16 +310,19 @@ client.on('message', function (topic, msg, packet) {
 						log.warn('>', "Invalid brightness %s for %j", brightness, cmd_array[MQTTM_OOK_ZONE]);
 						return;
                 } // switch
-				var ener_cmd = { cmd: 'send', mode: 'ook', repeat: ook_xmits, brightness: brightness, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: switchNum, switchState: switchState };
+				ener_cmd = { cmd: 'send', mode: 'ook', repeat: txParameters.ook_xmits, brightness: brightness, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: switchNum, switchState: switchState, productId: deviceType, txParameters: txParameters };
 
 			} else {
 				//validate standard on/off request, default to OFF
-				var switchState = false;
+				let switchState = false;
 				if (typeof msg == typeof true)
 					switchState = msg;
 				else if (msg == "ON" || msg == "on" || msg == 1 || msg == '1')
 					switchState = true;
-				var ener_cmd = { cmd: 'send', mode: 'ook', repeat: ook_xmits, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: cmd_array[MQTTM_OOK_SWITCH], switchState: switchState };
+				
+				const txParameters = getDeviceTxParameters(deviceType, switchState ? 'on' : 'off');
+				
+				ener_cmd = { cmd: 'send', mode: 'ook', repeat: txParameters.ook_xmits, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: cmd_array[MQTTM_OOK_SWITCH], switchState: switchState, productId: deviceType, txParameters: txParameters };
 			}
 			break;
 		case '2':
@@ -253,12 +330,12 @@ client.on('message', function (topic, msg, packet) {
 			// MIHO005 - Adaptor+
 
 			//validate on/off request, default to OFF
-			var switchState = false;
+			let switchState = false;
 			if (typeof msg == typeof true)
 				switchState = msg;
 			else if (msg == "ON" || msg == "on" || msg == 1 || msg == '1')
 				switchState = true;
-			var ener_cmd = {
+			ener_cmd = {
 				cmd: 'send', mode: 'fsk', repeat: fsk_xmits, command: 'switch', 
 				productId: cmd_array[MQTTM_OT_PRODUCTID],
 				deviceId: cmd_array[MQTTM_OT_DEVICEID],
@@ -403,7 +480,7 @@ client.on('message', function (topic, msg, packet) {
 
 
 				// All eTRV commands are cached
-				var ener_cmd = {
+				ener_cmd = {
 					cmd: 'cacheCmd', mode: 'fsk', repeat: fsk_xmits,
 					command: cmd_array[MQTTM_OT_CMD],
 					productId: Number(cmd_array[MQTTM_OT_PRODUCTID]),
@@ -471,7 +548,7 @@ client.on('message', function (topic, msg, packet) {
 				}
 
 				// Thermostat commands are cached
-				var ener_cmd = {
+				ener_cmd = {
 					cmd: 'cacheCmd', mode: 'fsk', repeat: fsk_xmits,
 					command: cmd_array[MQTTM_OT_CMD],
 					productId: Number(cmd_array[MQTTM_OT_PRODUCTID]),
@@ -499,10 +576,11 @@ client.on('message', function (topic, msg, packet) {
 			// Undefined device
 	} // switch MQTTM_DEVICE
 
-	if (ener_cmd !== undefined) {
+	if (ener_cmd !== null) {
 		// Send request to energenie process, any responses are handled by forked.on('message')
 		log.http("command", "%j", ener_cmd);
-		forked.send(ener_cmd);
+		// forked.send(ener_cmd);
+		queueMessage(ener_cmd);
 	} else {
 		log.warn('cmd',"Invalid MQTT device/command %j:%j",cmd_array[MQTTM_DEVICE],msg);
 	}
@@ -529,6 +607,7 @@ forked.on("spawn", msg => {
 	// process started succesfully, request start of the monitor loop if configured in config file
 	if (CONFIG.monitoring){
 		log.info("monitor", "starting monitoring of FSK devices...");
+		// queueMessage({ cmd: "monitor", enabled: true });
 		forked.send({ cmd: "monitor", enabled: true });
 	}
 });
@@ -543,6 +622,7 @@ forked.on("message", msg => {
 		case 'send':
 			var rtn_msg = "UNKNOWN";
 			var state_topic;
+			const prefix = msg.productId ? msg.productId : 'ook';
 			switch (msg.mode) {
 				case 'ook':
 					if (msg.brightness){
@@ -550,11 +630,12 @@ forked.on("message", msg => {
 						log.verbose('app', "dimmer: %j", msg);
 
 						// use the value of dimmer instead of switchNum
-						state_topic = `${CONFIG.topic_stub}ook/${msg.zone}/dimmer/state`;
+						state_topic = `${CONFIG.topic_stub}${prefix}/${msg.zone}/dimmer/state`;
 						rtn_msg = String(msg.brightness);
 
 					} else {
-						state_topic = `${CONFIG.topic_stub}ook/${msg.zone}/${msg.switchNum}/state`;
+						
+						state_topic = `${CONFIG.topic_stub}${prefix}/${msg.zone}/${msg.switchNum}/state`;
 						
 						if (typeof(msg.state) === 'boolean'){
 							if (msg.state) {
@@ -793,7 +874,8 @@ forked.on("message", msg => {
 									switchState: rstate[dynamicName]
 								};
 								log.http("command", "RETRY %j", ener_cmd);
-								forked.send(ener_cmd);
+								queueMessage(ener_cmd);
+								// forked.send(ener_cmd);
 							}
 						}
 					}
@@ -866,7 +948,8 @@ forked.on('exit', (code, signal) => {
 function UpdateMQTTDiscovery() {
 	if (discovery){
 		log.info('auto', "calling discovery");
-		forked.send({ cmd: "discovery", scan: false });
+		// forked.send({ cmd: "discovery", scan: false });
+		queueMessage({ cmd: "discovery", scan: false });
 	}
 }
 
@@ -1167,4 +1250,213 @@ function runAtSpecificTimeOfDay(hour, minutes, func)
     // run every 24 hours from now on
     setInterval(func, twentyFourHours);
   }, eta_ms);
+}
+
+
+/**
+ * Queue Message
+ * 
+ * If this is an OOK command, apply deduplication of 
+ * same zone + switchNum, last to the queues wins
+ * 
+ * @param {object} msg - the message to send
+ */
+function queueMessage(msg) {
+
+	// If OOK, remove previous queued messages
+	// with the same zone + switchNum
+	if (msg.mode === 'ook') {
+		// Remove duplications from queue starting at index 1
+		messageQueue = [
+			...(messageQueue[0] ? [messageQueue[0]] : []),
+			...messageQueue.slice(1).filter(entry => {
+				const queueMessage = entry.msg;
+
+				// Keep entry if
+				// - Not OOK
+				// - OR different zone
+				// - OR different switch number
+				const isDuplicated = (
+					queueMessage.mode === 'ook' &&
+					queueMessage.zone === msg.zone &&
+					queueMessage.switchNum === msg.switchNum
+				);
+
+				if(isDuplicated) {
+					log.verbose('queueMessage', 'Removing queue duplicate:', queueMessage);
+				}
+				return !isDuplicated;
+			})
+		];
+	}
+
+	// Push new message
+	const delay = msg.txParameters?.delay || 0;
+	messageQueue.push({ msg, delay });
+	processQueue();
+}
+
+
+/**
+ * Process a queue of message, and stop flooding of ener314-rt
+ * 
+ * Waits for child to finish each message before sending the next
+ */
+function processQueue() {
+	if (processingQueue === true) {
+		log.verbose('<', 'Already processing Queue - exiting...');
+		return;
+	}
+
+	processingQueue = true;
+	const next = async () => {
+		if (messageQueue.length === 0) {
+			processingQueue = false;
+			return;
+		}
+
+		const { msg, delay } = messageQueue[0];
+
+		const ts = new Date().toISOString();
+		log.verbose('processQueue', `${ts} - Sending message:`, msg, `(delay after send: ${delay}ms)`);
+
+		try {
+			await sendAndWait(msg);
+		} catch (err) {
+			log.error('processQueue', 'Error waiting for child:', err);
+		}
+
+		messageQueue.shift();
+		
+		setTimeout(next, delay);
+	}
+
+	next();
+}
+
+
+/**
+ * SendAndWait for child process to report bac it has successfully
+ * processed the RF message.
+ * 
+ * Have applied a requestId, to be used to monitor the appropriate send
+ * message.
+ * 
+ * Safety: will automatically timeout after 10 seconds.
+ * 
+ * @param {object} msg
+ * @return Promise<any>
+ */
+function sendAndWait(msg) {
+	return new Promise((resolve, reject) => {
+
+		const requestId = ++requestCounter;
+		const payload   = {
+			...msg, requestId
+		};
+
+		const timeout = setTimeout( () => {
+			forked.removeListener('message', onMessage);
+			reject(new Error("Child response timeout"));
+		}, 10000);  // Safety timeout if nothing comes back after 10 seconds
+
+		function onMessage(response) {
+			if ( !response ) return;
+			if (  response.requestId !== requestId ) return;
+			if (  response.done !== true ) return;
+			clearTimeout(timeout);
+			forked.removeListener('message', onMessage);
+			resolve(response);
+		}
+
+		forked.on('message', onMessage);
+		forked.send(payload);
+	});
+}
+
+
+/**
+ * Resolve the effective OOK transmission parameters
+ * for a specific device and state.
+ *
+ * Resolution order (lowest → highest priority):
+ *
+ * 1. deviceType default profile definition
+ * 2. JSON profile-level override
+ * 3. JSON device-level override
+ *
+ * Device-level overrides always win.
+ *
+ * @param {string} deviceType - e.g. "MIHO008"
+ * @param {string} state - e.g. "on", "off", "brightness"
+ * @returns {{outer_loop:number, delay:number, ook_xmits:number}}
+ * @throws {Error} if device, profile, or state is invalid
+ */
+function getDeviceTxParameters(deviceType, state) {
+	// Short alias to overrides section (may be undefined)
+	const overrides = CONFIG.ook_tx_profiles ?? {};
+
+	// Resolves base profile from hard-coded device map
+	let profileType = DEVICE_PROFILE_MAP[deviceType];
+	if (!profileType) {
+		throw new Error(`Unknown device: ${deviceType}`);
+	}
+
+	// Allow JSON to override the device's profile type
+	// optional, controlled escape
+	const deviceConfig = overrides.devices?.[deviceType];
+	if (deviceConfig?.profile) {
+		profileType = deviceConfig.profile;
+
+		// Safety check to prevent invalid profile assignment
+		if (!DEFAULT_OOK_PROFILES[profileType]) {
+			throw new Error(
+        		`Invalid profile override "${profileType}" for ${deviceType}`
+      		);
+		}
+	}
+
+	// Retrieve base profile form deviceType defaults
+
+	const baseProfile = DEFAULT_OOK_PROFILES[profileType];
+	if (!baseProfile?.[state]) {
+		throw new Error(`Invalid state "${state}" for profile ${profileType}`);
+	}
+
+	// Clone base profile state as to never mutate defaults
+	let result = { ...baseProfile[state] };
+
+	/**
+	 * Apply profile-level JSON override (if present)
+  	 * Example:
+     * {
+     *   profiles: {
+     *     light_switch: {
+     *       on: { delay: 700 }
+     *     }
+     *   }
+     * }
+	 */
+	const profileOverride = overrides.profiles?.[profileType]?.[state];
+	if (profileOverride) {
+		Object.assign(result, profileOverride);
+	}
+
+	/**
+	 * Apply device-level JSON override (highest priority)
+	 * Example:
+	 * {
+	 * 	devices: {
+	 *		MIHO008: {
+	 * 			on: { outer_loop: 6 }	 	
+	 * 		}
+	 * 	}
+	 * }
+	 */
+	if (deviceConfig?.[state]) {
+		Object.assign(result, deviceConfig[state]);
+	}
+
+	// Final resolved transmission profiles
+	return result;
 }

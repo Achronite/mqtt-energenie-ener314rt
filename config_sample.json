@@ -8,9 +8,22 @@
     },
     "monitoring": true,
     "discovery_prefix": "homeassistant/",
-    "ook_xmits": 10,
     "fsk_xmits": 5,
     "cached_retries": 10,
     "log_level": "info",
-    "retry":true
+    "retry":true,
+    "ook_tx_profiles": {
+        "profiles": {
+            "light_switch": {
+                "on": { "delay": 700 }
+            }
+        },
+        "devices": {
+            "MIHO008": {
+                "profile": "dimmable_light_switch",
+                "on": { "outer_loop": 6 },
+                "brightness": { "delay": 900 }
+            }
+        }
+    }
 }
