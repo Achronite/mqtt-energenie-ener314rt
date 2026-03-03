@@ -1256,11 +1256,35 @@ function runAtSpecificTimeOfDay(hour, minutes, func)
 /**
  * Queue Message
  * 
+ * If this is an OOK command, apply deduplication of 
+ * same zone + switchNum, last to the queues wins
+ * 
  * @param {object} msg - the message to send
  */
 function queueMessage(msg) {
+
+	// If OOK, remove previous queued messages
+	// with the same zone + switchNum
+	if (msg.mode === 'ook') {
+		messageQueue = messageQueue.filter(entry => {
+			const queueMessage = entry.msg;
+
+			// Keep entry if 
+			// - Not OOK
+			// - OR different zone
+			// - OR different switch number
+			return !(
+				queueMessage.mode === 'ook' && 
+				queueMessage.zone === msg.zone &&
+				queueMessage.switchNum === msg.switchNum
+			);
+		});
+		
+	}
+
+	// Push new message
 	const delay = msg.txParameters?.delay || 0;
-	messageQueue.push({msg, delay});
+	messageQueue.push({ msg, delay });
 	processQueue();
 }
 
