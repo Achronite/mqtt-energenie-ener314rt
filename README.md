@@ -89,6 +89,9 @@ It should contain the following entities configured for your environment. The ex
 * `cached_retries` (optional) contains the number of times to retry a cached command before stopping (applies to eTRV and thermostat)
 * `log_level` the application logging level, see [Logging](#logging) below
 * `retry` auto-retry capability for MIHO005 (optional, enabled by default).  Checks that the resulting monitor message switch state from the Smart Plug+ matches the (just) sent switch command state; if it is different it retries the command again (indefinitely) until the state matches.  Set this to `false` to disable the auto-retry switch command for the MIHO005 (Smart Plug+).
+* `weekly_valve_exercise_enabled` (optional, default: false) enables automatic weekly valve exercise for all eTRVs. When enabled, sends the EXERCISE_VALVE command to all known eTRVs on the configured schedule. This maintenance process helps valves relearn their fully open and closed positions.
+* `weekly_valve_exercise_day` (optional, default: "Sunday") specifies the day of week for valve exercise. Accepts day names ("Sunday", "Monday", etc.) or numbers (0-6, where 0=Sunday).
+* `weekly_valve_exercise_time` (optional, default: "12:00") specifies the time of day in 24-hour format (HH:MM) when valve exercise should run.
 
 9) Run the application manually first using the command: ``node app.js``.  When you know this runs OK a system service can then be set-up as shown in the [Systemd Service](#systemd-service) below.
 
@@ -172,6 +175,8 @@ Other devices will return other OpenThings parameters which you can use. I have 
 
 ## Home Assistant Set-up
 Enable the [MQTT Integration](https://www.home-assistant.io/integrations/mqtt/) in Home Assistant (if not already enabled).
+
+Example Home Assistant helpers/automation are provided in [Home Assistant Examples/example_helpers.yaml](Home%20Assistant%20Examples/example_helpers.yaml) and [Home Assistant Examples/example_automation.yaml](Home%20Assistant%20Examples/example_automation.yaml). They normalize heat demand across TRVs and drive a boiler via a Nest/OpenTherm thermostat; copy and adapt them to your entity names and topology before use.
 
 ### MQTT Discovery
 Most MiHome Monitor devices will auto-add and be available in Home Assistant via [MQTT discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery), consult the table above to see if your devices are supported.  If your Monitor device is not found you can force it to transmit a 'join' request by holding down the button on the device for 5 seconds. The default discovery topics for the devices follow the pattern `homeassistant/<component>/ener314rt/<deviceId>-<ParameterName>`, the value `homeassistant/` can be changed in the `config.json` file if your discovery topic is configured differently.
@@ -325,7 +330,7 @@ Both MiHome heating devices are now supported (as of v0.7.x).  Specifically the 
 These devices are battery operated, so energenie in order to save power, have implemented periods of sleep where the devices do not listen for commands.  This can lead to a delay from when a command is sent to it being processed by the device. See **Command Caching** below.
 
 ### Command Caching
-Battery powered energenie devices, such as the eTRV or Thermostat do not constantly listen for commands.  For example, the eTRV reports its temperature at the *SET_REPORTING_INTERVAL* (default 5 minutes) after which the receiver is then activated to listen for commands. The receiver only remains active for 200ms or until a message is received.
+Battery powered energenie devices, such as the eTRV or Thermostat do not constantly listen for commands.  For example, the eTRV reports its temperature at the *SET_REPORT_PERIOD* (default 5 minutes) after which the receiver is then activated to listen for commands. The receiver only remains active for 200ms or until a message is received.
 
 To cater for these hardware limitations a command will be held (cached) until a report is received by the monitor thread from the device; at this point the most recent cached message (only 1 is supported) will be sent to the device.  Messages will continue to be resent until we know they have been succesfully received or until the number of retries has reached 0.  When a command is known to have been processed (e.g DIAGNOSTICS) the 'command' and 'retries' topics are reset to 0.
 
@@ -334,25 +339,85 @@ The reason that a command may be resent multiple times is due to reporting issue
 > **NOTE:** The performance of node may decrease when a command is cached due to dynamic polling. The frequency that the radio device is polled by the monitor thread automatically increases by a factor of 200 when a command is cached (it goes from checking every 5 seconds to every 25 milliseconds) this dramatically increases the chance of a message being correctly received sooner.
 
 ### eTRV Commands
-The MiHome Thermostatic Radiator valve (eTRV) can accept commands to perform operations, provide diagnostics or perform self tests.  The documented commands are provided in the table below.  For this MQTT implementation most of the commands have been simplified under a single 'Maintenance' topic.  If you are using MQTT Discovery in Home Assistant you should see a 'select' for this on your dashboard.
+The MiHome Thermostatic Radiator valve (eTRV) can accept commands to perform operations, provide diagnostics or perform self tests.  The documented commands are provided in the table below.  For this MQTT implementation most of the commands have been simplified under a single 'MAINTENANCE' topic.  If you are using MQTT Discovery in Home Assistant you should see a 'select' for this on your dashboard.
 
-Where .data shows an entry in "", this is the string that should be sent as the 'Command' for the MQTT Maintenance topic. This can be used if you want to send a request without using the select dropdown set-up by MQTT discovery.
+Where .data shows an entry in "", this is the string that should be sent as the 'Command' for the MQTT MAINTENANCE topic. This can be used if you want to send a request without using the select dropdown set-up by MQTT discovery.
 
-| Command | MQTT Command Topic(s) | # | Description | .data | Response Msg |
+| Command | MQTT Command Topic(s) | # | Description | Data | Response Msg |
 |---|:---:|---|---|:---:|---|
-|Clear|Maintenance|0|Cancel current outstanding cached command for the device (set command & retries to 0)| "Cancel Command"|All Msgs|
-|Exercise Valve|Maintenance EXERCISE_VALVE|163|Send exercise valve command, recommended once a week to calibrate eTRV|"Exercise Valve"|DIAGNOSTICS|
-|Low power mode|Maintenance LOW_POWER_MODE|164|This is used to enhance battery life by limiting the hunting of the actuator, ie it limits small adjustments to degree of opening, when the room temperature is close to the *TEMP_SET* point. A consequence of the Low Power mode is that it may cause larger errors in controlling room temperature to the set temperature.|0=Off<br>1=On OR "Low Power Mode ON" "Low Power Mode OFF"|No*|
-|Valve state^|Maintenance<br>VALVE_STATE|165|Set valve state|"Valve Auto"<br>"Valve Open"<br>"Valve Closed"<br> OR 0=Open<br>1=Closed<br>2=Auto (default)|No|
-|Diagnostics|Maintenance<br>DIAGNOSTICS|166|Request diagnostic data from device, if all is OK it will return 0. Otherwise see additional monitored values for status messages|"Request Diagnostics"|DIAGNOSTICS|
-|Identify|Maintenance<br>IDENTIFY|191|Identify the device by making the green light flash on the selected eTRV for 60 seconds|"Identify"|No|
-|Reporting Interval|Maintenance REPORTING_INTERVAL|210|Update reporting interval to requested value|300-3600 seconds|No|
-|Voltage|Maintenance<br>VOLTAGE|226|Report current voltage of the batteries||VOLTAGE|
-|Target temperature|TARGET_TEMP|244|Send new target temperature for eTRV.<br>NOTE: The VALVE_STATE must be set to 'Auto' for this to work.|5-40<br>(Integer)|No|
+|Clear|MAINTENANCE|0|Cancel current outstanding cached command for the device (set command & retries to 0)| "Cancel Command"|All Msgs|
+|Exercise Valve|MAINTENANCE EXERCISE_VALVE|163|Send exercise valve command, recommended once a week to calibrate eTRV|"Exercise Valve"|DIAGNOSTICS|
+|Low power mode|MAINTENANCE LOW_POWER_MODE|164|This is used to enhance battery life by limiting the hunting of the actuator, ie it limits small adjustments to degree of opening, when the room temperature is close to the *TEMP_SET* point. A consequence of the Low Power mode is that it may cause larger errors in controlling room temperature to the set temperature.|0=Off<br>1=On <br> OR <br> "Low Power Mode ON" "Low Power Mode OFF"|No*|
+|Valve state^|MAINTENANCE<br>VALVE_STATE|165|Set valve state|"Valve Fully Open"<br>"Valve Fully Closed"<br>"Valve Normal"<br> OR <br> 0=Open<br>1=Closed<br>2=Normal (default)|No|
+|Diagnostics|MAINTENANCE<br>DIAGNOSTICS|166|Request diagnostic data from device, if all is OK it will return 0. Otherwise see additional monitored values for status messages|"Request Diagnostics"|DIAGNOSTICS|
+|Identify|MAINTENANCE<br>IDENTIFY|191|Identify the device by making the green light flash on the selected eTRV for 60 seconds|"Identify"|No|
+|Reporting Interval|MAINTENANCE REPORT_PERIOD|210|Update reporting interval to requested value|300-3600 seconds|No|
+|Voltage|MAINTENANCE<br>VOLTAGE|226|Report current voltage of the batteries||VOLTAGE|
+|Target temperature|TARGET_TEMP|244|Send new target temperature for eTRV.<br>NOTE: The VALVE_STATE must be set to 'Normal' for this to work.|5-40<br>(Integer)|No|
 
 > \* Although this will not auto-report, a subsequent call to *REQUEST_DIAGNOTICS* will confirm the *LOW_POWER_MODE* setting
 
-> \^ Do not set *VALVE_STATE* 0='Valve Open' When used with Home Assistant in MQTT Discovery mode as it will interfere with the Climate Control Entity
+> \^ Do not set *VALVE_STATE* 0='Valve Fully Open' When used with Home Assistant in MQTT Discovery mode as it will interfere with the Climate Control Entity
+
+#### Climate Mode Mapping
+
+The Home Assistant climate entity displays two modes for the eTRV:
+- **'off'** mode: VALVE_STATE = 1 (Fully Closed) - valve is forced closed, no heat flows
+- **'heat'** mode: VALVE_STATE = 2 (Normal) - valve controls heat output automatically based on temperature comparison with the HVAC_ACTION sensor
+
+When VALVE_STATE is 2 (Normal), the valve controls heat output automatically based on temperature control. The climate entity provides a simple, user-friendly interface for the common heating use case.
+
+**Note on 'Fully Open' State:** The eTRV supports a third valve state (VALVE_STATE = 0, Fully Open) which forces the valve fully open for maximum heat flow. This state is intentionally NOT exposed through the climate mode selector because it's a manual override that should be explicitly chosen. To set the valve to fully open, use the "Valve Fully Open" maintenance button instead. This design prevents accidental use of this override mode through the standard thermostat controls.
+
+### eTRV LED Indicators
+
+The eTRV has LED indicators that provide feedback on its operation:
+
+**Setting Valve State:**
+- Red LED flashes continuously while the motor is running
+- Terminated by three long green LED flashes when the valve is fully open
+- Terminated by three long red LED flashes when the valve is fully closed
+
+**Diagnostics, Exercise Valve, or Voltage Request:**
+- Red LED will flash once every 5 seconds if the 'battery dead' flag is set
+
+### Weekly Valve Exercise Automation
+
+The application supports automated weekly valve exercise for all eTRVs. This maintenance feature helps valves recalibrate by relearning their fully open and fully closed positions, which is recommended by the manufacturer.
+
+**Configuration:**
+Enable this feature by adding these optional settings to your `config.json`:
+
+```json
+{
+  "weekly_valve_exercise_enabled": true,
+  "weekly_valve_exercise_day": "Sunday",
+  "weekly_valve_exercise_time": "12:00"
+}
+```
+
+**Settings:**
+- `weekly_valve_exercise_enabled`: Set to `true` to enable automatic valve exercise (default: `false`)
+- `weekly_valve_exercise_day`: Day of week for exercise. Accepts day names ("Sunday", "Monday", etc.) or numbers (0-6, where 0=Sunday). Default: "Sunday"
+- `weekly_valve_exercise_time`: Time in 24-hour format (HH:MM) when exercise should run. Default: "12:00"
+
+**Behavior:**
+- When enabled, the application automatically sends the EXERCISE_VALVE command to all known eTRVs on the configured schedule
+- The schedule uses the system timezone
+- Commands are queued through the normal eTRV command queue system, respecting priority and retry logic
+- eTRVs must be discovered (have reported at least once) to be included in the automation
+
+**Home Assistant Integration:**
+When using MQTT discovery, two additional sensors are available on the board device:
+- `Valve Exercise Enabled` - Binary sensor showing whether the feature is enabled
+- `Valve Exercise Last Run` - Timestamp sensor showing when the last valve exercise was performed
+
+### Automated Battery Voltage Polling
+
+The application automatically polls battery voltage from all eTRVs every 24 hours after application startup to monitor battery health.
+
+**Manual Voltage Request:**
+You can also manually request voltage at any time using the MAINTENANCE command topic (see eTRV Topics below).
 
 ### eTRV Topics
 
@@ -360,7 +425,7 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 
 |Parameter|Description|Topics|Data|Discovery Type|
 |---|---|:---:|:---:|:---:|
-|Maintenance|For sending maintenance commands|state,command|None, Cancel Command, Request Diagnostics, Exercise Valve, Identify, Low Power Mode ON, Low Power Mode OFF, Valve Auto, Valve Open,Valve Closed|select|
+|MAINTENANCE|For sending MAINTENANCE commands|state,command|None, Cancel Command, Request Diagnostics, Exercise Valve, Identify, Low Power Mode ON, Low Power Mode OFF, Valve Fully Open, Valve Fully Closed, Valve Normal|select|
 |command|Current cached command being sent to device|state,command|None,...|sensor|
 |retries|The number of remaining retries for 'command' to be sent to the device|state,*soon*|0-10|sensor|
 |DIAGNOSTICS|Numeric diagnostic code|state|Numeric||
@@ -369,10 +434,10 @@ To support the MiHome Radiator Valve (MIHO013) aka **'eTRV'**, additional code h
 |ERROR_TEXT|error information|state|text|sensor|
 |EXERCISE_VALVE|The result of the *EXERCISE_VALVE* command|state|success, fail|binary_sensor|
 |LOW_POWER_MODE|eTRV is in low power mode state>|state|ON, OFF|binary_sensor|
-|REPORTING_INTERVAL|Frequency the eTRV will work up and report (in seconds)|command|300-3600|Number|
-|TARGET_TEMP|Target temperature in celcius|state,command|5.0 to 40.0<br>0.5 increments|Number|
-|TEMPERATURE|The current temperature in celcius|state|float|sensor|
-|VALVE_STATE|Current valve mode/state|state|0=Open<br>1=Closed<br>2=Auto|sensor|
+|REPORT_PERIOD|Frequency the eTRV will work up and report (in seconds)|command|300-3600|Number|
+|TARGET_TEMP|Target temperature in celsius|state,command|5.0 to 40.0<br>0.5 increments|Number|
+|TEMPERATURE|The current temperature in celsius|state|float|sensor|
+|VALVE_STATE|Current valve mode/state|state|0=Open<br>1=Closed<br>2=Normal|sensor|
 |VALVE_TS|The time the valve was last exercised|state|state|epoch||
 |VOLTAGE|Current battery voltage|state|float|sensor|
 |VOLTAGE_TS|The time the battery last updated|state|epoch|sensor|
@@ -392,8 +457,8 @@ A different mechanism of reporting processed commands has been implemented for t
 |battery|Estimated battery percentage|state|0-100|sensor|
 |BATTERY_LEVEL|Current battery voltage|state|float|sensor|
 |REL_HUMIDITY|The current relative humidity as a percentage|state|float|sensor|
-|TEMPERATURE|The current temperature in celcius|state|float|sensor|
-|TARGET_TEMP|Target temperature in celcius|state,command|5.0 to 40.0<br>0.5 increments|Number|
+|TEMPERATURE|The current temperature in celsius|state|float|sensor|
+|TARGET_TEMP|Target temperature in celsius|state,command|5.0 to 40.0<br>0.5 increments|Number|
 |THERMOSTAT_MODE|Set operating mode for thermostat, where<br>0=Off, 1=Auto, 2=On|state,command|0,1,2|sensor|
 |MOTION_DETECTOR|Somehow relates to motion being detected|state|who knows!|sensor|
 |RELAY_POLARITY|Set relay polarity, where<br>0=Normally Open, 1=Normally Closed|command,state|0,1|switch|

@@ -2,15 +2,18 @@
     "topic_stub": "energenie/",
     "mqtt_broker": "mqtt://homeassistant.local",
     "mqtt_options": {
-        "username":"node-ener314rt",
-        "password":"password",
+        "username": "node-ener314rt",
+        "password": "password",
         "clean": true
     },
     "monitoring": true,
     "discovery_prefix": "homeassistant/",
-    "ook_xmits": 10,
-    "fsk_xmits": 5,
+    "ook_xmits": 20,
+    "fsk_xmits": 20,
     "cached_retries": 10,
     "log_level": "info",
-    "retry": true
+    "retry": true,
+    "weekly_valve_exercise_enabled": false,
+    "weekly_valve_exercise_day": "Sunday",
+    "weekly_valve_exercise_time": "12:00"
 }

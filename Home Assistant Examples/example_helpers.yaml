@@ -1,0 +1,43 @@
+sensor:
+  # Helper 1: Heating Max Room Temperature Delta
+  # Purpose: largest unmet heating requirement across all rooms; negatives clamped to 0; 0 means no room needs heat.
+  - name: heating_max_room_temperature_delta
+    unit_of_measurement: "°C"
+    state: >
+      {{ [
+        max(states('sensor.bedroom_radiator_temperature_delta') | float(0), 0),
+        max(states('sensor.dining_room_radiator_temperature_delta') | float(0), 0),
+        max(states('sensor.guest_bedroom_radiator_temperature_delta') | float(0), 0),
+        max(states('sensor.hall_radiator_temperature_delta') | float(0), 0),
+        max(states('sensor.kitchen_radiator_temperature_delta') | float(0), 0),
+        max(states('sensor.library_radiator_temperature_delta') | float(0), 0),
+        max(states('sensor.living_room_radiator_temperature_delta') | float(0), 0),
+        max(states('sensor.office_radiator_temperature_delta') | float(0), 0)
+      ] | max }}
+
+  # Helper 2: Heating Nest Demand Offset (OpenTherm Friendly)
+  # Purpose: convert system-wide delta into a bounded temperature offset to modulate boiler via Nest/OpenTherm.
+  # Fail-safe: if delta is unavailable/invalid -> 0; never negative; capped to avoid aggressive boiler behaviour.
+  # Used by automation: Home Assistant Examples/example_automation.yaml
+  - name: heating_nest_demand_offset_opentherm_friendly
+    unit_of_measurement: "°C"
+    state: >
+      {% set raw = states('sensor.heating_max_room_temperature_delta') %}
+      {% if raw in ['unknown', 'unavailable', 'none', ''] %}
+        0
+      {% else %}
+        {% set d = raw | float(0) %}
+        {% if d <= 0 %}
+          0
+        {% elif d < 0.4 %}
+          0.3
+        {% elif d < 1.0 %}
+          0.6
+        {% elif d < 2.0 %}
+          1.0
+        {% elif d < 3.5 %}
+          1.8
+        {% else %}
+          2.4
+        {% endif %}
+      {% endif %}

@@ -30,20 +30,20 @@ const MQTTM_OT_DEVICEID = 2;
 const MQTTM_OT_CMD = 3;
 
 // OpenThings Commands
-const CANCEL			= 1;    // replace with 0 before sending
-const EXERCISE_VALVE 	= 163;
-const LOW_POWER_MODE 	= 164;
-const VALVE_STATE 		= 165;
-const DIAGNOSTICS 		= 166;
-const THERMOSTAT_MODE   = 170;  // Thermostat
-const IDENTIFY			= 191;
-const REPORTING_INTERVAL= 210;
-const TARGET_TEMP 		= 244;
-const VOLTAGE 			= 226;
-const SWITCH_STATE    	= 243;
-const HYSTERESIS        = 254;  // Thermostat
-const RELAY_POLARITY    = 171;  // Thermostat
-const TEMP_OFFSET  = 189;  // Thermostat
+const CANCEL = 1;    // replace with 0 before sending
+const EXERCISE_VALVE = 163;
+const LOW_POWER_MODE = 164;
+const VALVE_STATE = 165;
+const DIAGNOSTICS = 166;
+const THERMOSTAT_MODE = 170;  // Thermostat
+const IDENTIFY = 191;
+const REPORT_PERIOD = 210;
+const TARGET_TEMP = 244;
+const VOLTAGE = 226;
+const SWITCH_STATE = 243;
+const HYSTERESIS = 254;  // Thermostat
+const RELAY_POLARITY = 171;  // Thermostat
+const TEMP_OFFSET = 189;  // Thermostat
 const HUMID_OFFSET = 186;  // Thermostat
 
 // OpenThings Device constants
@@ -74,7 +74,7 @@ var discovery = false;
 var shutdown = false;
 
 // setup signal error handling
-process.on('SIGINT', handleSignal );
+process.on('SIGINT', handleSignal);
 //process.on('SIGKILL', handleSignal );
 
 // read xmit defaults from config file
@@ -100,23 +100,24 @@ log.info('MQTT', "connecting to broker %s", CONFIG.mqtt_broker);
 // Add last will & testament message to set offline on disconnect
 const availability_topic = `${CONFIG.topic_stub}availability/state`
 var mqtt_options = CONFIG.mqtt_options;
-mqtt_options.will = { topic: availability_topic,  payload: 'offline', retain: true };
+mqtt_options.will = { topic: availability_topic, payload: 'offline', retain: true };
 
-var client = MQTT.connect(CONFIG.mqtt_broker,mqtt_options);
+var client = MQTT.connect(CONFIG.mqtt_broker, mqtt_options);
 
 // when MQTT is connected...
-client.on('connect',function(){	
+client.on('connect', function () {
 	log.verbose('MQTT', "connected to broker %j", CONFIG.mqtt_broker);
 	//log.verbose('MQTT', "config: %j", mqtt_options);			// Commented out for #66
 
 	// Subscribe to incoming commands
-	var options={
-		retain:true,
-		qos:0};
-	
-	var cmd_topic= MQTT_SUBTOPIC;
-	client.subscribe(cmd_topic,options, function( err ) {
-		if (!err){
+	var options = {
+		retain: true,
+		qos: 0
+	};
+
+	var cmd_topic = MQTT_SUBTOPIC;
+	client.subscribe(cmd_topic, options, function (err) {
+		if (!err) {
 			log.info('MQTT', "subscribed to %s", cmd_topic);
 		} else {
 			log.error('MQTT', "unable to subscribe to '%s'", cmd_topic);
@@ -143,14 +144,14 @@ client.on('connect',function(){
 		publishBoardDiscovery();
 
 		// and then every day at 3:26am
-		runAtSpecificTimeOfDay(3,26,() => { publishBoardDiscovery() });
+		runAtSpecificTimeOfDay(3, 26, () => { publishBoardDiscovery() });
 
 		log.info('discovery', "discovery enabled at topic prefix '%s'", CONFIG.discovery_prefix);
 		// After 1 min update MQTT discovery topics
-		setTimeout(  UpdateMQTTDiscovery, (60 * 1000));
-	
+		setTimeout(UpdateMQTTDiscovery, (60 * 1000));
+
 		// Every 10 minutes update MQTT discovery topics
-		doDiscovery = setInterval(  UpdateMQTTDiscovery, (600 * 1000));
+		doDiscovery = setInterval(UpdateMQTTDiscovery, (600 * 1000));
 	} else {
 		log.warn('discovery', "discovery disabled");
 	}
@@ -159,11 +160,649 @@ client.on('connect',function(){
 
 })
 
+//
+// eTRV Command Queue System
+// ========================
+// 
+// CRITICAL CONSTRAINT: The underlying C library (energenie-ener314rt) only supports
+// ONE cached command per device at a time. Calling openThingsCacheCmd() REPLACES
+// any existing cached command in the C library.
+//
+// QUEUE BEHAVIOR:
+// - Single dynamic queue per device with priority-based ordering
+// - Priority order (descending): TARGET_TEMP > VALVE_STATE > REPORT_PERIOD > others
+// - Only one instance of each command type allowed in queue (latest replaces existing)
+// - Higher priority commands preempt currently processing command
+// - Commands are sent ONE AT A TIME and must complete (retries=0) before next command
+//
+// PROCESSING FLOW:
+// 1. Command added to queue via queueETRVCommand()
+// 2. processETRVQueue() sends command to C library via openThingsCacheCmd()
+// 3. C library holds command and retransmits when eTRV wakes (every ~5 minutes)
+// 4. Monitor thread receives retries updates as C library processes command
+// 5. When retries=0, handleETRVRetriesUpdate() marks command complete
+// 6. markETRVCommandComplete() calls processETRVQueue() for next command
+//
+// PREEMPTION:
+// - Higher priority commands can preempt lower priority ones
+// - Same command type replaces existing (e.g., new TARGET_TEMP replaces old TARGET_TEMP)
+// - Preemption works because openThingsCacheCmd() atomically replaces the cached command
+//
+// eTRVs only wake and process cached commands every ~5 minutes; allow a generous timeout
+// so we do not prematurely move on to the next command while retries are still pending.
+const ETRV_COMMAND_TIMEOUT_MS = 2 * 60 * 60 * 1000;  // 2 hours safety fallback (accounts for max 1 hour report period + buffer)
+const etrv_command_queues = {};  // deviceId -> { queue: cmd[], processing: boolean, current: cmd|null, completionTimer: NodeJS.Timeout|null }
+const etrv_exercise_valve_pending = {};  // Track which eTRVs have pending EXERCISE_VALVE commands waiting for DIAGNOSTICS response
+const EXERCISE_VALVE_DIAGNOSTICS_TIMEOUT_MS = 2 * 60 * 60 * 1000;  // 2 hours to wait for DIAGNOSTICS response (accounts for max 1 hour report period + buffer)
+
+function isCancelCommand(ener_cmd) {
+	return !!ener_cmd && (ener_cmd.otCommand === 0 || ener_cmd.command === 'CANCEL');
+}
+
+function markETRVCommandComplete(deviceId, reason) {
+	const queueState = etrv_command_queues[deviceId];
+	if (!queueState || !queueState.processing) {
+		return;
+	}
+
+	if (queueState.completionTimer) {
+		clearTimeout(queueState.completionTimer);
+		queueState.completionTimer = null;
+	}
+
+	const current = queueState.current;
+	const commandName = current ? (current.command || current.otCommand || 'unknown') : 'unknown';
+	log.verbose('queue', "eTRV %d: completed %s command (%s)", deviceId, commandName, reason || 'complete');
+
+	// Track EXERCISE_VALVE commands that will get a DIAGNOSTICS response
+	if (current && (current.otCommand === EXERCISE_VALVE || current.command === 'EXERCISE_VALVE')) {
+		etrv_exercise_valve_pending[deviceId] = {
+			timestamp: Date.now(),
+			timer: setTimeout(() => {
+				// If we don't get DIAGNOSTICS response within timeout, clean up
+				if (etrv_exercise_valve_pending[deviceId]) {
+					log.warn('eTRV', 'EXERCISE_VALVE timeout for device %d - no DIAGNOSTICS response received', deviceId);
+					delete etrv_exercise_valve_pending[deviceId];
+				}
+			}, EXERCISE_VALVE_DIAGNOSTICS_TIMEOUT_MS)
+		};
+		log.verbose('queue', "eTRV %d: marked EXERCISE_VALVE as pending - waiting for DIAGNOSTICS response (timeout: %d min)", deviceId, EXERCISE_VALVE_DIAGNOSTICS_TIMEOUT_MS / 60000);
+	}
+
+	queueState.processing = false;
+	queueState.current = null;
+
+	publishETRVQueueState(deviceId);
+	processETRVQueue(deviceId);
+}
+
+function handleETRVRetriesUpdate(deviceId, retries, source) {
+	if (isNaN(retries)) {
+		return;
+	}
+
+	const queue = etrv_command_queues[deviceId];
+	if (!queue) {
+		return;
+	}
+
+	// When retries reaches 0, the C library has finished with this command.
+	// This is our signal that it's safe to send the next queued command.
+	// The C library sends retries updates via monitor messages as it processes the cached command.
+	if (queue.processing && retries === 0) {
+		log.verbose('queue', "eTRV %d: retries=0 from %s, command complete", deviceId, source);
+		markETRVCommandComplete(deviceId, source);
+	} else if (queue.processing && retries > 0) {
+		log.verbose('queue', "eTRV %d: retries=%d from %s, command still processing", deviceId, retries, source);
+	}
+}
+
+function describeQueuedCommand(cmd) {
+	if (!cmd) {
+		return null;
+	}
+
+	if (isCancelCommand(cmd)) {
+		return null;
+	}
+
+	const otCmd = cmd.otCommand;
+	const baseCommand = cmd.command;
+	const data = cmd.data;
+
+	if (otCmd === TARGET_TEMP || baseCommand === 'TARGET_TEMP') {
+		const temp = parseFloat(data);
+		if (!Number.isNaN(temp)) {
+			const rounded = Number.isInteger(temp) ? temp.toFixed(0) : temp.toFixed(1);
+			return `Set Temperature ${rounded}°C`;
+		}
+		return 'Set Temperature';
+	}
+
+	if (otCmd === VALVE_STATE || baseCommand === 'VALVE_STATE') {
+		const numeric = typeof data === 'number' ? data : parseInt(data, 10);
+		switch (numeric) {
+			case 0:
+				return 'Valve Fully Open';
+			case 1:
+				return 'Valve Fully Closed';
+			case 2:
+				return 'Valve Normal Operation';
+			default:
+				return 'Valve Mode';
+		}
+	}
+
+	if (otCmd === LOW_POWER_MODE || baseCommand === 'LOW_POWER_MODE') {
+		const isOn = data === 1 || data === '1' || data === true || data === 'ON';
+		const isOff = data === 0 || data === '0' || data === false || data === 'OFF';
+		if (isOn) {
+			return 'Low Power Mode On';
+		}
+		if (isOff) {
+			return 'Low Power Mode Off';
+		}
+		return 'Low Power Mode';
+	}
+
+	if (otCmd === EXERCISE_VALVE || baseCommand === 'EXERCISE_VALVE') {
+		return 'Exercise Valve';
+	}
+
+	if (otCmd === DIAGNOSTICS || baseCommand === 'DIAGNOSTICS') {
+		return 'Request Diagnostics';
+	}
+
+	if (otCmd === IDENTIFY || baseCommand === 'IDENTIFY') {
+		return 'Identify';
+	}
+
+	if (otCmd === VOLTAGE || baseCommand === 'VOLTAGE') {
+		return 'Request Voltage';
+	}
+
+	if (otCmd === REPORT_PERIOD || baseCommand === 'REPORT_PERIOD') {
+		if (data !== undefined && data !== null) {
+			return `Interval ${data}s`;
+		}
+		return 'Interval';
+	}
+
+	if (typeof otCmd === 'number' && otCmd > 0) {
+		const desc = lookupCommand(otCmd, data);
+		if (desc !== undefined && desc !== null) {
+			return String(desc);
+		}
+	}
+
+	if (baseCommand) {
+		return String(baseCommand);
+	}
+
+	return 'Unknown';
+}
+
+function resolveQueueDisplay(value, hasCommand) {
+	if (value === null || value === undefined) {
+		return hasCommand ? 'Unknown' : 'None';
+	}
+
+	const str = String(value).trim();
+	if (str.length === 0) {
+		return hasCommand ? 'Unknown' : 'None';
+	}
+
+	return str;
+}
+
+function getCommandPriority(command, otCommand) {
+	// Priority values (higher = more urgent)
+	if (command === 'TARGET_TEMP' || otCommand === TARGET_TEMP) {
+		return 400;  // Highest: temperature setting
+	}
+	if (command === 'VALVE_STATE' || otCommand === VALVE_STATE) {
+		return 300;  // High: valve mode
+	}
+	if (command === 'REPORT_PERIOD' || otCommand === REPORT_PERIOD) {
+		return 200;  // Medium: reporting interval
+	}
+	// All other commands (diagnostics, identify, low power mode, etc)
+	return 100;  // Low: everything else
+}
+
+function getCommandType(ener_cmd) {
+	// Return a unique identifier for command type (for deduplication)
+	const otCmd = ener_cmd.otCommand;
+	const baseCommand = ener_cmd.command;
+
+	if (isCancelCommand(ener_cmd)) {
+		return 'CANCEL';
+	}
+	if (otCmd === TARGET_TEMP || baseCommand === 'TARGET_TEMP') {
+		return 'TARGET_TEMP';
+	}
+	if (otCmd === VALVE_STATE || baseCommand === 'VALVE_STATE') {
+		return 'VALVE_STATE';
+	}
+	if (otCmd === REPORT_PERIOD || baseCommand === 'REPORT_PERIOD') {
+		return 'REPORT_PERIOD';
+	}
+	if (otCmd === LOW_POWER_MODE || baseCommand === 'LOW_POWER_MODE') {
+		return 'LOW_POWER_MODE';
+	}
+	if (otCmd === DIAGNOSTICS || baseCommand === 'DIAGNOSTICS') {
+		return 'DIAGNOSTICS';
+	}
+	if (otCmd === VOLTAGE || baseCommand === 'VOLTAGE') {
+		return 'VOLTAGE';
+	}
+	if (otCmd === EXERCISE_VALVE || baseCommand === 'EXERCISE_VALVE') {
+		return 'EXERCISE_VALVE';
+	}
+	if (otCmd === IDENTIFY || baseCommand === 'IDENTIFY') {
+		return 'IDENTIFY';
+	}
+	// Fallback to otCommand or command
+	return String(otCmd || baseCommand || 'UNKNOWN');
+}
+
+function queueETRVCommand(deviceId, ener_cmd) {
+	if (!etrv_command_queues[deviceId]) {
+		etrv_command_queues[deviceId] = {
+			queue: [],
+			processing: false,
+			current: null,
+			completionTimer: null
+		};
+	}
+
+	const queueState = etrv_command_queues[deviceId];
+	const priority = getCommandPriority(ener_cmd.command, ener_cmd.otCommand);
+	const cmdType = getCommandType(ener_cmd);
+
+	if (isCancelCommand(ener_cmd)) {
+		// Cancel: clear entire queue and stop current processing
+		queueState.queue = [];
+
+		// Stop current processing
+		if (queueState.completionTimer) {
+			clearTimeout(queueState.completionTimer);
+			queueState.completionTimer = null;
+		}
+		queueState.processing = false;
+		queueState.current = null;
+
+		// Publish retries = 0 to signal cancellation
+		const state_topic = `${CONFIG.topic_stub}${MIHO013}/${deviceId}/retries/state`;
+		log.verbose('<', "%s: 0 (cancel)", state_topic);
+		client.publish(state_topic, '0');
+
+		// Add cancel command to queue
+		queueState.queue.push(ener_cmd);
+		log.info('queue', "eTRV %d: CANCEL - cleared all commands, set retries=0, queued cancel", deviceId);
+	} else {
+		// Check if new command should preempt or replace current
+		if (queueState.processing && queueState.current) {
+			const currentType = getCommandType(queueState.current);
+			const currentPriority = getCommandPriority(queueState.current.command, queueState.current.otCommand);
+
+			// Preempt if: higher priority OR same type (replace with newer)
+			if (priority > currentPriority || cmdType === currentType) {
+				log.info('queue', "eTRV %d: preempting current %s command with %s", deviceId, queueState.current.command, ener_cmd.command);
+
+				// If same type: replace (don't push back)
+				// If different type but higher priority: push current back to queue
+				if (cmdType !== currentType) {
+					// Different type, higher priority - save current command to queue
+					queueState.queue.push(queueState.current);
+				}
+
+				// Stop current processing
+				if (queueState.completionTimer) {
+					clearTimeout(queueState.completionTimer);
+					queueState.completionTimer = null;
+				}
+				queueState.processing = false;
+				queueState.current = null;
+			}
+		}
+
+		// Remove any existing command of same type (keep only latest)
+		queueState.queue = queueState.queue.filter(cmd => getCommandType(cmd) !== cmdType);
+
+		// Add new command to queue
+		queueState.queue.push(ener_cmd);
+
+		// Sort queue by priority (descending)
+		queueState.queue.sort((a, b) => {
+			const priorityA = getCommandPriority(a.command, a.otCommand);
+			const priorityB = getCommandPriority(b.command, b.otCommand);
+			return priorityB - priorityA;  // Higher priority first
+		});
+
+		log.verbose('queue', "eTRV %d: queued %s (priority: %d, queue length: %d)", deviceId, ener_cmd.command, priority, queueState.queue.length);
+	}
+
+	// Publish updated queue state
+	publishETRVQueueState(deviceId);
+
+	// Try to process queue
+	processETRVQueue(deviceId);
+}
+
+function processETRVQueue(deviceId) {
+	const queueState = etrv_command_queues[deviceId];
+	if (!queueState || queueState.processing) {
+		return; // Already processing or no queue
+	}
+
+	// Get highest priority command from queue
+	if (queueState.queue.length === 0) {
+		return; // No commands to process
+	}
+
+	const commandToSend = queueState.queue.shift(); // Take from front (already sorted by priority)
+
+	if (queueState.completionTimer) {
+		clearTimeout(queueState.completionTimer);
+		queueState.completionTimer = null;
+	}
+
+	queueState.processing = true;
+	queueState.current = {
+		...commandToSend,
+		priority: getCommandPriority(commandToSend.command, commandToSend.otCommand)
+	};
+
+	log.verbose('queue', "eTRV %d: processing %s command (priority: %d, remaining: %d)",
+		deviceId, commandToSend.command, queueState.current.priority, queueState.queue.length);
+
+	// Publish queue state before sending command
+	publishETRVQueueState(deviceId);
+
+	// CRITICAL: The underlying C library only supports ONE cached command per device.
+	// Calling openThingsCacheCmd() REPLACES any existing cached command.
+	// Therefore, we MUST wait for retries=0 before sending the next command.
+	// The queue ensures we don't lose commands, but only send them one at a time.
+	forked.send(commandToSend);
+
+	// Set fallback timeout (2 hours for eTRV wake cycle, see ETRV_COMMAND_TIMEOUT_MS)
+	queueState.completionTimer = setTimeout(() => {
+		log.warn('queue', "eTRV %d: command timeout after 2 hours, marking as complete", deviceId);
+		markETRVCommandComplete(deviceId, 'timeout');
+	}, ETRV_COMMAND_TIMEOUT_MS);
+}
+
+// Update diagnostic queue with deduplication and replacement rules
+// - LOW_POWER_MODE: new replaces any existing LOW_POWER_MODE in queue
+// - REPORT_PERIOD: keep only latest REPORT_PERIOD
+// - Other diagnostics: enqueue only if not already present
+// No longer needed - deduplication now handled in queueETRVCommand
+
+// Publish per-device eTRV queue state to MQTT for Home Assistant sensors
+function publishETRVQueueState(deviceId) {
+	const queueState = etrv_command_queues[deviceId];
+	if (!queueState) return;
+
+	// Helper to publish a single key
+	function pub(key, value, retain = false) {
+		const state_topic = `${CONFIG.topic_stub}${MIHO013}/${deviceId}/${key}/state`;
+		const state = String(value === undefined || value === null ? '' : value);
+		if (retain) {
+			log.verbose('<', "%s: %s (retained)", state_topic, state);
+			client.publish(state_topic, state, { retain: true });
+		} else {
+			log.verbose('<', "%s: %s", state_topic, state);
+			client.publish(state_topic, state);
+		}
+	}
+
+	// Get all commands (current + queued), excluding CANCEL
+	// Note: Don't double-count current if it's also in queue
+	const allCommands = [];
+	const currentType = queueState.current ? getCommandType(queueState.current) : null;
+
+	if (queueState.current && currentType !== 'CANCEL') {
+		allCommands.push(queueState.current);
+	}
+
+	queueState.queue.forEach(cmd => {
+		const cmdType = getCommandType(cmd);
+		// Skip if CANCEL or if it's the same command currently processing
+		if (cmdType !== 'CANCEL' && !(queueState.current && cmdType === currentType && cmd.data === queueState.current.data)) {
+			allCommands.push(cmd);
+		}
+	});
+
+	// processing flag
+	pub('QUEUE_PROCESSING', queueState.processing ? 'true' : 'false');
+
+	// Primary queue command (first in list)
+	const primaryCommand = allCommands.length > 0 ? allCommands[0] : null;
+	const primaryDisplayRaw = primaryCommand ? describeQueuedCommand(primaryCommand) : null;
+	const primaryDisplay = resolveQueueDisplay(primaryDisplayRaw, Boolean(primaryCommand));
+	pub('QUEUE_COMMAND', primaryDisplay);
+
+	// Total queue length
+	pub('QUEUE_LEN', allCommands.length);
+
+	// Publish full queue as JSON attributes for both QUEUE_COMMAND and QUEUE_LEN
+	const allDisplays = allCommands
+		.map(cmd => describeQueuedCommand(cmd))
+		.filter(val => val !== null && val !== undefined && String(val).trim().length > 0)
+		.map(item => resolveQueueDisplay(item, true));
+
+	const queueAttr = {
+		current: queueState.current ? resolveQueueDisplay(describeQueuedCommand(queueState.current), true) : 'None',
+		pending: queueState.queue
+			.filter(cmd => getCommandType(cmd) !== 'CANCEL')
+			.map(cmd => resolveQueueDisplay(describeQueuedCommand(cmd), true)),
+		all: allDisplays
+	};
+
+	// Publish to QUEUE_COMMAND attributes
+	const queueCmdAttrTopic = `${CONFIG.topic_stub}${MIHO013}/${deviceId}/QUEUE_COMMAND/attributes`;
+	log.verbose('<', "%s: %j", queueCmdAttrTopic, queueAttr);
+	client.publish(queueCmdAttrTopic, JSON.stringify(queueAttr));
+
+	// Publish to QUEUE_LEN attributes
+	const queueLenAttrTopic = `${CONFIG.topic_stub}${MIHO013}/${deviceId}/QUEUE_LEN/attributes`;
+	log.verbose('<', "%s: %j", queueLenAttrTopic, queueAttr);
+	client.publish(queueLenAttrTopic, JSON.stringify(queueAttr));
+}
+
+//
+// eTRV Battery Voltage Polling
+// Request battery voltage from all known eTRVs periodically
+//
+const known_etrvs = new Set();  // Track discovered eTRV deviceIds
+const etrv_last_seen = {};  // Track last seen timestamp for each eTRV
+
+function addKnownETRV(deviceId) {
+	if (!known_etrvs.has(deviceId)) {
+		known_etrvs.add(deviceId);
+		log.verbose('battery', "Added eTRV %d to battery polling list", deviceId);
+	}
+	// Update last seen time
+	etrv_last_seen[deviceId] = Date.now();
+}
+
+function requestETRVBatteryVoltages() {
+	if (known_etrvs.size > 0) {
+		log.verbose('battery', "Requesting voltage from %d eTRVs", known_etrvs.size);
+		const now = Date.now();
+		// eTRV REPORT_PERIOD can be set from 300-3600 seconds (5 min - 1 hour)
+		// Wait at least 2x the maximum interval (2 hours) before warning about missing eTRV
+		const TWO_HOURS = 2 * 60 * 60 * 1000;
+
+		known_etrvs.forEach(deviceId => {
+			// Check when we last saw this eTRV
+			if (etrv_last_seen[deviceId]) {
+				const timeSinceLastSeen = now - etrv_last_seen[deviceId];
+				if (timeSinceLastSeen > TWO_HOURS) {
+					log.warn('battery', "eTRV %d not seen for %d minutes - may have RF reception issues",
+						deviceId, Math.round(timeSinceLastSeen / 60000));
+				}
+			}
+
+			const voltage_cmd = {
+				cmd: 'cacheCmd',
+				mode: 'fsk',
+				repeat: fsk_xmits,
+				command: 'VOLTAGE',
+				productId: 3,  // MIHO013
+				deviceId: deviceId,
+				otCommand: VOLTAGE,
+				data: 0,
+				retries: cached_retries
+			};
+			queueETRVCommand(deviceId, voltage_cmd);
+		});
+	}
+}
+
+// Poll battery voltage every 24 hours (86400000 ms)
+const batteryPollInterval = setInterval(requestETRVBatteryVoltages, 86400000);
+
+//
+// eTRV Weekly Valve Exercise
+// Exercise valve on all known eTRVs on a weekly schedule
+//
+let valve_exercise_enabled = false;
+let valve_exercise_day = 0;  // Sunday (0-6, where 0 = Sunday)
+let valve_exercise_time = { hour: 12, minutes: 0 };  // 12:00
+let last_valve_exercise_timestamp = null;
+
+// Read configuration
+if (CONFIG.weekly_valve_exercise_enabled !== undefined) {
+	valve_exercise_enabled = Boolean(CONFIG.weekly_valve_exercise_enabled);
+}
+
+if (CONFIG.weekly_valve_exercise_day !== undefined && CONFIG.weekly_valve_exercise_day !== '') {
+	const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+	const dayInput = String(CONFIG.weekly_valve_exercise_day).toLowerCase();
+	const dayIndex = dayNames.map(d => d.toLowerCase()).indexOf(dayInput);
+	if (dayIndex !== -1) {
+		valve_exercise_day = dayIndex;
+	} else {
+		const numericDay = parseInt(CONFIG.weekly_valve_exercise_day, 10);
+		if (!isNaN(numericDay) && numericDay >= 0 && numericDay <= 6) {
+			valve_exercise_day = numericDay;
+		}
+	}
+}
+
+if (CONFIG.weekly_valve_exercise_time !== undefined && CONFIG.weekly_valve_exercise_time !== '') {
+	const timeMatch = String(CONFIG.weekly_valve_exercise_time).match(/^(\d{1,2}):(\d{2})$/);
+	if (timeMatch) {
+		const hour = parseInt(timeMatch[1], 10);
+		const minutes = parseInt(timeMatch[2], 10);
+		if (hour >= 0 && hour <= 23 && minutes >= 0 && minutes <= 59) {
+			valve_exercise_time = { hour, minutes };
+		}
+	}
+}
+
+function exerciseAllETRVValves() {
+	if (!valve_exercise_enabled) {
+		return;
+	}
+
+	if (known_etrvs.size > 0) {
+		log.info('valve-exercise', "Starting weekly valve exercise for %d eTRVs", known_etrvs.size);
+
+		known_etrvs.forEach(deviceId => {
+			const exercise_cmd = {
+				cmd: 'cacheCmd',
+				mode: 'fsk',
+				repeat: fsk_xmits,
+				command: 'EXERCISE_VALVE',
+				productId: 3,  // MIHO013
+				deviceId: deviceId,
+				otCommand: EXERCISE_VALVE,
+				data: 0,
+				retries: cached_retries
+			};
+			queueETRVCommand(deviceId, exercise_cmd);
+			log.verbose('valve-exercise', "Queued EXERCISE_VALVE command for eTRV %d", deviceId);
+		});
+
+		// Update last run timestamp
+		last_valve_exercise_timestamp = new Date().toISOString();
+		publishBoardState('valve_exercise_last_run', last_valve_exercise_timestamp);
+		log.info('valve-exercise', "Completed queuing valve exercise commands");
+	} else {
+		log.info('valve-exercise', "No eTRVs found for valve exercise");
+	}
+}
+
+function runOnSpecificDayAndTime(dayOfWeek, hour, minutes, func) {
+	const oneWeek = 7 * 24 * 60 * 60 * 1000;  // 7 days in milliseconds
+
+	function getNextRunTime() {
+		const now = new Date();
+		const currentDay = now.getDay();  // 0 = Sunday, 1 = Monday, etc.
+
+		// Calculate target date/time
+		let daysUntilTarget = dayOfWeek - currentDay;
+		if (daysUntilTarget < 0) {
+			daysUntilTarget += 7;  // Next week
+		}
+
+		const targetDate = new Date(
+			now.getFullYear(),
+			now.getMonth(),
+			now.getDate() + daysUntilTarget,
+			hour,
+			minutes,
+			0,
+			0
+		);
+
+		// If target time is in the past (e.g., same day but earlier time), schedule for next week
+		if (targetDate.getTime() < now.getTime()) {
+			targetDate.setTime(targetDate.getTime() + oneWeek);
+		}
+
+		return targetDate.getTime() - now.getTime();
+	}
+
+	const eta_ms = getNextRunTime();
+	const targetDate = new Date(Date.now() + eta_ms);
+	log.info('valve-exercise', "Next valve exercise scheduled for %s", targetDate.toLocaleString());
+
+	setTimeout(function () {
+		// Run the function
+		func();
+		// Schedule next run in exactly one week
+		setInterval(func, oneWeek);
+	}, eta_ms);
+}
+
+// Initialize valve exercise scheduling if enabled
+if (valve_exercise_enabled) {
+	const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+	const timeStr = `${String(valve_exercise_time.hour).padStart(2, '0')}:${String(valve_exercise_time.minutes).padStart(2, '0')}`;
+	log.info('valve-exercise', "Weekly valve exercise enabled: %s at %s",
+		dayNames[valve_exercise_day], timeStr);
+	runOnSpecificDayAndTime(valve_exercise_day, valve_exercise_time.hour, valve_exercise_time.minutes, exerciseAllETRVValves);
+} else {
+	log.info('valve-exercise', "Weekly valve exercise disabled");
+}
+
+// Publish initial state
+if (CONFIG.monitoring && CONFIG.discovery_prefix) {
+	publishBoardState('valve_exercise_enabled', valve_exercise_enabled ? 'ON' : 'OFF');
+	if (last_valve_exercise_timestamp) {
+		publishBoardState('valve_exercise_last_run', last_valve_exercise_timestamp);
+	}
+}
+
 //handle incoming MQTT messages
 client.on('message', function (topic, msg, packet) {
 	// format command for passing to energenie process
 	// format is OOK: 'energenie/c/ook/zone/switchNum/command' or OT: 'energenie/c/2/deviceNum/command'
-	log.verbose('>',"%s: %s", topic, msg);
+	log.verbose('>', "%s: %s", topic, msg);
 	const cmd_array = topic.split("/");
 
 	let otCommand = 0;
@@ -173,21 +812,21 @@ client.on('message', function (topic, msg, packet) {
 		case 'OOK':
 		case 'o':
 			// All ook 1-way devices
-			
+
 			// Is this request for a dimmer switch?
-			if (cmd_array[MQTTM_OOK_SWITCH] == "dimmer"){
-                /*
-                 translate the brightness level into a switch number with on/off value, where the dimmer switch expects the following inputs
+			if (cmd_array[MQTTM_OOK_SWITCH] == "dimmer") {
+				/*
+				 translate the brightness level into a switch number with on/off value, where the dimmer switch expects the following inputs
 				  'OFF': Channel 1 off: Turn off
 				   'ON': Channel 1 on: Switch on at the previous light level set  (not used by Home Assistant)
-                    '2': Channel 2 on: Set dimmer to 20% (turn on at 20% if off)
-                    '3': Channel 3 on: Set dimmer to 30% (turn on at 30% if off)
-                    '4': Channel 4 on: Set dimmer to 40% (turn on at 40% if off)
-                    '5': Channel 1 off: Set dimmer to 50% (turn on at 50% if off)
-                    '6': Channel 2 off: Set dimmer to 60% (turn on at 60% if off)
-                    '8': Channel 3 off: Set dimmer to 80% (turn on at 80% if off)
-                   '10': Channel 4 off: Set dimmer to 100% (turn on at 100% if off)
-                */
+					'2': Channel 2 on: Set dimmer to 20% (turn on at 20% if off)
+					'3': Channel 3 on: Set dimmer to 30% (turn on at 30% if off)
+					'4': Channel 4 on: Set dimmer to 40% (turn on at 40% if off)
+					'5': Channel 1 off: Set dimmer to 50% (turn on at 50% if off)
+					'6': Channel 2 off: Set dimmer to 60% (turn on at 60% if off)
+					'8': Channel 3 off: Set dimmer to 80% (turn on at 80% if off)
+				   '10': Channel 4 off: Set dimmer to 100% (turn on at 100% if off)
+				*/
 
 				// default dimmer OFF
 				var switchNum = 1;
@@ -218,7 +857,7 @@ client.on('message', function (topic, msg, packet) {
 						switchState = true;
 						break;
 					case '5':
-					case '6':						
+					case '6':
 						switchNum = 2;
 						switchState = false;
 						break;
@@ -235,7 +874,7 @@ client.on('message', function (topic, msg, packet) {
 					default:
 						log.warn('>', "Invalid brightness %s for %j", brightness, cmd_array[MQTTM_OOK_ZONE]);
 						return;
-                } // switch
+				} // switch
 				var ener_cmd = { cmd: 'send', mode: 'ook', repeat: ook_xmits, brightness: brightness, zone: cmd_array[MQTTM_OOK_ZONE], switchNum: switchNum, switchState: switchState };
 
 			} else {
@@ -259,7 +898,7 @@ client.on('message', function (topic, msg, packet) {
 			else if (msg == "ON" || msg == "on" || msg == 1 || msg == '1')
 				switchState = true;
 			var ener_cmd = {
-				cmd: 'send', mode: 'fsk', repeat: fsk_xmits, command: 'switch', 
+				cmd: 'send', mode: 'fsk', repeat: fsk_xmits, command: 'switch',
 				productId: cmd_array[MQTTM_OT_PRODUCTID],
 				deviceId: cmd_array[MQTTM_OT_DEVICEID],
 				switchState: switchState
@@ -273,7 +912,7 @@ client.on('message', function (topic, msg, packet) {
 				// this will be checked on the next periodic report from the device to ensure it has processed the switch command
 				let dynamicName = `_${ener_cmd.deviceId}`;
 				rstate[dynamicName] = switchState;
-				log.verbose("cmd", "openThingsSwitch() retry enabled %s=%s",dynamicName,rstate[dynamicName]);
+				log.verbose("cmd", "openThingsSwitch() retry enabled %s=%s", dynamicName, rstate[dynamicName]);
 			}
 
 			break;
@@ -286,10 +925,10 @@ client.on('message', function (topic, msg, packet) {
 			/* Valid Commands:
 				163 EXERCISE_VALVE 	   	(DIAGNOSTICS)
 				164 SET_LOW_POWER_MODE	(DIAGNOSTICS)
-				165 SET_VALVE_STATE 	Set valve state 0=Open, 1=Closed, 2=Auto
+				165 SET_VALVE_STATE 	Set valve state 0=Open, 1=Closed, 2=Normal
 				166 DIAGNOSTICS 		(DIAGNOSTICS)
 				191 IDENTIFY
-				210 REPORTING_INTERVAL	300-3600 seconds
+				210 REPORT_PERIOD	300-3600 seconds
 				226 REQUEST_VOLTAGE 	Report current voltage of the batteries (VOLTAGE)
 				TEMP_SET
 			*/
@@ -299,9 +938,9 @@ client.on('message', function (topic, msg, packet) {
 
 			// Convert OpenThings Cmd String to Numeric
 			switch (cmd_array[MQTTM_OT_CMD]) {
-				case 'Maintenance':
+				case 'MAINTENANCE':
 					// Special select processing from Home Assistant built for the eTRV
-					// The idea here is to translate the maintenance commands into OpenThings Commands
+					// The idea here is to translate the MAINTENANCE commands into OpenThings Commands
 					msg_data = 0;
 					switch (String(msg)) {
 						case 'None':
@@ -327,15 +966,15 @@ client.on('message', function (topic, msg, packet) {
 							otCommand = LOW_POWER_MODE;
 							msg_data = 0;
 							break;
-						case 'Valve Auto':
+						case 'Valve Normal':
 							otCommand = VALVE_STATE;
 							msg_data = 2;
 							break;
-						case 'Valve Open':
+						case 'Valve Fully Open':
 							otCommand = VALVE_STATE;
 							msg_data = 0;
 							break;
-						case 'Valve Closed':
+						case 'Valve Fully Closed':
 							otCommand = VALVE_STATE;
 							msg_data = 1;
 							break;
@@ -343,7 +982,7 @@ client.on('message', function (topic, msg, packet) {
 							otCommand = VOLTAGE;
 							break;
 						default:
-							log.warn('cmd', "Unsupported Maintenance command: %s type:%j for eTRV", msg, typeof(msg));
+							log.warn('cmd', "Unsupported MAINTENANCE command: %s type:%j for eTRV", msg, typeof (msg));
 					}  // msg
 					break;
 
@@ -373,12 +1012,12 @@ client.on('message', function (topic, msg, packet) {
 					log.verbose('<', "%s: null (retained)", stateTopic);
 					client.publish(stateTopic, undefined, { retain: true });
 					break;
-				case 'REPORTING_INTERVAL':
-					otCommand = REPORTING_INTERVAL;
+				case 'REPORT_PERIOD':
+					otCommand = REPORT_PERIOD;
 					break;
 				default:
 					// unsupported command
-					log.warn('cmd', "Unsupported cacheCmd for eTRV: %j %j",cmd_array[MQTTM_OT_CMD], msg);
+					log.warn('cmd', "Unsupported cacheCmd for eTRV: %j %j", cmd_array[MQTTM_OT_CMD], msg);
 					return;
 			} // switch 3: MQTTM_OT_CMD;
 
@@ -386,7 +1025,7 @@ client.on('message', function (topic, msg, packet) {
 				// We have a valid eTRV command
 
 				// swap out CANCEL for 0
-				if (otCommand == CANCEL ){
+				if (otCommand == CANCEL) {
 					otCommand = 0;
 				} else {
 					// Convert booleans from HA default (ON/OFF)
@@ -413,7 +1052,7 @@ client.on('message', function (topic, msg, packet) {
 					retries: cached_retries
 				};
 			} else {
-				log.warn('cmd',"Invalid otCommand for eTRV: %j",otCommand);
+				log.warn('cmd', "Invalid otCommand for eTRV: %j", otCommand);
 			}
 			break;
 
@@ -421,14 +1060,14 @@ client.on('message', function (topic, msg, packet) {
 		case 18:
 			// MIHO069 - Smart Thermostat (alpha)
 			var msg_data = Number(msg);
-			log.verbose('cmd', "Thermostat msg_data : %s",msg);
+			log.verbose('cmd', "Thermostat msg_data : %s", msg);
 
 			// Process (cached) command
 			switch (cmd_array[MQTTM_OT_CMD]) {
-				case 'TARGET_TEMP':	
+				case 'TARGET_TEMP':
 					otCommand = TARGET_TEMP;
 					break;
-				case 'THERMOSTAT_MODE':	
+				case 'THERMOSTAT_MODE':
 					otCommand = THERMOSTAT_MODE;
 					break;
 				case 'HYSTERESIS':				// aka TEMP_MARGIN
@@ -437,10 +1076,10 @@ client.on('message', function (topic, msg, packet) {
 				case 'RELAY_POLARITY':
 					otCommand = RELAY_POLARITY;
 					// Convert booleans from HA default (ON/OFF)
-					if (msg == "ON" || msg == "on"){
-							msg_data = 1;
-					} else if (msg == "OFF"  || msg == "off" ) {
-							msg_data = 0;
+					if (msg == "ON" || msg == "on") {
+						msg_data = 1;
+					} else if (msg == "OFF" || msg == "off") {
+						msg_data = 0;
 					}
 					break;
 				case 'TEMP_OFFSET':
@@ -449,8 +1088,8 @@ client.on('message', function (topic, msg, packet) {
 				case 'HUMID_OFFSET':
 					otCommand = HUMID_OFFSET;
 					break;
-				case 'REPORTING_INTERVAL':		// DO NOT USE
-					otCommand = REPORTING_INTERVAL;
+				case 'REPORT_PERIOD':		// DO NOT USE
+					otCommand = REPORT_PERIOD;
 					break;
 				case 'CANCEL':
 				case 1:
@@ -458,7 +1097,7 @@ client.on('message', function (topic, msg, packet) {
 				default:
 					// unsupported command (but allow it through)
 					otCommand = Number(cmd_array[MQTTM_OT_CMD]);
-					log.warn('cmd', "Unsupported Cmd for Thermostat: %j (%d) %j",cmd_array[MQTTM_OT_CMD], otCommand, msg);
+					log.warn('cmd', "Unsupported Cmd for Thermostat: %j (%d) %j", cmd_array[MQTTM_OT_CMD], otCommand, msg);
 
 			} // switch 18: MQTTM_OT_CMD;
 
@@ -466,7 +1105,7 @@ client.on('message', function (topic, msg, packet) {
 				// We have a valid Thermostat command
 
 				// swap out CANCEL for 0
-				if (otCommand == CANCEL ){
+				if (otCommand == CANCEL) {
 					otCommand = 0;
 				}
 
@@ -481,7 +1120,7 @@ client.on('message', function (topic, msg, packet) {
 					retries: cached_retries
 				};
 			} else {
-				log.warn('cmd',"Invalid otCommand for Thermostat : %j",otCommand);
+				log.warn('cmd', "Invalid otCommand for Thermostat : %j", otCommand);
 			}
 			break;
 		case 'board':
@@ -491,32 +1130,38 @@ client.on('message', function (topic, msg, packet) {
 				case 'scan':
 					// Call discovery function - force a scan as button was pressed
 					ener_cmd = { cmd: "discovery", scan: true };
-					break;					
+					break;
 			}
 			break;
 
 		default:
-			// Undefined device
+		// Undefined device
 	} // switch MQTTM_DEVICE
 
 	if (ener_cmd !== undefined) {
 		// Send request to energenie process, any responses are handled by forked.on('message')
 		log.http("command", "%j", ener_cmd);
-		forked.send(ener_cmd);
+
+		// Use command queue for eTRV to prevent conflicts
+		if (ener_cmd.productId === 3 && ener_cmd.cmd === 'cacheCmd') {
+			queueETRVCommand(ener_cmd.deviceId, ener_cmd);
+		} else {
+			forked.send(ener_cmd);
+		}
 	} else {
-		log.warn('cmd',"Invalid MQTT device/command %j:%j",cmd_array[MQTTM_DEVICE],msg);
+		log.warn('cmd', "Invalid MQTT device/command %j:%j", cmd_array[MQTTM_DEVICE], msg);
 	}
 });
-  
+
 //handle MQTT errors
-client.on('error', function(error){
+client.on('error', function (error) {
 	if (!shutdown)
-		log.error('MQTT',"ERROR %j connecting to MQTT broker: %j", error, CONFIG.mqtt_broker);
+		log.error('MQTT', "ERROR %j connecting to MQTT broker: %j", error, CONFIG.mqtt_broker);
 	process.exit(1)
 });
 
 //Report MQTT close
-client.on('close',function(){
+client.on('close', function () {
 	log.warn('MQTT', "Disconnected from MQTT broker: %s", CONFIG.mqtt_broker);
 	//process.exit(1)
 });
@@ -527,7 +1172,7 @@ const forked = fork("energenie.js", [log.level]);
 
 forked.on("spawn", msg => {
 	// process started succesfully, request start of the monitor loop if configured in config file
-	if (CONFIG.monitoring){
+	if (CONFIG.monitoring) {
 		log.info("monitor", "starting monitoring of FSK devices...");
 		forked.send({ cmd: "monitor", enabled: true });
 	}
@@ -537,15 +1182,15 @@ forked.on("spawn", msg => {
 */
 forked.on("message", msg => {
 	// we have a monitor or ACK message, transform into MQTT message
-    log.http("monitor","received: %j", msg);
+	log.http("monitor", "received: %j", msg);
 
-	switch (msg.cmd){
+	switch (msg.cmd) {
 		case 'send':
 			var rtn_msg = "UNKNOWN";
 			var state_topic;
 			switch (msg.mode) {
 				case 'ook':
-					if (msg.brightness){
+					if (msg.brightness) {
 						// dimmer switch uses brightness instead of state: 1-10 (ON at Brightness) or OFF
 						log.verbose('app', "dimmer: %j", msg);
 
@@ -555,27 +1200,27 @@ forked.on("message", msg => {
 
 					} else {
 						state_topic = `${CONFIG.topic_stub}ook/${msg.zone}/${msg.switchNum}/state`;
-						
-						if (typeof(msg.state) === 'boolean'){
+
+						if (typeof (msg.state) === 'boolean') {
 							if (msg.state) {
 								rtn_msg = "ON";
 							} else {
 								rtn_msg = "OFF";
 							}
 						} else {
-							log.error('app', "msg.state not boolean, type = %j", typeof(msg.state));
+							log.error('app', "msg.state not boolean, type = %j", typeof (msg.state));
 						}
 					}
 					// send response back via MQTT state topic, setting the retained flag to survive restart on client
 					log.verbose('<', "%s: %s (retained)", state_topic, rtn_msg);
-					client.publish(state_topic,rtn_msg,{retain: true});
+					client.publish(state_topic, rtn_msg, { retain: true });
 					break;
 
 				case 'fsk':
 					// TODO allow for multiple parameters being returned
 					state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/${msg.command}/state`;
-					
-					if (typeof(msg.state) === 'boolean'){
+
+					if (typeof (msg.state) === 'boolean') {
 						if (msg.state) {
 							rtn_msg = "ON";
 						} else {
@@ -588,10 +1233,10 @@ forked.on("message", msg => {
 
 					// send single response back via MQTT state topic
 					log.verbose('<', "%s: %s", state_topic, rtn_msg);
-					client.publish(state_topic,rtn_msg);
+					client.publish(state_topic, rtn_msg);
 
 					break;
-				
+
 			} // switch 'send' msg.mode
 
 
@@ -600,12 +1245,22 @@ forked.on("message", msg => {
 		case 'monitor':
 			// OpenThings monitor message
 
+			// Track eTRV reception for diagnostics
+			if (msg.productId === 3 || msg.productId === MIHO013) {
+				addKnownETRV(msg.deviceId);
+			}
+
 			let keys = Object.keys(msg);
+
+			// Variables to cache temperature values for HVAC action calculation (eTRV only)
+			let currentTemperature = null;
+			let targetTemperature = null;
 
 			// Iterate through the object returned
 			keys.forEach((key) => {
 				let topic_key = key;
-				let retain = false;;
+				// Default retain to true for eTRV (productId 3) to persist state across sleep cycles
+				let retain = (msg.productId === 3 || msg.productId === MIHO013);
 				switch (key) {
 					case 'productId':
 					case 'deviceId':
@@ -618,7 +1273,9 @@ forked.on("message", msg => {
 					case 'timestamp':
 						// epoch to last_seen timestamp
 						topic_key = 'last_seen';
-						break;							
+						// Don't retain timestamps as they should reflect current state
+						retain = false;
+						break;
 					case 'SWITCH_STATE':
 						// use friendly name and value
 						topic_key = 'switch';
@@ -676,9 +1333,34 @@ forked.on("message", msg => {
 						else
 							topic_key = null;
 						break;
-					case 'VALVE_STATE':
-					case 'REPORTING_INTERVAL':
+					case 'TEMPERATURE':
+						// Store temperature for HVAC action calculation after all keys processed (eTRV only)
+						if (msg.productId == 3) {
+							const temp = parseFloat(msg.TEMPERATURE);
+							if (!isNaN(temp)) {
+								currentTemperature = temp;
+							} else {
+								log.warn('eTRV', 'Invalid TEMPERATURE value received: %s', msg.TEMPERATURE);
+							}
+						}
+						break;
+
 					case 'TARGET_TEMP':
+						// Store target temperature for HVAC action calculation after all keys processed (eTRV only)
+						if (msg.productId == 3) {
+							const temp = parseFloat(msg[key]);
+							if (!isNaN(temp)) {
+								targetTemperature = temp;
+							} else {
+								log.warn('eTRV', 'Invalid TARGET_TEMP value: %s', msg[key]);
+							}
+						}
+						// Set retain flag for TARGET_TEMP
+						retain = true;
+						break;
+
+					case 'VALVE_STATE':
+					case 'REPORT_PERIOD':
 					case 'ERROR_TEXT':
 					case 'THERMOSTAT_MODE':
 					case 'HYSTERESIS':
@@ -691,7 +1373,7 @@ forked.on("message", msg => {
 					case 'BATTERY_LEVEL':
 						let batteries = 0;
 						// Voltage values are device specific
-						switch(msg.productId){
+						switch (msg.productId) {
 							case 3:		// eTRV
 								batteries = 2;
 								retain = true;
@@ -705,52 +1387,76 @@ forked.on("message", msg => {
 							case 19:    // Click - 3V single battery ~ 2 AA batteries
 								batteries = 2;
 						}
-						if (batteries > 0){
+						if (batteries > 0) {
 							// calculate battery % where applicable assuming alkaline batteries, calculations from internet ;)
-							let v = msg[key]/batteries;
+							let v = msg[key] / batteries;
 							let charge = 0;
-							if (v >= 1.55){
+							if (v >= 1.55) {
 								charge = 100;
-							} else if (v < 1.1 ){
+							} else if (v < 1.1) {
 								charge = 0
-							} else if (v < 1.18 ){
+							} else if (v < 1.18) {
 								charge = 5;
 							} else {
 								// use a simple linear equation for the rest (y=mx+c), based on 1.44v=90% and 1.2v=10%
-								charge = (333.3*v) - 390;
+								charge = (333.3 * v) - 390;
 
 								// Can produce high values at top end, restrict down
-								if (charge>95){
-									charge=95;
+								if (charge > 95) {
+									charge = 95;
 								}
 								//charge = 9412 - 23449*(v/batteries) + 19240*(v*v/batteries) - 5176*(v*v*v/batteries); // cubic regression
 							}
-							
+
 							// send addition battery percentage response back via MQTT state topic
 							state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/battery/state`;
 							state = String(Math.round(charge));
 							if (retain) {
 								log.verbose('<', "%s: %s (retained)", state_topic, state);
-								client.publish(state_topic,state,{retain: true});
+								client.publish(state_topic, state, { retain: true });
 							} else {
 								log.verbose('<', "%s: %s", state_topic, state);
-								client.publish(state_topic,state);
+								client.publish(state_topic, state);
 							}
 						}
 
 					case 'ALARM':
 						// Translate suspected low battery alert to text
-						if (msg[key] == 66 | msg[key] == '66'){
+						if (msg[key] == 66 | msg[key] == '66') {
 							// send low battery alert - NOT retained as this never clears
 							msg[key] = "Low Battery";
 						}
 
+					case 'DIAGNOSTICS':
+						// Handle DIAGNOSTICS response - update VALVE_TS timestamp when exercise completes
+						if (msg.productId == MIHO013 && etrv_exercise_valve_pending[msg.deviceId]) {
+							const pending = etrv_exercise_valve_pending[msg.deviceId];
+
+							// Clear the timeout since we got the response
+							if (pending.timer) {
+								clearTimeout(pending.timer);
+							}
+							delete etrv_exercise_valve_pending[msg.deviceId];
+
+							const diagnosticsCode = Number(msg[key]);
+							log.info('eTRV', 'EXERCISE_VALVE response for device %d: diagnostics=%d',
+								msg.deviceId, diagnosticsCode);
+
+							// Set VALVE_TS to current epoch timestamp (retained) - confirms valve was exercised
+							const valveTsTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/VALVE_TS/state`;
+							const timestamp = Math.floor(Date.now() / 1000);
+							log.verbose('<', "%s: %d (retained)", valveTsTopic, timestamp);
+							client.publish(valveTsTopic, String(timestamp), { retain: true });
+						}
+						retain = true;
+						break;
+
 					default:
 						// captured OpenThings commands (e.g from MiHome gateway) are preceeded with '_', set retained on these so we can find them more easily in MQTT Explorer
-						if(key.startsWith("_")){
+						if (key.startsWith("_")) {
 							retain = true;
 						}
-						// assume an unknown key we need to set in topic tree
+					// assume an unknown key we need to set in topic tree
 				}
 
 				// send MQTT response (state) if we have a valid topic string
@@ -761,33 +1467,37 @@ forked.on("message", msg => {
 					// send response back via MQTT state topic
 					if (retain) {
 						log.verbose('<', "%s: %s (retained)", state_topic, state);
-						client.publish(state_topic,state,{retain: true});
+						client.publish(state_topic, state, { retain: true });
 					} else {
 						log.verbose('<', "%s: %s", state_topic, state);
-						client.publish(state_topic,state);
+						client.publish(state_topic, state);
 					}
 
-					// Update Maintenance if retries=0 for trv
-					if (msg.productId == MIHO013 && topic_key == "retries" && state == '0'){
-						// retries are now empty, also change the Maintenance Select back to None
-						state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/Maintenance/state`;
+					if (msg.productId == MIHO013 && topic_key == "retries") {
+						handleETRVRetriesUpdate(msg.deviceId, Number(state), 'monitor');
+					}
+
+					// Update MAINTENANCE if retries=0 for trv
+					if (msg.productId == MIHO013 && topic_key == "retries" && state == '0') {
+						// retries are now empty, also change the MAINTENANCE Select back to None
+						state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/MAINTENANCE/state`;
 						log.verbose('<', "%s: None", state_topic);
-						client.publish(state_topic,"None");
+						client.publish(state_topic, "None");
 					}
 
 					// Check returned state for MIHO005 to see if switched correctly
-					if ( retry_switch && msg.productId == MIHO005 && topic_key == 'switch') {
+					if (retry_switch && msg.productId == MIHO005 && topic_key == 'switch') {
 						let dynamicName = `_${msg.deviceId}`;
 						if (dynamicName in rstate) {
-							log.verbose('monitor','checking switch command for %s',msg.deviceId);
+							log.verbose('monitor', 'checking switch command for %s', msg.deviceId);
 							// we have previously sent a command, did the device switch?
-							if (switchState == rstate[dynamicName]){
+							if (switchState == rstate[dynamicName]) {
 								// switch was ok, remove the dynamic key to prevent re-checking
 								delete rstate[dynamicName];
 							} else {
 								// retry switch command
 								var ener_cmd = {
-									cmd: 'send', mode: 'fsk', repeat: fsk_xmits, command: 'switch', 
+									cmd: 'send', mode: 'fsk', repeat: fsk_xmits, command: 'switch',
 									productId: msg.productId,
 									deviceId: msg.deviceId,
 									switchState: rstate[dynamicName]
@@ -800,12 +1510,37 @@ forked.on("message", msg => {
 				};
 			})
 
+			// Calculate HVAC action after all keys processed (eTRV only)
+			// This ensures calculation works regardless of key iteration order
+			if (msg.productId == 3 && currentTemperature !== null && targetTemperature !== null) {
+				// Determine HVAC action: heating if target temp is above current, otherwise idle
+				const delta = targetTemperature - currentTemperature;
+				const hvacAction = delta > 0 ? 'heating' : 'idle';
+				const deltaTemp = delta.toFixed(2);
+
+				log.info('eTRV', 'HVAC calculation - Current: %s°C, Target: %s°C, Delta: %s°C, Action: %s',
+					currentTemperature, targetTemperature, deltaTemp, hvacAction);
+
+				// Publish HVAC action and temperature delta (retained to persist across sleep cycles)
+				const hvacTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/HVAC_ACTION/state`;
+				const deltaTempTopic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/DELTA_TEMP/state`;
+
+				client.publish(hvacTopic, hvacAction, { qos: 0, retain: true });
+				client.publish(deltaTempTopic, deltaTemp, { qos: 0, retain: true });
+			}
+
 			break;
 		case 'discovery':
 			// device discovery message publish discovery messages to Home Assistant
 			log.info('discovery', "found %i devices", msg.numDevices);
-			publishBoardState('discover', msg.numDevices);			
-			msg.devices.forEach(publishDiscovery);
+			publishBoardState('discover', msg.numDevices);
+			msg.devices.forEach(device => {
+				publishDiscovery(device);
+				// Track eTRVs for battery voltage polling and reception diagnostics
+				if (device.productId === 3) {
+					addKnownETRV(device.deviceId);
+				}
+			});
 			break;
 
 		case 'cacheCmd':
@@ -815,34 +1550,38 @@ forked.on("message", msg => {
 
 			// send MQTT if we have a valid topic string
 			if (msg.productId !== undefined && msg.deviceId !== undefined) {
-				
-				if (typeof(msg.retries) != "undefined") {
+
+				if (typeof (msg.retries) != "undefined") {
 					state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/retries/state`;
 					state = String(msg.retries);
 					// set retries on MQTT
 					log.verbose('<', "%s: %s", state_topic, state);
-					client.publish(state_topic,state);
+					client.publish(state_topic, state);
+
+					if (msg.productId === MIHO013) {
+						handleETRVRetriesUpdate(msg.deviceId, Number(state), 'cache');
+					}
 				}
-				
-				if (typeof(msg.otCommand) != "undefined"){
+
+				if (typeof (msg.otCommand) != "undefined") {
 					state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/command/state`;
 					state = String(lookupCommand(msg.otCommand, msg.data));
 
 					// save cached command on MQTT
 					log.verbose('<', "%s: %s", state_topic, state);
-					client.publish(state_topic,state);
+					client.publish(state_topic, state);
 				}
 
 				// Store cached state for values that are NEVER returned by monitor messages (confirmed by energenie)
-				if (msg.productId == MIHO013 && msg.command == 'VALVE_STATE'){
+				if (msg.productId == MIHO013 && msg.command == 'VALVE_STATE') {
 					state_topic = `${CONFIG.topic_stub}${msg.productId}/${msg.deviceId}/${msg.command}/state`;
 					state = String(msg.data);
 
 					// send response back via MQTT
 					log.verbose('<', "%s: %s (optimistic retained)", state_topic, state);
-					client.publish(state_topic,state,{retain: true});
+					client.publish(state_topic, state, { retain: true });
 				}
-				
+
 			};
 			break;
 	} // switch msg.cmd
@@ -850,21 +1589,21 @@ forked.on("message", msg => {
 });
 
 forked.on('close', (code, signal) => {
-    log.warn('app', "closed due to terminated energenie process. code=%j, signal=%j", code, signal);
-    // clear interval timer (causes program to exit as nothing left to do!)
-    //clearInterval(doDiscovery);
+	log.warn('app', "closed due to terminated energenie process. code=%j, signal=%j", code, signal);
+	// clear interval timer (causes program to exit as nothing left to do!)
+	//clearInterval(doDiscovery);
 	process.exit();
 });
 
 forked.on('exit', (code, signal) => {
-    log.warn('app', "exit due to terminated energenie process. code=%j, signal=%j", code, signal);
-    // clear interval timer (causes program to exit as nothing left to do!)
-    //clearInterval(doDiscovery);
+	log.warn('app', "exit due to terminated energenie process. code=%j, signal=%j", code, signal);
+	// clear interval timer (causes program to exit as nothing left to do!)
+	//clearInterval(doDiscovery);
 	process.exit();
 });
 
 function UpdateMQTTDiscovery() {
-	if (discovery){
+	if (discovery) {
 		log.info('auto', "calling discovery");
 		forked.send({ cmd: "discovery", scan: false });
 	}
@@ -875,11 +1614,11 @@ function UpdateMQTTDiscovery() {
 //
 // Configuration of what values to publish is externalised to a file for each device product 'devices/<productId>.json'
 //
-function publishDiscovery( device ){
+function publishDiscovery(device) {
 
-	log.info('discovery',"discovered: %j",device);
+	log.info('discovery', "discovered: %j", device);
 
-	if ( device.mfrId == 4){
+	if (device.mfrId == 4) {
 		// energenie device
 
 		// Read discovery config
@@ -888,11 +1627,11 @@ function publishDiscovery( device ){
 				log.error('discovery', "skipped for device %i - unknown device type 'devices/%j.json' missing", device.deviceId, device.productId);
 			} else {
 				device_defaults = JSON.parse(data);
-				device_defaults.parameters.forEach( (parameter) => {
+				device_defaults.parameters.forEach((parameter) => {
 					//
 					// To save on network/processing only the main entity will contain the details of the device that they belong to
 					//
-					if (parameter.main){
+					if (parameter.main) {
 						var device_details = {
 							name: `${device_defaults.mdl} ${device.deviceId}`,
 							ids: [`ener314rt-${device.deviceId}`],
@@ -900,10 +1639,10 @@ function publishDiscovery( device ){
 							mf: 'Energenie',
 							sw: `mqtt-ener314rt ${APP_VERSION}`,
 							via_device: 'mqtt-energenie-ener314rt'
-						}
+						};
 						// To align to HA standards, the main parameter should not be appended to the entity name
 						// Except when the main component is type sensor, where we must preserve it
-						if ( parameter.component == "sensor"){
+						if (parameter.component == "sensor") {
 							var entity_name = toTitleCase(parameter.id);
 						} else {
 							var entity_name = null;
@@ -911,7 +1650,7 @@ function publishDiscovery( device ){
 
 					} else {
 						var entity_name = toTitleCase(parameter.id);
-						var device_details = {ids: [`ener314rt-${device.deviceId}`]};
+						var device_details = { ids: [`ener314rt-${device.deviceId}`] };
 					}
 
 					var dmsg = Object.assign({
@@ -926,21 +1665,26 @@ function publishDiscovery( device ){
 							url: `https://github.com/Achronite/mqtt-energenie-ener314rt`
 						}
 					},
-					parameter.config );
+						parameter.config);
 
 					// replace @ in topics with the address where each of the data items are published (state) or read (command)
-					if (parameter.stat_t){
+					if (parameter.stat_t) {
 						dmsg.stat_t = parameter.stat_t.replace("@", `${parameter.id}`);
 					}
 
-					if (parameter.cmd_t){
+					if (parameter.cmd_t) {
 						dmsg.cmd_t = parameter.cmd_t.replace("@", `${parameter.id}`);
+					}
+
+					// Include JSON attributes topic mapping for sensors
+					if (parameter.json_attr_t) {
+						dmsg.json_attr_t = parameter.json_attr_t.replace("@", `${parameter.id}`);
 					}
 
 					var discoveryTopic = `${CONFIG.discovery_prefix}${parameter.component}/ener314rt/${device.deviceId}-${parameter.id}/config`;
 
 					log.verbose('<', "discovery %s", discoveryTopic);
-					client.publish(discoveryTopic,JSON.stringify(dmsg),{retain: true});
+					client.publish(discoveryTopic, JSON.stringify(dmsg), { retain: true });
 
 				})
 
@@ -957,28 +1701,28 @@ function publishDiscovery( device ){
 ** Internal Function that return the english parameter name (for display) of a given OpenThings parameter code (cmd)
 ** If the parameter requires a data value (data) to be set this is appended to the name of the command giving the full string
 */
-function lookupCommand( cmd, data ){
+function lookupCommand(cmd, data) {
 	let command = null;
-	switch( Number(cmd) ){
+	switch (Number(cmd)) {
 		case 0:
 			return 'None';
 		case THERMOSTAT_MODE:
 			command = 'Thermostat Mode';
 			break;
 		case TARGET_TEMP:
-			command =  'Set Temperature';
+			command = 'Set Temperature';
 			break;
 		case EXERCISE_VALVE:
 			return 'Exercise Valve';
 		case LOW_POWER_MODE:
-			command = 'Low Power Mode';		
+			command = 'Low Power Mode';
 			break;
 		case VALVE_STATE:
 			command = 'Valve Mode';
 			break;
 		case DIAGNOSTICS:
 			return 'Diagnostics';
-		case REPORTING_INTERVAL:
+		case REPORT_PERIOD:
 			command = 'Interval';
 			break;
 		case IDENTIFY:
@@ -1036,29 +1780,29 @@ function handleSignal(signal) {
 
 // Convert '_' delimited string to Title Case, replacing '_' with spaces
 function toTitleCase(str) {
-    let upper = false;
-    let newStr = str[0].toUpperCase();
-    for (let i = 1, l = str.length; i < l; i++) {
-        if (str[i] == "_") {
-            upper = true;
-            newStr += ' ';
-            continue;
-        }
-        newStr += upper ? str[i].toUpperCase() : str[i].toLowerCase();
-        upper = false;
-    }
-    return newStr;
+	let upper = false;
+	let newStr = str[0].toUpperCase();
+	for (let i = 1, l = str.length; i < l; i++) {
+		if (str[i] == "_") {
+			upper = true;
+			newStr += ' ';
+			continue;
+		}
+		newStr += upper ? str[i].toUpperCase() : str[i].toLowerCase();
+		upper = false;
+	}
+	return newStr;
 }
 
 // This function publishes the config items for parent board @<discovery_prefix>/board/1/<object_id>/config
 // This is only called once on initialisation
 // Configuration of the values to publish is externalised to a file 'devices/board.json'
 //
-function publishBoardDiscovery(){
+function publishBoardDiscovery() {
 
 	const deviceId = 'board';
 
-	log.info('discovery',"board discovered");
+	log.info('discovery', "board discovered");
 
 	// Read discovery config
 	fs.readFile(`devices/board.json`, (err, data) => {
@@ -1092,7 +1836,7 @@ function publishBoardDiscovery(){
 						url: `https://github.com/Achronite/mqtt-energenie-ener314rt`
 					}
 				},
-				parameter.config,);
+					parameter.config,);
 
 				// Add MQTT availability only to the 'Discover' button
 				if (parameter.id == 'discover') {
@@ -1120,9 +1864,9 @@ function publishBoardDiscovery(){
 }
 
 // Update stats to MQTT for the overall program
-function publishBoardState(param,state) {
+function publishBoardState(param, state) {
 	state_topic = `${CONFIG.topic_stub}board/1/${param}/state`;
-	
+
 	// send response back via MQTT
 	log.verbose('<', "%s: %s (board)", state_topic, state);
 	client.publish(state_topic, String(state));
@@ -1144,27 +1888,25 @@ function publishLatestRelease() {
 			// Publish it to MQTT version
 			state_topic = `${CONFIG.topic_stub}board/1/version/state`;
 			log.verbose('<', "%s: %j (board)", state_topic, github_details.latest_version);
-			client.publish(state_topic, JSON.stringify(github_details), {retain: true});
+			client.publish(state_topic, JSON.stringify(github_details), { retain: true });
 		})
-		.catch(error => log.warn('version','error getting latest release data from github:',error)
-	); 
+		.catch(error => log.warn('version', 'error getting latest release data from github:', error)
+		);
 
 }
 
 // run a function at the same time every day (credit @farhad-taran)
-function runAtSpecificTimeOfDay(hour, minutes, func)
-{
-  const twentyFourHours = 86400000;
-  const now = new Date();
-  let eta_ms = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minutes, 0, 0).getTime() - now;
-  if (eta_ms < 0)
-  {
-    eta_ms += twentyFourHours;
-  }
-  setTimeout(function() {
-    //run once
-    func();
-    // run every 24 hours from now on
-    setInterval(func, twentyFourHours);
-  }, eta_ms);
+function runAtSpecificTimeOfDay(hour, minutes, func) {
+	const twentyFourHours = 86400000;
+	const now = new Date();
+	let eta_ms = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minutes, 0, 0).getTime() - now;
+	if (eta_ms < 0) {
+		eta_ms += twentyFourHours;
+	}
+	setTimeout(function () {
+		//run once
+		func();
+		// run every 24 hours from now on
+		setInterval(func, twentyFourHours);
+	}, eta_ms);
 }

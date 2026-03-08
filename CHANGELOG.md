@@ -7,6 +7,40 @@
 
 Also see [Issues](https://github.com/Achronite/mqtt-energenie-ener314rt/issues) for additional details.
 
+## [0.8.0] 2025-12-29
+
+### Added
+
+* eTRV command queue with priority, dedupe, and preemption to avoid lost commands when sent in quick succession
+* Queue visibility sensors: `QUEUE_PROCESSING`, `QUEUE_COMMAND`, `QUEUE_LEN` (with JSON attributes for full queue)
+* HVAC action reporting (`HVAC_ACTION`) and delta temperature (`DELTA_TEMP`) for boiler automation
+* New sensors and buttons in eTRV discovery (ROOM_TEMPERATURE, TEMPERATURE_SET_POINT, HEAT_DEMANDED, 11 maintenance buttons)
+* Weekly valve exercise automation with board status sensors and configurable day/time options in `config.json`
+* State classes added across device sensors for long-term statistics in Home Assistant
+
+### Changed
+
+* Climate modes simplified to `heat` and `off`; Fully Open remains available via maintenance button (not via climate mode)
+* Climate mode mapping documented: `off` -> VALVE_STATE=1 (closed), `heat` -> VALVE_STATE=2 (normal); VALVE_STATE=0 (fully open) requires maintenance button
+* Report interval parameter renamed to `REPORT_PERIOD` for consistency with the C library
+* Transmission defaults increased to OOK/FSK = 20/20 in sample config for better reliability
+* Monitor polling interval reduced from 10s to 1s for improved eTRV reception
+* Documentation expanded for queue behavior, HVAC action, valve exercise, and climate mapping
+* README now points to example Home Assistant helper/automation YAMLs for boiler control via TRVs and Nest/OpenTherm
+
+### Fixed
+
+* HVAC action calculation now runs only when valve is in Normal mode (VALVE_STATE=2); reports `off` when manually forced fully open or fully closed to prevent false boiler triggers
+* VALVE_STATE handling in climate templates now explicit for states 0/1/2 to avoid misleading mode display
+
+### Addresses
+
+* [#96](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/96) - eTRV Temperature Monitoring
+* [#91](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/91) - Boiler Automation Support via HVAC action
+* [#90](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/90) - Maintenance Controls Accessibility (buttons replacing dropdown)
+* [#72](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/72) - Parameter Naming Consistency (`REPORT_PERIOD`)
+* [#68](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/68) - Historical Data Tracking (state_class additions)
+
 ## [0.7.2] 2024-03-04
 
 The v0.7.x releases require the following updates that will need to be manually installed if upgrading from v0.6.x or below:
@@ -85,7 +119,7 @@ See also: https://github.com/Achronite/energenie-ener314rt/releases/tag/v0.7.2  
 
 ### Fixed
 
-* Type error on Maintenance LOW_POWER_MODE causing crash [#49](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/49)
+* Type error on MAINTENANCE LOW_POWER_MODE causing crash [#49](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/49)
 ### Changed
 
 * MQTT Discovery: Entity names are now in Title Case (instead of all lower case)
@@ -96,7 +130,7 @@ See also: https://github.com/Achronite/energenie-ener314rt/releases/tag/v0.7.2  
   * 'always on' (0) has been removed, as there isn't an equivalent in HA
 * MQTT Discovery: Origin added to device discovery message (@genestealer)
 * MQTT Discovery: Device Class for Smart Plug switch set to outlet (@genestealer)
-* MQTT Discovery: eTRV `REPORTING_INTERVAL` and `Maintenance` Entity categories set to config (@genestealer)
+* MQTT Discovery: eTRV `REPORTING_INTERVAL` and `MAINTENANCE` Entity categories set to config (@genestealer)
 * MQTT Discovery: eTRV temperature step added and set to 0.5 (@genestealer)
 * MQTT Discovery: Battery % now shows as dynamic icon in Home Assistant for eTRV (@genestealer) and Home Energy Monitor (@Achronite)
 * MQTT Discovery: `FREQUENCY` and `VOLTAGE` added as HA 'disabled entities' for Monitor Plug, and Smart Plug+
@@ -160,7 +194,7 @@ The log level can now be configured in the `config.json` file using `log_level`.
 
 ### Added
 * Grouped a devices parameters for HA MQTT discovery [#15](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/15)
-* Request Voltage added to Maintenance commands for eTRV
+* Request Voltage added to MAINTENANCE commands for eTRV
 * Added 'last_seen' topic as epoch for all OpenThings devices at device level [#18](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/18)
 * Guidance added to README for formatting epoch timestamps in Home Assistant
 * Added overall availability of application, including basing all discovery devices on this overall availability topic [#19](https://github.com/Achronite/mqtt-energenie-ener314rt/issues/15)
@@ -171,7 +205,7 @@ The log level can now be configured in the `config.json` file using `log_level`.
 * Replaced underscores with spaces for MQTT discovery entity names
 * Reduced MQTT discovery message lengths by expanding '~' to include the device type and id
 * Set retain flag on irregular reported values on MQTT for 'VALVE_STATE', 'LOW_POWER_MODE', 'REPORTING_INTERVAL', 'TARGET_TEMP' & 'ERROR_TEXT'
-* Simplified state/command values for VALVE_STATE to be 0,1,2 (Maintenance cmds unchanged)
+* Simplified state/command values for VALVE_STATE to be 0,1,2 (MAINTENANCE cmds unchanged)
 
 ### Fixed
 * Issue in MQTT discovery that prevented battery voltage being shown for eTRV and House Energy monitor
@@ -188,7 +222,7 @@ The log level can now be configured in the `config.json` file using `log_level`.
 * Home Assistant MQTT Discovery added for MiHome devices:
   - Monitor Plug
   - Smart Plug+
-  - Radiator Valve (includes simplified commands using 'Maintenance' dropdown)
+  - Radiator Valve (includes simplified commands using 'MAINTENANCE' dropdown)
   - Whole House Monitor
   - Door (Contact) Sensor
   - PIR

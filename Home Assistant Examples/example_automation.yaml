@@ -1,0 +1,145 @@
+alias: Heating OpenTherm Boiler Control from TRVs 
+triggers:
+  - entity_id:
+      - binary_sensor.bedroom_radiator_heat_demanded
+      - binary_sensor.dining_room_radiator_heat_demanded
+      - binary_sensor.guest_bedroom_radiator_heat_demanded
+      - binary_sensor.hall_radiator_heat_demanded
+      - binary_sensor.kitchen_radiator_heat_demanded
+      - binary_sensor.library_radiator_heat_demanded
+      - binary_sensor.living_room_radiator_heat_demanded
+      - sensor.heating_nest_demand_offset_opentherm_friendly
+      - input_boolean.heating_master_enable
+    trigger: state
+conditions:
+  - condition: state
+    entity_id: input_boolean.heating_master_enable
+    state: "on"
+actions:
+  - choose:
+      - conditions:
+          - condition: or
+            conditions:
+              - condition: state
+                entity_id: binary_sensor.bedroom_radiator_heat_demanded
+                state: "on"
+              - condition: state
+                entity_id: binary_sensor.dining_room_radiator_heat_demanded
+                state: "on"
+              - condition: state
+                entity_id: binary_sensor.guest_bedroom_radiator_heat_demanded
+                state: "on"
+              - condition: state
+                entity_id: binary_sensor.hall_radiator_heat_demanded
+                state: "on"
+              - condition: state
+                entity_id: binary_sensor.kitchen_radiator_heat_demanded
+                state: "on"
+              - condition: state
+                entity_id: binary_sensor.library_radiator_heat_demanded
+                state: "on"
+              - condition: state
+                entity_id: binary_sensor.living_room_radiator_heat_demanded
+                state: "on"
+        sequence:
+          - variables:
+              base_temp: >
+                {{ state_attr('climate.hallway','current_temperature') |
+                float(15) }}
+              offset: >
+                {{
+                states('sensor.heating_nest_demand_offset_opentherm_friendly') |
+                float(0) }}
+              target_temp: |
+                {{ [ [ base_temp + offset, 32 ] | min, 10 ] | max }}
+          - condition: template
+            value_template: >
+              {{ target_temp != state_attr('climate.hallway','temperature') |
+              float(0) }}
+          - target:
+              entity_id: climate.hallway
+            data:
+              temperature: "{{ target_temp }}"
+            action: climate.set_temperature
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: state
+                entity_id: binary_sensor.bedroom_radiator_heat_demanded
+                state: "off"
+              - condition: state
+                entity_id: binary_sensor.dining_room_radiator_heat_demanded
+                state: "off"
+              - condition: state
+                entity_id: binary_sensor.guest_bedroom_radiator_heat_demanded
+                state: "off"
+              - condition: state
+                entity_id: binary_sensor.hall_radiator_heat_demanded
+                state: "off"
+              - condition: state
+                entity_id: binary_sensor.kitchen_radiator_heat_demanded
+                state: "off"
+              - condition: state
+                entity_id: binary_sensor.library_radiator_heat_demanded
+                state: "off"
+              - condition: state
+                entity_id: binary_sensor.living_room_radiator_heat_demanded
+                state: "off"
+        sequence:
+          - delay:
+              minutes: 5
+            enabled: false
+          - condition: and
+            conditions:
+              - condition: state
+                entity_id: binary_sensor.bedroom_radiator_heat_demanded
+                state: "off"
+              - condition: state
+                entity_id: binary_sensor.dining_room_radiator_heat_demanded
+                state: "off"
+              - condition: state
+                entity_id: binary_sensor.guest_bedroom_radiator_heat_demanded
+                state: "off"
+              - condition: state
+                entity_id: binary_sensor.hall_radiator_heat_demanded
+                state: "off"
+              - condition: state
+                entity_id: binary_sensor.kitchen_radiator_heat_demanded
+                state: "off"
+              - condition: state
+                entity_id: binary_sensor.library_radiator_heat_demanded
+                state: "off"
+              - condition: state
+                entity_id: binary_sensor.living_room_radiator_heat_demanded
+                state: "off"
+          - target:
+              entity_id: climate.hallway
+            data:
+              temperature: 12
+            action: climate.set_temperature
+mode: restart
+description: >-
+  This automation controls the boiler via the Nest thermostat using OpenTherm,
+  based on heat demand from all radiator TRVs. Each TRV exposes two normalized
+  signals so third-party devices behave consistently:
+
+  • Heating Max Room Temperature Delta (sensor.heating_max_room_temperature_delta)
+    - Largest unmet heating requirement across all rooms (setpoint - room temp, negatives clamped to 0)
+    - 0 means no room needs heat; larger values mean at least one room is below target
+
+  • Heating Nest Demand Offset (OpenTherm Friendly) (sensor.heating_nest_demand_offset_opentherm_friendly)
+    - Converts the system-wide delta into a bounded temperature offset added to the Nest current temp
+    - Small deltas nudge low flow temperatures for efficient burns; larger deltas speed recovery but stay capped
+    - Falls back to 0 if the delta is unavailable/invalid
+
+  Logic:
+  - If any radiator demands heat and the master enable is ON, set Nest target to current temp + offset
+    so the boiler modulates via OpenTherm instead of just blasting on/off.
+  - If no radiators demand heat, wait briefly (optional) then set Nest to a low setback (12°C) so the
+    boiler shuts down cleanly.
+
+  This keeps comfort/hysteresis in the TRVs, uses HA only for coordination, and lets the boiler run
+  efficiently with OpenTherm modulation instead of fixed on/off control.
+ 
+  Uses helpers: heating_max_room_temperature_delta and heating_nest_demand_offset_opentherm_friendly (see example_helpers.yaml)
+
